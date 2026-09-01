@@ -39,6 +39,7 @@ body{font-family:'Segoe UI',sans-serif;background:var(--n1);color:var(--text);mi
 .field label{display:block;color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px}
 .field input{width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:11px 14px;color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s}
 .field input:focus{border-color:var(--gold)}
+.field input[type=email],.field input[type=password]{-webkit-user-select:text!important;user-select:text!important;pointer-events:auto!important;cursor:text!important;position:relative;z-index:1}
 .btn-auth{width:100%;background:var(--gold);color:var(--n1);border:none;border-radius:9px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:4px;transition:background .15s}
 .btn-auth:hover{background:var(--goldL)}
 .btn-auth:disabled{opacity:.6;cursor:not-allowed}
@@ -145,11 +146,11 @@ tr:hover td{background:#1A366010}
     </div>
     <div class="field">
       <label>Email</label>
-      <input type="email" id="login-email" placeholder="your@sp360.com.kw" autocomplete="email" style="pointer-events:auto;user-select:text;-webkit-user-select:text;"/>
+      <input type="email" id="login-email" placeholder="your@sp360.com.kw" autocomplete="email" tabindex="1"/>
     </div>
     <div class="field">
       <label>Password</label>
-      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" style="pointer-events:auto;user-select:text;-webkit-user-select:text;"/>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" tabindex="2"/>
     </div>
     <button class="btn-auth" id="btn-login" onclick="doLogin()">Sign In</button>
     <div id="auth-error">Invalid email or password.</div>
@@ -1071,6 +1072,19 @@ sb.auth.onAuthStateChange((event,session)=>{
     if(document.getElementById('app').style.display!=='none') location.reload();
   } else if(session){
     currentUser=session.user;
+  }
+});
+
+// Ensure login inputs are always focusable
+document.addEventListener('click', e => {
+  if (e.target.id === 'login-email' || e.target.id === 'login-pass') {
+    e.target.focus();
+  }
+});
+document.addEventListener('touchend', e => {
+  if (e.target.id === 'login-email' || e.target.id === 'login-pass') {
+    e.preventDefault();
+    e.target.focus();
   }
 });
 
