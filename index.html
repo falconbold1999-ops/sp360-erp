@@ -1051,23 +1051,13 @@ async function saveInvoice(){
   closeModal();loadFinance();
 }
 
-// ── SESSION RESTORE (with timeout) ──────────────────────────
+// ── SESSION RESTORE ─────────────────────────────────────────
+// Always show login screen — user must sign in every time
+// Sign out any existing session to ensure clean state
 (async()=>{
   try {
-    const sessionPromise = sb.auth.getSession();
-    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({data:{session:null},error:{message:'timeout'}}), 5000));
-    const {data:{session}, error} = await Promise.race([sessionPromise, timeoutPromise]);
-    if (error) console.warn('Session restore:', error.message);
-    if (session) {
-      currentUser = session.user;
-      await loadProfile();
-      enterApp();
-    }
-    // If no session or timeout: auth-screen stays visible (already shown by CSS)
-  } catch(e) {
-    console.warn('Session restore failed:', e);
-    // Auth screen stays visible — user can still log in
-  }
+    await sb.auth.signOut();
+  } catch(e) {}
 })();
 
 sb.auth.onAuthStateChange((event,session)=>{
