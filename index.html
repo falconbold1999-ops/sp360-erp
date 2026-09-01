@@ -1095,6 +1095,22 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&document.getElementById('auth-screen').style.display!=='none')doLogin();
 });
 
+
+  // Expose to global scope for HTML onclick handlers
+  window.doLogin = doLogin;
+  window.doLogout = doLogout;
+  window.navTo = navTo;
+  window.toggleSide = toggleSide;
+  window.closeModal = closeModal;
+  window.openTenderModal = openTenderModal;
+  window.openProjectModal = openProjectModal;
+  window.openInvoiceModal = openInvoiceModal;
+  window.saveTender = saveTender;
+  window.saveProject = saveProject;
+  window.saveInvoice = saveInvoice;
+  window.submitBidDecision = submitBidDecision;
+  window.approveWf = approveWf;
+  window.rejectWf = rejectWf;
 }
 </script>
 <script
