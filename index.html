@@ -16,6 +16,7 @@
   --card:#0A1628;--card2:#0D1F38;--bdr:#1E3A5F;
 }
 body{font-family:'Segoe UI',sans-serif;background:var(--n1);color:var(--text);min-height:100vh}
+/* AUTH */
 #auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#06112A 0%,#0B1D3A 50%,#0F2444 100%)}
 .auth-box{background:var(--n2);border:1px solid var(--bdr);border-radius:18px;padding:44px 40px;width:420px;max-width:95vw;box-shadow:0 24px 80px #00000066}
 .auth-logo{display:flex;align-items:center;gap:14px;margin-bottom:32px;justify-content:center}
@@ -26,9 +27,11 @@ body{font-family:'Segoe UI',sans-serif;background:var(--n1);color:var(--text);mi
 .field label{display:block;color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px}
 .field input{width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:11px 14px;color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s}
 .field input:focus{border-color:var(--gold)}
-.btn-auth{width:100%;background:var(--gold);color:var(--n1);border:none;border-radius:9px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:4px}
+.btn-auth{width:100%;background:var(--gold);color:var(--n1);border:none;border-radius:9px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:4px;transition:background .15s}
+.btn-auth:hover{background:var(--goldL)}
 .btn-auth:disabled{opacity:.6;cursor:not-allowed}
 #auth-error{color:var(--red);font-size:12px;margin-top:10px;text-align:center;display:none;background:#EF444418;border:1px solid #EF444433;border-radius:6px;padding:7px}
+/* APP */
 #app{display:none;flex-direction:column;min-height:100vh}
 header{background:var(--n2);border-bottom:1px solid var(--bdr);height:56px;display:flex;align-items:center;padding:0 16px;gap:12px;position:sticky;top:0;z-index:100;flex-shrink:0}
 .logo-sq{width:34px;height:34px;border-radius:8px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--n1);font-size:14px}
@@ -39,10 +42,11 @@ header{background:var(--n2);border-bottom:1px solid var(--bdr);height:56px;displ
 .btn-logout{background:none;border:1px solid var(--bdr);border-radius:6px;padding:5px 11px;color:var(--muted);cursor:pointer;font-size:11px;font-family:inherit}
 .btn-logout:hover{border-color:var(--red);color:var(--red)}
 #layout{display:flex;flex:1;overflow:hidden;min-height:0}
-aside{width:192px;flex-shrink:0;background:var(--n2);border-right:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden}
+aside{width:192px;flex-shrink:0;background:var(--n2);border-right:1px solid var(--bdr);display:flex;flex-direction:column;transition:width .2s;overflow:hidden}
+aside.collapsed{width:0}
 nav{padding:10px 7px;flex:1;overflow-y:auto}
 .nav-section{color:var(--faint);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:12px 10px 5px}
-.nav-btn{width:100%;display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;border:none;cursor:pointer;background:none;color:var(--muted);font-size:12px;text-align:left;font-family:inherit;border-left:3px solid transparent;margin-bottom:1px;white-space:nowrap;overflow:hidden}
+.nav-btn{width:100%;display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;border:none;cursor:pointer;background:none;color:var(--muted);font-size:12px;text-align:left;font-family:inherit;border-left:3px solid transparent;margin-bottom:1px;white-space:nowrap;overflow:hidden;transition:all .1s}
 .nav-btn.active{background:#C9A84C18;color:var(--gold);font-weight:700;border-left-color:var(--gold)}
 .nav-btn:hover:not(.active){background:var(--n4);color:var(--text)}
 .nav-icon{font-size:14px;flex-shrink:0}
@@ -55,6 +59,7 @@ main{flex:1;overflow-y:auto;padding:20px 24px}
 .page-head h1{font-size:18px;font-weight:800;color:var(--text)}
 .page-head .sub{color:var(--faint);font-size:10px;margin-top:3px}
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
 .kpi{background:var(--card2);border:1px solid var(--bdr);border-radius:11px;padding:16px 18px;position:relative;overflow:hidden}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kpi-color,var(--gold))}
@@ -70,37 +75,42 @@ th{padding:8px 10px;color:var(--muted);font-size:9px;font-weight:700;text-transf
 td{padding:10px 10px;font-size:12px;border-bottom:1px solid #1E3A5F22;vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#1A366010}
-.btn{border:none;border-radius:7px;cursor:pointer;font-weight:700;font-family:inherit}
+.btn{border:none;border-radius:7px;cursor:pointer;font-weight:700;font-family:inherit;transition:all .1s}
 .btn-primary{background:var(--gold);color:var(--n1);padding:8px 16px;font-size:12px}
 .btn-primary:hover{background:var(--goldL)}
 .btn-ghost{background:none;border:1px solid var(--bdr);color:var(--muted);padding:7px 13px;font-size:11px}
+.btn-ghost:hover{border-color:var(--muted);color:var(--text)}
 .btn-sm{padding:4px 10px;font-size:10px}
 .btn-danger{background:#EF444418;border:1px solid #EF444444;color:var(--red);padding:5px 10px;font-size:10px}
 .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;border-bottom:1px solid var(--bdr);padding-bottom:10px}
-.tab{background:none;border:none;color:var(--muted);padding:6px 14px;font-size:11px;border-radius:7px;cursor:pointer;font-family:inherit;font-weight:600;border-bottom:2px solid transparent}
+.tab{background:none;border:none;color:var(--muted);padding:6px 14px;font-size:11px;border-radius:7px;cursor:pointer;font-family:inherit;font-weight:600;border-bottom:2px solid transparent;transition:all .1s}
 .tab.act{color:var(--gold);border-bottom-color:var(--gold);background:#C9A84C10}
 .empty{color:var(--faint);font-size:13px;padding:40px;text-align:center;font-style:italic}
 .loading{color:var(--muted);font-size:13px;padding:40px;text-align:center}
 .evm-bar-bg{background:var(--n4);border-radius:4px;height:5px;overflow:hidden;width:60px;display:inline-block;vertical-align:middle;margin-left:4px}
 .evm-bar-fill{height:100%;border-radius:4px}
-.modal-overlay{display:none;position:fixed;inset:0;background:#00000088;z-index:500;align-items:center;justify-content:center}
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:#00000088;z-index:500;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
 .modal-overlay.open{display:flex}
-.modal{background:var(--n2);border:1px solid var(--bdr);border-radius:16px;width:520px;max-width:96vw;max-height:88vh;overflow-y:auto}
-.modal-head{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--bdr);position:sticky;top:0;background:var(--n2)}
+.modal{background:var(--n2);border:1px solid var(--bdr);border-radius:16px;width:520px;max-width:96vw;max-height:88vh;overflow-y:auto;box-shadow:0 32px 100px #000000AA}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--bdr);position:sticky;top:0;background:var(--n2);z-index:1}
 .modal-head span{color:var(--gold);font-weight:800;font-size:14px}
-.modal-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:2px 6px}
+.modal-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:2px 6px;border-radius:4px}
+.modal-close:hover{color:var(--text);background:var(--n4)}
 .modal-body{padding:20px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .form-field{margin-bottom:13px}
 .form-field label{display:block;color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px}
-.form-field input,.form-field select,.form-field textarea{width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:9px 12px;color:var(--text);font-size:12px;font-family:inherit;outline:none}
-.form-field input:focus,.form-field select:focus{border-color:var(--gold)}
+.form-field input,.form-field select,.form-field textarea{width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:9px 12px;color:var(--text);font-size:12px;font-family:inherit;outline:none;transition:border-color .15s}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--gold)}
 .form-field select option{background:var(--n2)}
 .modal-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--bdr)}
-.toast{position:fixed;bottom:24px;right:24px;background:var(--n2);border:1px solid var(--bdr);border-radius:10px;padding:12px 18px;font-size:13px;z-index:1000;display:none;align-items:center;max-width:340px}
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--n2);border:1px solid var(--bdr);border-radius:10px;padding:12px 18px;font-size:13px;z-index:1000;display:none;align-items:center;box-shadow:0 8px 32px #00000066;max-width:340px}
 .toast.show{display:flex}
 .toast.success{border-color:#10B98155;color:var(--green)}
 .toast.error{border-color:#EF444455;color:var(--red)}
+/* AUDIT */
 .audit-row{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #1E3A5F22;font-size:11px}
 .audit-time{color:var(--muted);white-space:nowrap;min-width:140px}
 .audit-action{color:var(--gold);font-weight:700;min-width:80px}
@@ -110,7 +120,9 @@ tr:hover td{background:#1A366010}
 </style>
 </head>
 <body>
-  <div id="auth-screen">
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
   <div class="auth-box">
     <div class="auth-logo">
       <div class="auth-logo-sq">SP</div>
@@ -119,19 +131,27 @@ tr:hover td{background:#1A366010}
         <div class="auth-sub">Smart Projects 360 · Kuwait · Production System</div>
       </div>
     </div>
-    <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="your@sp360.com.kw" autocomplete="email"/></div>
-    <div class="field"><label>Password</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/></div>
-    <button class="btn-auth" id="btn-login" onclick="doLogin()">Sign In</button>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="your@sp360.com.kw" autocomplete="email"/>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="btn-auth" id="btn-login">Sign In</button>
     <div id="auth-error">Invalid email or password.</div>
     <div style="margin-top:16px;padding:10px 12px;background:#10B98108;border:1px solid #10B98133;border-radius:8px;font-size:10px;color:var(--muted);line-height:1.6">
       <strong style="color:var(--green)">Production Accounts:</strong><br/>
-      ibrahim@sp360.com.kw | fatima@sp360.com.kw<br/>
-      mohammed@sp360.com.kw | sarah@sp360.com.kw | khalid@sp360.com.kw<br/>
+      ibrahim@sp360.com.kw &nbsp;|&nbsp; fatima@sp360.com.kw<br/>
+      mohammed@sp360.com.kw &nbsp;|&nbsp; sarah@sp360.com.kw<br/>
+      khalid@sp360.com.kw<br/>
       <span style="color:var(--gold)">Password: sp360@2026</span>
     </div>
   </div>
 </div>
 
+<!-- APP -->
 <div id="app">
   <header>
     <button onclick="toggleSide()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 6px;border-radius:5px">☰</button>
@@ -148,6 +168,7 @@ tr:hover td{background:#1A366010}
       <button class="btn-logout" onclick="doLogout()">Sign out</button>
     </div>
   </header>
+
   <div id="layout">
     <aside id="sidebar">
       <nav>
@@ -169,6 +190,7 @@ tr:hover td{background:#1A366010}
       </nav>
       <div class="sidebar-foot">SP360 ERP v6.0 · Production</div>
     </aside>
+
     <main>
       <div class="page active" id="page-dashboard"></div>
       <div class="page" id="page-bizdev"></div>
@@ -184,31 +206,95 @@ tr:hover td{background:#1A366010}
   </div>
 </div>
 
+<!-- MODAL -->
 <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <div class="modal-head"><span id="modal-title"></span><button class="modal-close" onclick="closeModal()">✕</button></div>
     <div class="modal-body" id="modal-body"></div>
   </div>
 </div>
+
 <div class="toast" id="toast"></div>
+
 <script>
 'use strict';
-const SUPABASE_URL='https://sqizirpsatofcoqshwer.supabase.co';
-const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxaXppcnBzYXRvZmNvcXNod2VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxNTM5MTAsImV4cCI6MjEwMjcyOTkxMH0.LnfA4pGIbv30uQVNHa7MeFioP9OF2ukNTol_cDUF8mk';
-const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-const ROLE_PAGES={'PMO Manager':['dashboard','bizdev','projects','procurement','finance','hr','qhse','documents','workflow','audit'],'Finance Manager':['dashboard','projects','procurement','finance','workflow','audit'],'Procurement Lead':['dashboard','projects','procurement','workflow'],'BD Manager':['dashboard','bizdev','projects'],'QHSE Engineer':['dashboard','projects','qhse','documents']};
-const STEP_APPROVERS={'Dept. Approval':['PMO Manager','Procurement Lead'],'Finance Review':['Finance Manager'],'GM Approval':['PMO Manager'],'PM Verification':['PMO Manager'],'Finance Approval':['Finance Manager']};
-let currentUser=null,currentProfile=null,curProcTab='vendors',curHRTab='employees',curQHSETab='ncrs',curDocTab='documents';
-const SC={active:'#10B981',planning:'#3B82F6',on_hold:'#F97316',completed:'#94A3B8',cancelled:'#EF4444',draft:'#94A3B8',submitted:'#3B82F6',approved:'#10B981',paid:'#10B981',issued:'#10B981',rejected:'#EF4444',under_review:'#F97316',returned:'#F97316',open:'#EF4444',closed:'#10B981',in_progress:'#F97316',answered:'#10B981',dept_approval:'#F97316',finance_approval:'#8B5CF6',gm_approval:'#06B6D4',pending:'#F97316',overdue:'#EF4444',awarded:'#10B981',minor:'#3B82F6',major:'#F97316',critical:'#EF4444',identified:'#94A3B8',proposal:'#3B82F6',negotiation:'#8B5CF6',won:'#10B981',lost:'#EF4444',good:'#10B981',partial:'#F97316',damaged:'#EF4444',blacklisted:'#EF4444',annual:'#3B82F6',sick:'#F97316',near_miss:'#F97316',first_aid:'#EF4444'};
-const fmtK=v=>{v=Number(v||0);if(v>=1e6)return(v/1e6).toFixed(2)+'M';if(v>=1e3)return(v/1e3).toFixed(0)+'K';return v.toFixed(0)};
-const fmtKWD=v=>'KWD '+fmtK(v);
-const pill=(v,c)=>{const col=c||SC[v]||'#94A3B8';return`<span class="pill" style="color:${col};background:${col}22;border:1px solid ${col}44">${String(v||'').replace(/_/g,' ')}</span>`};
-const kpi=(lbl,val,c,sub)=>`<div class="kpi" style="--kpi-color:${c||'#C9A84C'}"><div class="kpi-lbl">${lbl}</div><div class="kpi-val">${val}</div>${sub?`<div class="kpi-sub">${sub}</div>`:''}</div>`;
-const cpiColor=v=>Number(v)>=1?'#10B981':Number(v)>=0.9?'#F97316':'#EF4444';
-const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ═══════════════════════════════════════════════════════════
+//  SP360 ERP v6 — Supabase Production System
+// ═══════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://sqizirpsatofcoqshwer.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxaXppcnBzYXRvZmNvcXNod2VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxNTM5MTAsImV4cCI6MjEwMjcyOTkxMH0.LnfA4pGIbv30uQVNHa7MeFioP9OF2ukNTol_cDUF8mk';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── ROLE-BASED ACCESS ────────────────────────────────────────
+const ROLE_PAGES = {
+  'PMO Manager':       ['dashboard','bizdev','projects','procurement','finance','hr','qhse','documents','workflow','audit'],
+  'Finance Manager':   ['dashboard','projects','procurement','finance','workflow','audit'],
+  'Procurement Lead':  ['dashboard','projects','procurement','workflow'],
+  'BD Manager':        ['dashboard','bizdev','projects'],
+  'QHSE Engineer':     ['dashboard','projects','qhse','documents']
+};
+
+// ── WORKFLOW APPROVAL RULES ──────────────────────────────────
+// Segregation of Duties — each role approves only their step
+const STEP_APPROVERS = {
+  'Dept. Approval':    ['PMO Manager','Procurement Lead'],
+  'Finance Review':    ['Finance Manager'],
+  'GM Approval':       ['PMO Manager'],
+  'PM Verification':   ['PMO Manager'],
+  'Finance Approval':  ['Finance Manager']
+};
+
+let currentUser = null;
+let currentProfile = null;
+let curProcTab = 'vendors';
+let curHRTab = 'employees';
+let curQHSETab = 'ncrs';
+let curDocTab = 'documents';
+
+// ── UTILS ────────────────────────────────────────────────────
+const SC = {
+  active:'#10B981',planning:'#3B82F6',on_hold:'#F97316',completed:'#94A3B8',cancelled:'#EF4444',
+  draft:'#94A3B8',submitted:'#3B82F6',approved:'#10B981',paid:'#10B981',issued:'#10B981',
+  rejected:'#EF4444',under_review:'#F97316',returned:'#F97316',
+  open:'#EF4444',closed:'#10B981',in_progress:'#F97316',answered:'#10B981',
+  dept_approval:'#F97316',finance_approval:'#8B5CF6',gm_approval:'#06B6D4',
+  pending:'#F97316',overdue:'#EF4444',awarded:'#10B981',
+  minor:'#3B82F6',major:'#F97316',critical:'#EF4444',
+  identified:'#94A3B8',proposal:'#3B82F6',negotiation:'#8B5CF6',won:'#10B981',lost:'#EF4444',
+  good:'#10B981',partial:'#F97316',damaged:'#EF4444',blacklisted:'#EF4444',
+  annual:'#3B82F6',sick:'#F97316',near_miss:'#F97316',first_aid:'#EF4444',
+  'PMO Manager':'#C9A84C','Finance Manager':'#10B981','Procurement Lead':'#3B82F6',
+  'BD Manager':'#8B5CF6','QHSE Engineer':'#EF4444'
+};
+const fmtK = v=>{v=Number(v||0);if(v>=1e6)return(v/1e6).toFixed(2)+'M';if(v>=1e3)return(v/1e3).toFixed(0)+'K';return v.toFixed(0)};
+const fmtKWD = v=>'KWD '+fmtK(v);
+const pill = (v,c)=>{const col=c||SC[v]||'#94A3B8';return`<span class="pill" style="color:${col};background:${col}22;border:1px solid ${col}44">${String(v||'').replace(/_/g,' ')}</span>`};
+const kpi = (lbl,val,c,sub)=>`<div class="kpi" style="--kpi-color:${c||'#C9A84C'}"><div class="kpi-lbl">${lbl}</div><div class="kpi-val">${val}</div>${sub?`<div class="kpi-sub">${sub}</div>`:''}</div>`;
+const cpiColor = v=>Number(v)>=1?'#10B981':Number(v)>=0.9?'#F97316':'#EF4444';
+const esc = s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
 let _toastT;
-function showToast(msg,type='success'){const t=document.getElementById('toast');if(_toastT)clearTimeout(_toastT);t.textContent=msg;t.className=`toast show ${type}`;_toastT=setTimeout(()=>{t.className='toast';},3500);}
-async function writeAudit(entity_type,entity_id,action,old_val,new_val,notes=''){try{await sb.from('audit_log').insert({entity_type,entity_id,action,old_values:old_val?JSON.stringify(old_val):null,new_values:new_val?JSON.stringify(new_val):null,performed_by:currentProfile?.id,notes});}catch(e){console.warn('Audit:',e);}}
+function showToast(msg,type='success'){
+  const t=document.getElementById('toast');
+  if(_toastT)clearTimeout(_toastT);
+  t.textContent=msg;t.className=`toast show ${type}`;
+  _toastT=setTimeout(()=>{t.className='toast';},3500);
+}
+
+async function writeAudit(entity_type,entity_id,action,old_val,new_val,notes=''){
+  try{
+    await sb.from('audit_log').insert({
+      entity_type,entity_id,action,
+      old_values:old_val?JSON.stringify(old_val):null,
+      new_values:new_val?JSON.stringify(new_val):null,
+      performed_by:currentProfile?.id,
+      notes
+    });
+  }catch(e){console.warn('Audit write failed:',e);}
+}
+
+// ── AUTH ─────────────────────────────────────────────────────
 async function doLogin(){
   const email=document.getElementById('login-email').value.trim();
   const pass=document.getElementById('login-pass').value;
@@ -224,6 +310,7 @@ async function doLogin(){
   await loadProfile();
   enterApp();
 }
+
 async function loadProfile(){
   const {data}=await sb.from('user_profiles').select('*').eq('id',currentUser.id).single();
   currentProfile=data;
@@ -235,9 +322,11 @@ async function loadProfile(){
     document.getElementById('user-role').textContent=data.role;
   }
 }
+
 function enterApp(){
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app').style.display='flex';
+  // Show/hide nav based on role
   const allowed=ROLE_PAGES[currentProfile?.role]||['dashboard'];
   ['bizdev','projects','procurement','finance','hr','qhse','documents','workflow','audit'].forEach(p=>{
     const btn=document.getElementById('nav-'+p);
@@ -246,237 +335,718 @@ function enterApp(){
   navTo('dashboard',document.querySelector('.nav-btn.active'));
   loadWfBadge();
 }
-async function doLogout(){await sb.auth.signOut();currentUser=null;currentProfile=null;document.getElementById('app').style.display='none';document.getElementById('auth-screen').style.display='flex';document.getElementById('login-email').value='';document.getElementById('login-pass').value='';}
-async function loadWfBadge(){const {data}=await sb.from('workflow_items').select('id').in('status',['pending','overdue']);const count=(data||[]).length;document.getElementById('pending-badge').textContent=`⚡ ${count} pending`;const badge=document.getElementById('wf-badge');badge.style.display=count>0?'':'none';badge.textContent=count;}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  currentUser=null;currentProfile=null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('login-email').value='';
+  document.getElementById('login-pass').value='';
+}
+
+async function loadWfBadge(){
+  const {data}=await sb.from('workflow_items').select('id').in('status',['pending','overdue']);
+  const count=(data||[]).length;
+  document.getElementById('pending-badge').textContent=`⚡ ${count} pending`;
+  const badge=document.getElementById('wf-badge');
+  badge.style.display=count>0?'':'none';
+  badge.textContent=count;
+}
+
+// ── NAVIGATION ───────────────────────────────────────────────
 function toggleSide(){document.getElementById('sidebar').classList.toggle('collapsed');}
-function navTo(id,btn){document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));const pg=document.getElementById('page-'+id);if(pg)pg.classList.add('active');const loaders={dashboard:loadDashboard,bizdev:loadBizdev,projects:loadProjects,procurement:()=>loadProc(curProcTab),finance:loadFinance,hr:()=>loadHR(curHRTab),qhse:()=>loadQHSE(curQHSETab),documents:()=>loadDocs(curDocTab),workflow:loadWorkflow,audit:loadAudit};if(loaders[id])loaders[id]();}
-function openModal(title,html){document.getElementById('modal-title').textContent=title;document.getElementById('modal-body').innerHTML=html;document.getElementById('modal-overlay').classList.add('open');}
+function navTo(id,btn){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const pg=document.getElementById('page-'+id);
+  if(pg)pg.classList.add('active');
+  const loaders={
+    dashboard:loadDashboard,bizdev:loadBizdev,projects:loadProjects,
+    procurement:()=>loadProc(curProcTab),finance:loadFinance,
+    hr:()=>loadHR(curHRTab),qhse:()=>loadQHSE(curQHSETab),
+    documents:()=>loadDocs(curDocTab),workflow:loadWorkflow,audit:loadAudit
+  };
+  if(loaders[id])loaders[id]();
+}
+
+// ── MODAL ────────────────────────────────────────────────────
+function openModal(title,html){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal-overlay').classList.add('open');
+}
 function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
 
+// ══════════════════════════════════════════════════════════════
+//  PAGE LOADERS
+// ══════════════════════════════════════════════════════════════
+
+// ── DASHBOARD ────────────────────────────────────────────────
 async function loadDashboard(){
   const el=document.getElementById('page-dashboard');
-  el.innerHTML=`<div class="loading">Loading…</div>`;
-  const [projR,invR,wfR,ncrR]=await Promise.all([sb.from('projects').select('id,project_no,name,contract_value,bac,ac,ev,pv,pct,cpi,spi,status'),sb.from('invoices').select('invoice_type,net_amount,status'),sb.from('workflow_items').select('id,ref_no,current_step,status'),sb.from('ncrs').select('id,severity,status')]);
-  const projs=projR.data||[],invs=invR.data||[],wfs=wfR.data||[],ncrs=ncrR.data||[];
-  const totalEV=projs.reduce((s,p)=>s+Number(p.ev),0),totalAC=projs.reduce((s,p)=>s+Number(p.ac),0),totalPV=projs.reduce((s,p)=>s+Number(p.pv),0);
-  const portCPI=totalAC>0?(totalEV/totalAC).toFixed(2):'1.00',portSPI=totalPV>0?(totalEV/totalPV).toFixed(2):'1.00';
+  el.innerHTML=`<div class="loading">Loading dashboard…</div>`;
+  const [projR,invR,wfR,ncrR]=await Promise.all([
+    sb.from('projects').select('id,project_no,name,contract_value,bac,ac,ev,pv,pct,cpi,spi,status,department'),
+    sb.from('invoices').select('invoice_type,net_amount,status'),
+    sb.from('workflow_items').select('id,ref_no,entity_type,current_step,status,raised_date'),
+    sb.from('ncrs').select('id,severity,status')
+  ]);
+  const projs=projR.data||[], invs=invR.data||[], wfs=wfR.data||[], ncrs=ncrR.data||[];
+
+  // Portfolio EVM — weighted
+  const totalEV=projs.reduce((s,p)=>s+Number(p.ev),0);
+  const totalAC=projs.reduce((s,p)=>s+Number(p.ac),0);
+  const totalPV=projs.reduce((s,p)=>s+Number(p.pv),0);
+  const portCPI=totalAC>0?(totalEV/totalAC).toFixed(2):'1.00';
+  const portSPI=totalPV>0?(totalEV/totalPV).toFixed(2):'1.00';
   const totalVal=projs.reduce((s,p)=>s+Number(p.contract_value),0);
+
   const rev=invs.filter(i=>i.invoice_type==='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
   const cost=invs.filter(i=>i.invoice_type!=='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
   const outstanding=invs.filter(i=>i.status!=='paid'&&i.status!=='cancelled').reduce((s,i)=>s+Number(i.net_amount),0);
-  const openNCR=ncrs.filter(n=>n.status==='open').length,critNCR=ncrs.filter(n=>n.severity==='critical'&&n.status==='open').length;
+  const openNCR=ncrs.filter(n=>n.status==='open').length;
+  const critNCR=ncrs.filter(n=>n.severity==='critical'&&n.status==='open').length;
   const pendWF=wfs.filter(w=>w.status==='pending'||w.status==='overdue').length;
+
   el.innerHTML=`
-  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">📊</span><div><h1>Executive Dashboard</h1><div class="sub">Portfolio · ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div></div></div></div>
-  <div class="grid4">${kpi('Portfolio Value',fmtKWD(totalVal),'#C9A84C',projs.length+' projects')}${kpi('Active Projects',projs.filter(p=>p.status==='active').length,'#10B981',projs.filter(p=>p.status==='completed').length+' completed')}${kpi('Portfolio CPI',portCPI,cpiColor(portCPI),'ΣEV/ΣAC weighted')}${kpi('Portfolio SPI',portSPI,cpiColor(portSPI),'ΣEV/ΣPV weighted')}</div>
-  <div class="grid4">${kpi('Outstanding AR',fmtKWD(outstanding),'#F97316','Pending collection')}${kpi('Pending Approvals',pendWF,'#8B5CF6','Workflow queue')}${kpi('Open NCRs',openNCR,openNCR>0?'#EF4444':'#10B981',critNCR+' critical')}${kpi('Gross Profit',fmtKWD(rev-cost),rev-cost>=0?'#C9A84C':'#EF4444',rev>0?(((rev-cost)/rev*100).toFixed(1)+'% margin'):'')}</div>
-  <div class="grid2">
-    <div class="card"><div class="sec-head"><div class="sec-title"><span>🏗</span>Project EVM Status</div></div>
-    <table><thead><tr><th>Project</th><th>%</th><th>CPI</th><th>SPI</th><th>EAC</th><th>Status</th></tr></thead><tbody>
-    ${projs.filter(p=>p.status==='active').map(p=>{const eac=Number(p.cpi)>0?Number(p.ac)+(Number(p.bac)-Number(p.ev))/Number(p.cpi):Number(p.bac);return`<tr><td><div style="font-size:11px;font-weight:600;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name.split('—')[0].trim())}</div><div style="color:var(--muted);font-size:9px">${esc(p.project_no)}</div></td><td><span style="font-weight:700;font-size:11px">${p.pct}%</span><div class="evm-bar-bg"><div class="evm-bar-fill" style="width:${p.pct}%;background:${Number(p.pct)>=75?'#10B981':Number(p.pct)>=40?'#F97316':'#EF4444'}"></div></div></td><td style="font-weight:800;color:${cpiColor(p.cpi)}">${Number(p.cpi).toFixed(2)}</td><td style="font-weight:800;color:${cpiColor(p.spi)}">${Number(p.spi).toFixed(2)}</td><td style="font-size:11px">${fmtKWD(eac)}</td><td>${pill(p.status)}</td></tr>`;}).join('')}
-    </tbody></table></div>
-    <div class="card"><div class="sec-head"><div class="sec-title"><span>⚡</span>Approval Queue</div></div>
-    <div style="display:flex;flex-direction:column;gap:7px">
-    ${wfs.slice(0,6).map(w=>`<div style="background:var(--card);border:1px solid ${w.status==='overdue'?'#EF444466':'var(--bdr)'};border-radius:8px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center"><div><div style="color:var(--gold);font-size:11px;font-weight:700">${esc(w.ref_no)}</div><div style="color:var(--muted);font-size:10px">${esc(w.current_step)}</div></div>${pill(w.status)}</div>`).join('')}
-    ${wfs.length===0?'<div class="empty">All approvals cleared ✓</div>':''}
-    </div></div>
+  <div class="page-head">
+    <div class="page-head-left"><span style="font-size:22px">📊</span>
+      <div><h1>Executive Dashboard</h1><div class="sub">Portfolio · ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div></div>
+    </div>
   </div>
-  <div class="card"><div class="sec-head"><div class="sec-title"><span>💰</span>Finance Snapshot</div></div>
-  <div class="grid4">${kpi('Revenue Collected',fmtKWD(rev),'#10B981')}${kpi('Cost Paid',fmtKWD(cost),'#EF4444')}${kpi('Gross Profit',fmtKWD(rev-cost),'#C9A84C',rev>0?(((rev-cost)/rev*100).toFixed(1)+'% margin'):'')}${kpi('Outstanding',fmtKWD(outstanding),'#F97316')}</div></div>`;
+  <div class="grid4">
+    ${kpi('Portfolio Value',fmtKWD(totalVal),'#C9A84C',projs.length+' projects')}
+    ${kpi('Active Projects',projs.filter(p=>p.status==='active').length,'#10B981',projs.filter(p=>p.status==='completed').length+' completed')}
+    ${kpi('Portfolio CPI',portCPI,cpiColor(portCPI),'ΣEV / ΣAC — BAC-weighted')}
+    ${kpi('Portfolio SPI',portSPI,cpiColor(portSPI),'ΣEV / ΣPV — BAC-weighted')}
+  </div>
+  <div class="grid4">
+    ${kpi('Outstanding AR',fmtKWD(outstanding),'#F97316','Pending collection')}
+    ${kpi('Pending Approvals',pendWF,'#8B5CF6','In workflow queue')}
+    ${kpi('Open NCRs',openNCR,openNCR>0?'#EF4444':'#10B981',critNCR+' critical')}
+    ${kpi('Gross Profit',fmtKWD(rev-cost),rev-cost>=0?'#C9A84C':'#EF4444',rev>0?(((rev-cost)/rev*100).toFixed(1)+'% margin'):'')}
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="sec-head"><div class="sec-title"><span>🏗</span>Project EVM Status</div></div>
+      <table><thead><tr><th>Project</th><th>%</th><th>CPI</th><th>SPI</th><th>EAC (KWD)</th><th>Status</th></tr></thead><tbody>
+      ${projs.filter(p=>p.status==='active').map(p=>{
+        const eac=p.cpi?Number(p.ac)+(Number(p.bac)-Number(p.ev))/Number(p.cpi):Number(p.bac);
+        return`<tr>
+          <td><div style="font-size:11px;font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name.split('—')[0].trim())}</div><div style="color:var(--muted);font-size:9px">${esc(p.project_no)}</div></td>
+          <td><span style="font-weight:700;font-size:11px">${p.pct}%</span><div class="evm-bar-bg"><div class="evm-bar-fill" style="width:${p.pct}%;background:${Number(p.pct)>=75?'#10B981':Number(p.pct)>=40?'#F97316':'#EF4444'}"></div></div></td>
+          <td style="font-weight:800;color:${cpiColor(p.cpi)}">${Number(p.cpi).toFixed(2)}</td>
+          <td style="font-weight:800;color:${cpiColor(p.spi)}">${Number(p.spi).toFixed(2)}</td>
+          <td style="font-size:11px">${fmtKWD(eac)}</td>
+          <td>${pill(p.status)}</td>
+        </tr>`;
+      }).join('')}
+      </tbody></table>
+    </div>
+    <div class="card">
+      <div class="sec-head"><div class="sec-title"><span>⚡</span>Approval Queue</div></div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        ${wfs.slice(0,6).map(w=>`
+        <div style="background:var(--card);border:1px solid ${w.status==='overdue'?'#EF444466':'var(--bdr)'};border-radius:8px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="color:var(--gold);font-size:11px;font-weight:700">${esc(w.ref_no)}</div>
+            <div style="color:var(--muted);font-size:10px">${esc(w.current_step)}</div>
+          </div>
+          ${pill(w.status)}
+        </div>`).join('')}
+        ${wfs.length===0?'<div class="empty">All approvals cleared ✓</div>':''}
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="sec-head"><div class="sec-title"><span>💰</span>Finance Snapshot</div></div>
+    <div class="grid4">
+      ${kpi('Revenue Collected',fmtKWD(rev),'#10B981','Client invoices paid')}
+      ${kpi('Cost Paid',fmtKWD(cost),'#EF4444','Supplier + subcontractor')}
+      ${kpi('Cash Gross Profit',fmtKWD(rev-cost),'#C9A84C',rev>0?(((rev-cost)/rev*100).toFixed(1)+'% margin'):'')}
+      ${kpi('Outstanding',fmtKWD(outstanding),'#F97316','Pending collection')}
+    </div>
+  </div>`;
 }
 
+// ── BUSINESS DEV ─────────────────────────────────────────────
 async function loadBizdev(){
-  const el=document.getElementById('page-bizdev');el.innerHTML=`<div class="loading">Loading…</div>`;
+  const el=document.getElementById('page-bizdev');
+  el.innerHTML=`<div class="loading">Loading…</div>`;
   const {data:list}=await sb.from('opportunities').select('*').order('created_at',{ascending:false});
-  const opps=list||[],weighted=opps.reduce((s,o)=>s+Number(o.est_value)*o.probability/100,0),active=opps.filter(o=>['proposal','negotiation'].includes(o.status));
-  el.innerHTML=`<div class="page-head"><div class="page-head-left"><span style="font-size:22px">🎯</span><div><h1>Business Development</h1><div class="sub">Opportunities · Pipeline</div></div></div><button class="btn btn-primary btn-sm" onclick="openNewOppModal()">+ New Opportunity</button></div>
-  <div class="grid4">${kpi('Weighted Pipeline',fmtKWD(weighted),'#C9A84C','Probability-adjusted')}${kpi('Active Pursuits',active.length,'#3B82F6','of '+opps.length+' total')}${kpi('Won',opps.filter(o=>o.status==='won').length,'#10B981',fmtKWD(opps.filter(o=>o.status==='won').reduce((s,o)=>s+Number(o.est_value),0)))}${kpi('Avg Win Prob',active.length?Math.round(active.reduce((s,o)=>s+o.probability,0)/active.length)+'%':'—','#8B5CF6')}</div>
-  <div class="card"><div class="sec-head"><div class="sec-title"><span>🎯</span>Opportunity Register</div></div>
-  <table><thead><tr><th>Ref</th><th>Title</th><th>Client</th><th style="text-align:right">Value (KWD)</th><th style="text-align:center">Win%</th><th>Deadline</th><th>Stage</th></tr></thead><tbody>
-  ${opps.map(o=>`<tr><td style="color:var(--gold);font-size:10px">${esc(o.opp_no)}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">${esc(o.title)}</td><td style="color:var(--muted);font-size:11px">${esc(o.client)}</td><td style="text-align:right;font-weight:700">${fmtKWD(o.est_value)}</td><td style="text-align:center;font-weight:800;color:${o.probability>=70?'#10B981':o.probability>=40?'#F97316':'#EF4444'}">${o.probability}%</td><td style="color:var(--muted);font-size:11px">${o.deadline||'—'}</td><td>${pill(o.status)}</td></tr>`).join('')}
-  </tbody></table></div>`;
+  const opps=list||[];
+  const weighted=opps.reduce((s,o)=>s+Number(o.est_value)*o.probability/100,0);
+  const active=opps.filter(o=>['proposal','negotiation'].includes(o.status));
+  el.innerHTML=`
+  <div class="page-head">
+    <div class="page-head-left"><span style="font-size:22px">🎯</span><div><h1>Business Development</h1><div class="sub">Opportunities · Pipeline · Win/Loss</div></div></div>
+    <button class="btn btn-primary btn-sm" onclick="openNewOppModal()">+ New Opportunity</button>
+  </div>
+  <div class="grid4">
+    ${kpi('Weighted Pipeline',fmtKWD(weighted),'#C9A84C','Probability-adjusted')}
+    ${kpi('Active Pursuits',active.length,'#3B82F6','of '+opps.length+' total')}
+    ${kpi('Won',opps.filter(o=>o.status==='won').length,'#10B981',fmtKWD(opps.filter(o=>o.status==='won').reduce((s,o)=>s+Number(o.est_value),0)))}
+    ${kpi('Avg Win Prob',active.length?Math.round(active.reduce((s,o)=>s+o.probability,0)/active.length)+'%':'—','#8B5CF6')}
+  </div>
+  <div class="card">
+    <div class="sec-head"><div class="sec-title"><span>🎯</span>Opportunity Register</div></div>
+    <table><thead><tr><th>Ref</th><th>Title</th><th>Client</th><th>Dept</th><th style="text-align:right">Value (KWD)</th><th style="text-align:center">Win%</th><th>Deadline</th><th style="text-align:center">Stage</th></tr></thead><tbody>
+    ${opps.map(o=>`<tr>
+      <td style="color:var(--gold);font-size:10px">${esc(o.opp_no)}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">${esc(o.title)}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(o.client)}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(o.department)}</td>
+      <td style="text-align:right;font-weight:700">${fmtKWD(o.est_value)}</td>
+      <td style="text-align:center;font-weight:800;color:${o.probability>=70?'#10B981':o.probability>=40?'#F97316':'#EF4444'}">${o.probability}%</td>
+      <td style="color:var(--muted);font-size:11px">${o.deadline||'—'}</td>
+      <td style="text-align:center">${pill(o.status)}</td>
+    </tr>`).join('')}
+    </tbody></table>
+  </div>`;
 }
 
+// ── PROJECTS ─────────────────────────────────────────────────
 async function loadProjects(){
-  const el=document.getElementById('page-projects');el.innerHTML=`<div class="loading">Loading…</div>`;
+  const el=document.getElementById('page-projects');
+  el.innerHTML=`<div class="loading">Loading…</div>`;
   const {data:list}=await sb.from('projects').select('*').order('created_at',{ascending:false});
-  const projs=list||[],totalEV=projs.reduce((s,p)=>s+Number(p.ev),0),totalAC=projs.reduce((s,p)=>s+Number(p.ac),0),totalPV=projs.reduce((s,p)=>s+Number(p.pv),0);
-  const portCPI=totalAC>0?(totalEV/totalAC).toFixed(2):'1.00',portSPI=totalPV>0?(totalEV/totalPV).toFixed(2):'1.00';
-  el.innerHTML=`<div class="page-head"><div class="page-head-left"><span style="font-size:22px">🏗</span><div><h1>Projects</h1><div class="sub">Portfolio · EVM · Cost</div></div></div><button class="btn btn-primary btn-sm" onclick="openNewProjectModal()">+ New Project</button></div>
-  <div class="grid4">${kpi('Portfolio Value',fmtKWD(projs.reduce((s,p)=>s+Number(p.contract_value),0)),'#C9A84C',projs.length+' projects')}${kpi('Active',projs.filter(p=>p.status==='active').length,'#10B981')}${kpi('Portfolio CPI',portCPI,cpiColor(portCPI),'ΣEV/ΣAC')}${kpi('Portfolio SPI',portSPI,cpiColor(portSPI),'ΣEV/ΣPV')}</div>
-  <div class="card"><div class="sec-head"><div class="sec-title"><span>🏗</span>Project Portfolio — EVM View</div></div>
-  <table><thead><tr><th>No</th><th>Project</th><th>Client</th><th>Dept</th><th style="text-align:right">BAC</th><th style="text-align:center">%</th><th style="text-align:right">EV</th><th style="text-align:right">AC</th><th style="text-align:center">CPI</th><th style="text-align:center">SPI</th><th style="text-align:right">EAC</th><th>Status</th></tr></thead><tbody>
-  ${projs.map(p=>{const eac=Number(p.cpi)>0?Number(p.ac)+(Number(p.bac)-Number(p.ev))/Number(p.cpi):Number(p.bac);return`<tr><td style="color:var(--gold);font-size:10px;white-space:nowrap">${esc(p.project_no)}</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:11px">${esc(p.name)}</td><td style="color:var(--muted);font-size:11px">${esc(p.client)}</td><td style="color:var(--muted);font-size:11px">${esc(p.department)}</td><td style="text-align:right;font-size:11px">${fmtKWD(p.bac)}</td><td style="text-align:center"><span style="font-weight:700;font-size:11px">${p.pct}%</span><div class="evm-bar-bg"><div class="evm-bar-fill" style="width:${p.pct}%;background:${Number(p.pct)>=75?'#10B981':Number(p.pct)>=40?'#F97316':'#EF4444'}"></div></div></td><td style="text-align:right;color:var(--muted);font-size:11px">${fmtKWD(p.ev)}</td><td style="text-align:right;color:var(--muted);font-size:11px">${fmtKWD(p.ac)}</td><td style="text-align:center;font-weight:800;color:${cpiColor(p.cpi)}">${Number(p.cpi).toFixed(2)}</td><td style="text-align:center;font-weight:800;color:${cpiColor(p.spi)}">${Number(p.spi).toFixed(2)}</td><td style="text-align:right;font-size:11px">${fmtKWD(eac)}</td><td>${pill(p.status)}</td></tr>`;}).join('')}
-  </tbody></table></div>`;
+  const projs=list||[];
+  const totalEV=projs.reduce((s,p)=>s+Number(p.ev),0);
+  const totalAC=projs.reduce((s,p)=>s+Number(p.ac),0);
+  const totalPV=projs.reduce((s,p)=>s+Number(p.pv),0);
+  const portCPI=totalAC>0?(totalEV/totalAC).toFixed(2):'1.00';
+  const portSPI=totalPV>0?(totalEV/totalPV).toFixed(2):'1.00';
+  el.innerHTML=`
+  <div class="page-head">
+    <div class="page-head-left"><span style="font-size:22px">🏗</span><div><h1>Projects</h1><div class="sub">Portfolio · EVM · Schedule · Cost</div></div></div>
+    <button class="btn btn-primary btn-sm" onclick="openNewProjectModal()">+ New Project</button>
+  </div>
+  <div class="grid4">
+    ${kpi('Portfolio Value',fmtKWD(projs.reduce((s,p)=>s+Number(p.contract_value),0)),'#C9A84C',projs.length+' projects')}
+    ${kpi('Active',projs.filter(p=>p.status==='active').length,'#10B981',projs.filter(p=>p.status==='planning').length+' planning')}
+    ${kpi('Portfolio CPI',portCPI,cpiColor(portCPI),'ΣEV/ΣAC')}
+    ${kpi('Portfolio SPI',portSPI,cpiColor(portSPI),'ΣEV/ΣPV')}
+  </div>
+  <div class="card">
+    <div class="sec-head"><div class="sec-title"><span>🏗</span>Project Portfolio — EVM View</div></div>
+    <table><thead><tr><th>No</th><th>Project</th><th>Client</th><th>Dept</th><th style="text-align:right">BAC</th><th style="text-align:center">%</th><th style="text-align:right">EV</th><th style="text-align:right">AC</th><th style="text-align:center">CPI</th><th style="text-align:center">SPI</th><th style="text-align:right">EAC</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${projs.map(p=>{
+      const eac=Number(p.cpi)>0?Number(p.ac)+(Number(p.bac)-Number(p.ev))/Number(p.cpi):Number(p.bac);
+      return`<tr>
+        <td style="color:var(--gold);font-size:10px;white-space:nowrap">${esc(p.project_no)}</td>
+        <td style="max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:11px" title="${esc(p.name)}">${esc(p.name)}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(p.client)}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(p.department)}</td>
+        <td style="text-align:right;font-size:11px">${fmtKWD(p.bac)}</td>
+        <td style="text-align:center"><span style="font-weight:700;font-size:11px">${p.pct}%</span><div class="evm-bar-bg"><div class="evm-bar-fill" style="width:${p.pct}%;background:${Number(p.pct)>=75?'#10B981':Number(p.pct)>=40?'#F97316':'#EF4444'}"></div></div></td>
+        <td style="text-align:right;color:var(--muted);font-size:11px">${fmtKWD(p.ev)}</td>
+        <td style="text-align:right;color:var(--muted);font-size:11px">${fmtKWD(p.ac)}</td>
+        <td style="text-align:center;font-weight:800;font-size:13px;color:${cpiColor(p.cpi)}">${Number(p.cpi).toFixed(2)}</td>
+        <td style="text-align:center;font-weight:800;font-size:13px;color:${cpiColor(p.spi)}">${Number(p.spi).toFixed(2)}</td>
+        <td style="text-align:right;font-size:11px">${fmtKWD(eac)}</td>
+        <td style="text-align:center">${pill(p.status)}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>
+  </div>`;
 }
 
+// ── PROCUREMENT ──────────────────────────────────────────────
 async function loadProc(tab='vendors'){
-  curProcTab=tab;const el=document.getElementById('page-procurement');el.innerHTML=`<div class="loading">Loading…</div>`;
-  const tabs=`<div class="tabs">${['vendors','rfqs','pos','mrvs'].map((t,i)=>`<button class="tab${t===tab?' act':''}" onclick="loadProc('${t}')">${['🏢 Vendors','📋 RFQs','📦 Purchase Orders','✅ MRVs'][i]}</button>`).join('')}</div>`;
+  curProcTab=tab;
+  const el=document.getElementById('page-procurement');
+  el.innerHTML=`<div class="loading">Loading…</div>`;
+  const tabs=`<div class="tabs">
+    ${['vendors','rfqs','pos','mrvs'].map((t,i)=>`<button class="tab${t===tab?' act':''}" onclick="loadProc('${t}')">${['🏢 Vendors','📋 RFQs','📦 Purchase Orders','✅ MRVs'][i]}</button>`).join('')}
+  </div>`;
+
   let kpis='',body='';
-  if(tab==='vendors'){const {data:L}=await sb.from('vendors').select('*').order('vendor_code');const l=L||[];kpis=kpi('Total',l.length,'#E2E8F0')+kpi('Approved',l.filter(v=>v.is_approved).length,'#10B981')+kpi('Pending',l.filter(v=>!v.is_approved&&v.status!=='blacklisted').length,'#F97316')+kpi('Blacklisted',l.filter(v=>v.status==='blacklisted').length,'#EF4444');body=`<table><thead><tr><th>Code</th><th>Name</th><th>Category</th><th>Score</th><th>Approved</th><th>Status</th></tr></thead><tbody>${l.map(v=>`<tr><td style="color:var(--gold);font-size:10px">${esc(v.vendor_code)}</td><td style="font-weight:600">${esc(v.name)}</td><td style="color:var(--muted);font-size:11px">${esc(v.category)}</td><td style="font-weight:700;color:${Number(v.perf_score||0)>=8?'#10B981':'#94A3B8'}">${v.perf_score||'N/A'}</td><td>${pill(v.is_approved?'Approved':'Pending',v.is_approved?'#10B981':'#F97316')}</td><td>${pill(v.status)}</td></tr>`).join('')}</tbody></table>`;}
-  else if(tab==='rfqs'){const {data:L}=await sb.from('rfqs').select('*,project:projects(project_no)').order('created_at',{ascending:false});const l=L||[];kpis=kpi('Total',l.length,'#E2E8F0')+kpi('Draft',l.filter(r=>r.status==='draft').length,'#94A3B8')+kpi('Submitted',l.filter(r=>r.status==='submitted').length,'#3B82F6')+kpi('Awarded',l.filter(r=>r.status==='awarded').length,'#10B981');body=`<table><thead><tr><th>No</th><th>Title</th><th>Project</th><th style="text-align:right">Budget</th><th>Closing</th><th>Status</th></tr></thead><tbody>${l.map(r=>`<tr><td style="color:var(--gold);font-size:10px">${esc(r.rfq_no)}</td><td style="font-weight:600;font-size:11px">${esc(r.title)}</td><td style="color:var(--muted);font-size:11px">${esc(r.project?.project_no||'—')}</td><td style="text-align:right">${fmtKWD(r.budget)}</td><td style="color:var(--muted);font-size:11px">${r.close_date||'—'}</td><td>${pill(r.status)}</td></tr>`).join('')}</tbody></table>`;}
-  else if(tab==='pos'){const {data:L}=await sb.from('purchase_orders').select('*,project:projects(project_no),vendor:vendors(name)').order('created_at',{ascending:false});const l=L||[];kpis=kpi('Total POs',l.length,'#E2E8F0')+kpi('Pending',l.filter(p=>p.status&&p.status.includes('approval')).length,'#F97316')+kpi('Issued',l.filter(p=>p.status==='issued').length,'#10B981')+kpi('Total Value',fmtKWD(l.reduce((s,p)=>s+Number(p.total_value),0)),'#C9A84C');body=`<table><thead><tr><th>No</th><th>Project</th><th>Vendor</th><th style="text-align:right">Value</th><th>Date</th><th>Status</th></tr></thead><tbody>${l.map(p=>`<tr><td style="color:var(--gold);font-size:10px">${esc(p.po_no)}</td><td style="color:var(--muted);font-size:11px">${esc(p.project?.project_no||'—')}</td><td style="font-weight:600;font-size:11px">${esc(p.vendor?.name||'—')}</td><td style="text-align:right;font-weight:700">${fmtKWD(p.total_value)}</td><td style="color:var(--muted);font-size:11px">${p.issue_date||'—'}</td><td>${pill(p.status)}</td></tr>`).join('')}</tbody></table>`;}
-  else{const {data:L}=await sb.from('mrvs').select('*,project:projects(project_no),vendor:vendors(name)').order('received_date',{ascending:false});const l=L||[];kpis=kpi('Total MRVs',l.length,'#E2E8F0')+kpi('Good',l.filter(m=>m.condition==='good').length,'#10B981')+kpi('Partial/Damaged',l.filter(m=>m.condition&&m.condition!=='good').length,'#F97316')+kpi('This Month',l.filter(m=>m.received_date&&m.received_date.startsWith('2026-08')).length,'#3B82F6');body=`<table><thead><tr><th>No</th><th>Project</th><th>Vendor</th><th>Date</th><th>Condition</th><th>Notes</th></tr></thead><tbody>${l.map(m=>`<tr><td style="color:var(--gold);font-size:10px">${esc(m.mrv_no)}</td><td style="color:var(--muted);font-size:11px">${esc(m.project?.project_no||'—')}</td><td style="font-weight:600;font-size:11px">${esc(m.vendor?.name||'—')}</td><td style="color:var(--muted);font-size:11px">${m.received_date||'—'}</td><td>${pill(m.condition)}</td><td style="color:var(--muted);font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.notes||'')}</td></tr>`).join('')}</tbody></table>`;}
-  el.innerHTML=`<div class="page-head"><div class="page-head-left"><span style="font-size:22px">📦</span><div><h1>Procurement</h1><div class="sub">Vendors · RFQ · POs · MRV</div></div></div></div><div class="grid4">${kpis}</div><div class="card">${tabs}${body}</div>`;
+  if(tab==='vendors'){
+    const {data:list}=await sb.from('vendors').select('*').order('vendor_code');
+    const L=list||[];
+    kpis=kpi('Total Vendors',L.length,'#E2E8F0')+kpi('Approved',L.filter(v=>v.is_approved).length,'#10B981')+kpi('Pending',L.filter(v=>!v.is_approved&&v.status!=='blacklisted').length,'#F97316')+kpi('Blacklisted',L.filter(v=>v.status==='blacklisted').length,'#EF4444');
+    body=`<table><thead><tr><th>Code</th><th>Name</th><th>Category</th><th style="text-align:center">Score</th><th style="text-align:center">Approved</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${L.map(v=>`<tr><td style="color:var(--gold);font-size:10px">${esc(v.vendor_code)}</td><td style="font-weight:600">${esc(v.name)}</td><td style="color:var(--muted);font-size:11px">${esc(v.category)}</td><td style="text-align:center;font-weight:700;color:${Number(v.perf_score||0)>=8?'#10B981':'#94A3B8'}">${v.perf_score||'N/A'}</td><td style="text-align:center">${pill(v.is_approved?'Approved':'Pending',v.is_approved?'#10B981':'#F97316')}</td><td style="text-align:center">${pill(v.status)}</td></tr>`).join('')}
+    </tbody></table>`;
+  } else if(tab==='rfqs'){
+    const {data:list}=await sb.from('rfqs').select('*,project:projects(project_no)').order('created_at',{ascending:false});
+    const L=list||[];
+    kpis=kpi('Total RFQs',L.length,'#E2E8F0')+kpi('Draft',L.filter(r=>r.status==='draft').length,'#94A3B8')+kpi('Submitted',L.filter(r=>r.status==='submitted').length,'#3B82F6')+kpi('Awarded',L.filter(r=>r.status==='awarded').length,'#10B981');
+    body=`<table><thead><tr><th>No</th><th>Title</th><th>Project</th><th style="text-align:right">Budget (KWD)</th><th>Closing</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${L.map(r=>`<tr><td style="color:var(--gold);font-size:10px">${esc(r.rfq_no)}</td><td style="font-weight:600;font-size:11px">${esc(r.title)}</td><td style="color:var(--muted);font-size:11px">${esc(r.project?.project_no||'—')}</td><td style="text-align:right">${fmtKWD(r.budget)}</td><td style="color:var(--muted);font-size:11px">${r.close_date||'—'}</td><td style="text-align:center">${pill(r.status)}</td></tr>`).join('')}
+    </tbody></table>`;
+  } else if(tab==='pos'){
+    const {data:list}=await sb.from('purchase_orders').select('*,project:projects(project_no),vendor:vendors(name)').order('created_at',{ascending:false});
+    const L=list||[];
+    const pending=L.filter(p=>p.status&&p.status.includes('approval'));
+    kpis=kpi('Total POs',L.length,'#E2E8F0')+kpi('Pending Approval',pending.length,'#F97316')+kpi('Issued',L.filter(p=>p.status==='issued').length,'#10B981')+kpi('Total Value',fmtKWD(L.reduce((s,p)=>s+Number(p.total_value),0)),'#C9A84C');
+    body=`<table><thead><tr><th>No</th><th>Project</th><th>Vendor</th><th style="text-align:right">Value (KWD)</th><th>Date</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${L.map(p=>`<tr><td style="color:var(--gold);font-size:10px">${esc(p.po_no)}</td><td style="color:var(--muted);font-size:11px">${esc(p.project?.project_no||'—')}</td><td style="font-weight:600;font-size:11px">${esc(p.vendor?.name||'—')}</td><td style="text-align:right;font-weight:700">${fmtKWD(p.total_value)}</td><td style="color:var(--muted);font-size:11px">${p.issue_date||'—'}</td><td style="text-align:center">${pill(p.status)}</td></tr>`).join('')}
+    </tbody></table>`;
+  } else {
+    const {data:list}=await sb.from('mrvs').select('*,project:projects(project_no),vendor:vendors(name)').order('received_date',{ascending:false});
+    const L=list||[];
+    kpis=kpi('Total MRVs',L.length,'#E2E8F0')+kpi('Good',L.filter(m=>m.condition==='good').length,'#10B981')+kpi('Partial/Damaged',L.filter(m=>m.condition&&m.condition!=='good').length,'#F97316')+kpi('This Month',L.filter(m=>m.received_date&&m.received_date.startsWith('2026-08')).length,'#3B82F6');
+    body=`<table><thead><tr><th>No</th><th>Project</th><th>Vendor</th><th>Date</th><th style="text-align:center">Condition</th><th>Notes</th></tr></thead><tbody>
+    ${L.map(m=>`<tr><td style="color:var(--gold);font-size:10px">${esc(m.mrv_no)}</td><td style="color:var(--muted);font-size:11px">${esc(m.project?.project_no||'—')}</td><td style="font-weight:600;font-size:11px">${esc(m.vendor?.name||'—')}</td><td style="color:var(--muted);font-size:11px">${m.received_date||'—'}</td><td style="text-align:center">${pill(m.condition)}</td><td style="color:var(--muted);font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.notes||'')}</td></tr>`).join('')}
+    </tbody></table>`;
+  }
+
+  el.innerHTML=`
+  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">📦</span><div><h1>Procurement</h1><div class="sub">Vendors · RFQ · Purchase Orders · MRV</div></div></div></div>
+  <div class="grid4">${kpis}</div>
+  <div class="card">${tabs}${body}</div>`;
 }
 
+// ── FINANCE ──────────────────────────────────────────────────
 async function loadFinance(){
-  const el=document.getElementById('page-finance');el.innerHTML=`<div class="loading">Loading…</div>`;
+  const el=document.getElementById('page-finance');
+  el.innerHTML=`<div class="loading">Loading…</div>`;
   const {data:list}=await sb.from('invoices').select('*,project:projects(project_no)').order('created_at',{ascending:false});
-  const L=list||[],rev=L.filter(i=>i.invoice_type==='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0),cost=L.filter(i=>i.invoice_type!=='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0),outstanding=L.filter(i=>i.status!=='paid'&&i.status!=='cancelled').reduce((s,i)=>s+Number(i.net_amount),0),today=new Date();
-  el.innerHTML=`<div class="page-head"><div class="page-head-left"><span style="font-size:22px">💰</span><div><h1>Finance</h1><div class="sub">Invoices · Revenue · Cost</div></div></div><button class="btn btn-primary btn-sm" onclick="openNewInvoiceModal()">+ New Invoice</button></div>
-  <div class="grid4">${kpi('Revenue Collected',fmtKWD(rev),'#10B981')}${kpi('Cost Paid',fmtKWD(cost),'#EF4444')}${kpi('Gross Profit',fmtKWD(rev-cost),rev-cost>=0?'#C9A84C':'#EF4444',rev>0?(((rev-cost)/rev*100).toFixed(1)+'% margin'):'')}${kpi('Outstanding',fmtKWD(outstanding),'#F97316')}</div>
-  <div class="card"><div class="sec-head"><div class="sec-title"><span>📄</span>Invoice Register</div></div>
-  <table><thead><tr><th>Invoice No</th><th>Project</th><th>Type</th><th style="text-align:right">Gross</th><th>Ret%</th><th style="text-align:right">Net (KWD)</th><th>Due</th><th>Status</th></tr></thead><tbody>
-  ${L.map(i=>{const ov=i.due_date&&new Date(i.due_date)<today&&i.status!=='paid';return`<tr><td style="color:var(--gold);font-size:10px;white-space:nowrap">${esc(i.invoice_no)}</td><td style="color:var(--muted);font-size:11px">${esc(i.project?.project_no||'—')}</td><td>${pill(i.invoice_type,i.invoice_type==='client'?'#10B981':i.invoice_type==='supplier'?'#F97316':'#8B5CF6')}</td><td style="text-align:right;color:var(--muted)">${fmtKWD(i.gross_amount)}</td><td style="color:var(--muted)">${i.retention_pct}%</td><td style="text-align:right;font-weight:800;color:var(--gold)">${fmtKWD(i.net_amount)}</td><td style="color:${ov?'#EF4444':'#94A3B8'};font-size:11px">${i.due_date||'—'}${ov?' ⚠️':''}</td><td>${pill(i.status)}</td></tr>`;}).join('')}
-  </tbody></table></div>`;
+  const L=list||[];
+  const rev=L.filter(i=>i.invoice_type==='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+  const cost=L.filter(i=>i.invoice_type!=='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+  const outstanding=L.filter(i=>i.status!=='paid'&&i.status!=='cancelled').reduce((s,i)=>s+Number(i.net_amount),0);
+  const today=new Date();
+  el.innerHTML=`
+  <div class="page-head">
+    <div class="page-head-left"><span style="font-size:22px">💰</span><div><h1>Finance</h1><div class="sub">Invoices · Revenue · Cost · Cash Flow</div></div></div>
+    <button class="btn btn-primary btn-sm" onclick="openNewInvoiceModal()">+ New Invoice</button>
+  </div>
+  <div class="grid4">
+    ${kpi('Revenue Collected',fmtKWD(rev),'#10B981','Client invoices paid')}
+    ${kpi('Cost Paid',fmtKWD(cost),'#EF4444','Supplier + sub paid')}
+    ${kpi('Cash Gross Profit',fmtKWD(rev-cost),rev-cost>=0?'#C9A84C':'#EF4444',rev>0?(((rev-cost)/rev*100).toFixed(1)+'% margin'):'')}
+    ${kpi('Outstanding',fmtKWD(outstanding),'#F97316','Pending collection')}
+  </div>
+  <div class="card">
+    <div class="sec-head"><div class="sec-title"><span>📄</span>Invoice Register</div></div>
+    <table><thead><tr><th>Invoice No</th><th>Project</th><th style="text-align:center">Type</th><th style="text-align:right">Gross</th><th style="text-align:center">Ret%</th><th style="text-align:right">Net (KWD)</th><th>Due Date</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${L.map(i=>{
+      const ov=i.due_date&&new Date(i.due_date)<today&&i.status!=='paid';
+      return`<tr>
+        <td style="color:var(--gold);font-size:10px;white-space:nowrap">${esc(i.invoice_no)}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(i.project?.project_no||'—')}</td>
+        <td style="text-align:center">${pill(i.invoice_type,i.invoice_type==='client'?'#10B981':i.invoice_type==='supplier'?'#F97316':'#8B5CF6')}</td>
+        <td style="text-align:right;color:var(--muted)">${fmtKWD(i.gross_amount)}</td>
+        <td style="text-align:center;color:var(--muted)">${i.retention_pct}%</td>
+        <td style="text-align:right;font-weight:800;color:var(--gold)">${fmtKWD(i.net_amount)}</td>
+        <td style="color:${ov?'#EF4444':'#94A3B8'};font-size:11px">${i.due_date||'—'}${ov?' ⚠️':''}</td>
+        <td style="text-align:center">${pill(i.status)}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>
+  </div>`;
 }
 
+// ── HR ───────────────────────────────────────────────────────
 async function loadHR(tab='employees'){
-  curHRTab=tab;const el=document.getElementById('page-hr');el.innerHTML=`<div class="loading">Loading…</div>`;
-  const tabs=`<div class="tabs"><button class="tab${tab==='employees'?' act':''}" onclick="loadHR('employees')">👥 Employees</button><button class="tab${tab==='leave'?' act':''}" onclick="loadHR('leave')">🏖 Leave</button></div>`;
+  curHRTab=tab;
+  const el=document.getElementById('page-hr');
+  el.innerHTML=`<div class="loading">Loading…</div>`;
+  const tabs=`<div class="tabs">
+    <button class="tab${tab==='employees'?' act':''}" onclick="loadHR('employees')">👥 Employees</button>
+    <button class="tab${tab==='leave'?' act':''}" onclick="loadHR('leave')">🏖 Leave Requests</button>
+  </div>`;
   let kpis='',body='';
-  if(tab==='employees'){const {data:L}=await sb.from('employees').select('*').order('employee_no');const l=L||[];kpis=kpi('Total Staff',l.length,'#E2E8F0')+kpi('Active',l.filter(e=>e.status==='active').length,'#10B981')+kpi('Departments',[...new Set(l.map(e=>e.department))].length,'#3B82F6')+kpi('Full Time',l.filter(e=>e.employment_type==='full_time').length,'#8B5CF6');body=`<table><thead><tr><th>No</th><th>Name</th><th>Dept</th><th>Title</th><th>Join Date</th><th>Status</th></tr></thead><tbody>${l.map(e=>`<tr><td style="color:var(--gold);font-size:10px">${esc(e.employee_no)}</td><td style="font-weight:700">${esc(e.full_name)}</td><td style="color:var(--muted);font-size:11px">${esc(e.department)}</td><td style="color:var(--muted);font-size:11px">${esc(e.job_title)}</td><td style="color:var(--muted);font-size:11px">${e.join_date}</td><td>${pill(e.status)}</td></tr>`).join('')}</tbody></table>`;}
-  else{const {data:L}=await sb.from('leave_requests').select('*,employee:employees(full_name)').order('created_at',{ascending:false});const l=L||[];kpis=kpi('Requests',l.length,'#E2E8F0')+kpi('Approved',l.filter(x=>x.status==='approved').length,'#10B981')+kpi('Pending',l.filter(x=>x.status==='pending').length,'#F97316')+kpi('Days Approved',l.filter(x=>x.status==='approved').reduce((s,x)=>s+x.days,0),'#3B82F6');body=`<table><thead><tr><th>Employee</th><th>Type</th><th>Start</th><th>End</th><th>Days</th><th>Reason</th><th>Status</th></tr></thead><tbody>${l.map(x=>`<tr><td style="font-weight:700;font-size:11px">${esc(x.employee?.full_name||'—')}</td><td>${pill(x.leave_type)}</td><td style="color:var(--muted);font-size:11px">${x.start_date}</td><td style="color:var(--muted);font-size:11px">${x.end_date}</td><td style="font-weight:700">${x.days}</td><td style="color:var(--muted);font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.reason||'')}</td><td>${pill(x.status)}</td></tr>`).join('')}</tbody></table>`;}
-  el.innerHTML=`<div class="page-head"><div class="page-head-left"><span style="font-size:22px">👥</span><div><h1>Human Resources</h1><div class="sub">Employees · Leave</div></div></div></div><div class="grid4">${kpis}</div><div class="card">${tabs}${body}</div>`;
+  if(tab==='employees'){
+    const {data:list}=await sb.from('employees').select('*').order('employee_no');
+    const L=list||[];
+    const depts=[...new Set(L.map(e=>e.department))];
+    kpis=kpi('Total Staff',L.length,'#E2E8F0')+kpi('Active',L.filter(e=>e.status==='active').length,'#10B981')+kpi('Departments',depts.length,'#3B82F6')+kpi('Full Time',L.filter(e=>e.employment_type==='full_time').length,'#8B5CF6');
+    body=`<table><thead><tr><th>No</th><th>Name</th><th>Department</th><th>Title</th><th>Join Date</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${L.map(e=>`<tr><td style="color:var(--gold);font-size:10px">${esc(e.employee_no)}</td><td style="font-weight:700">${esc(e.full_name)}</td><td style="color:var(--muted);font-size:11px">${esc(e.department)}</td><td style="color:var(--muted);font-size:11px">${esc(e.job_title)}</td><td style="color:var(--muted);font-size:11px">${e.join_date}</td><td style="text-align:center">${pill(e.status)}</td></tr>`).join('')}
+    </tbody></table>`;
+  } else {
+    const {data:list}=await sb.from('leave_requests').select('*,employee:employees(full_name)').order('created_at',{ascending:false});
+    const L=list||[];
+    kpis=kpi('Requests',L.length,'#E2E8F0')+kpi('Approved',L.filter(l=>l.status==='approved').length,'#10B981')+kpi('Pending',L.filter(l=>l.status==='pending').length,'#F97316')+kpi('Days Approved',L.filter(l=>l.status==='approved').reduce((s,l)=>s+l.days,0),'#3B82F6');
+    body=`<table><thead><tr><th>Employee</th><th>Type</th><th>Start</th><th>End</th><th style="text-align:center">Days</th><th>Reason</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${L.map(l=>`<tr><td style="font-weight:700;font-size:11px">${esc(l.employee?.full_name||'—')}</td><td>${pill(l.leave_type)}</td><td style="color:var(--muted);font-size:11px">${l.start_date}</td><td style="color:var(--muted);font-size:11px">${l.end_date}</td><td style="text-align:center;font-weight:700">${l.days}</td><td style="color:var(--muted);font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.reason||'')}</td><td style="text-align:center">${pill(l.status)}</td></tr>`).join('')}
+    </tbody></table>`;
+  }
+  el.innerHTML=`
+  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">👥</span><div><h1>Human Resources</h1><div class="sub">Employees · Leave Requests</div></div></div></div>
+  <div class="grid4">${kpis}</div>
+  <div class="card">${tabs}${body}</div>`;
 }
 
+// ── QHSE ─────────────────────────────────────────────────────
 async function loadQHSE(tab='ncrs'){
-  curQHSETab=tab;const el=document.getElementById('page-qhse');el.innerHTML=`<div class="loading">Loading…</div>`;
-  const tabs=`<div class="tabs"><button class="tab${tab==='ncrs'?' act':''}" onclick="loadQHSE('ncrs')">📋 NCRs</button><button class="tab${tab==='incidents'?' act':''}" onclick="loadQHSE('incidents')">⚠️ Incidents</button><button class="tab${tab==='itps'?' act':''}" onclick="loadQHSE('itps')">📋 ITP</button></div>`;
+  curQHSETab=tab;
+  const el=document.getElementById('page-qhse');
+  el.innerHTML=`<div class="loading">Loading…</div>`;
+  const tabs=`<div class="tabs">
+    <button class="tab${tab==='ncrs'?' act':''}" onclick="loadQHSE('ncrs')">📋 NCRs</button>
+    <button class="tab${tab==='incidents'?' act':''}" onclick="loadQHSE('incidents')">⚠️ Incidents</button>
+    <button class="tab${tab==='itps'?' act':''}" onclick="loadQHSE('itps')">📋 ITP</button>
+  </div>`;
   let kpis='',body='';
-  if(tab==='ncrs'){const {data:L}=await sb.from('ncrs').select('*,project:projects(project_no)').order('raised_date',{ascending:false});const l=L||[];kpis=kpi('Total',l.length,'#E2E8F0')+kpi('Open',l.filter(n=>n.status==='open').length,'#EF4444')+kpi('Critical',l.filter(n=>n.severity==='critical'&&n.status==='open').length,'#EF4444')+kpi('Closed',l.filter(n=>n.status==='closed').length,'#10B981');body=`<table><thead><tr><th>No</th><th>Title</th><th>Project</th><th>Severity</th><th>Raised</th><th>Status</th></tr></thead><tbody>${l.map(n=>`<tr><td style="color:var(--gold);font-size:10px">${esc(n.ncr_no)}</td><td style="font-weight:600;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(n.title)}</td><td style="color:var(--muted);font-size:11px">${esc(n.project?.project_no||'—')}</td><td>${pill(n.severity)}</td><td style="color:var(--muted);font-size:11px">${n.raised_date}</td><td>${pill(n.status)}</td></tr>`).join('')}</tbody></table>`;}
-  else if(tab==='incidents'){const {data:L}=await sb.from('incidents').select('*,project:projects(project_no)').order('incident_date',{ascending:false});const l=L||[];kpis=kpi('Total',l.length,'#E2E8F0')+kpi('Open',l.filter(h=>h.status==='open').length,'#EF4444')+kpi('Near Miss',l.filter(h=>h.incident_type==='near_miss').length,'#F97316')+kpi('First Aid',l.filter(h=>h.incident_type==='first_aid').length,'#EF4444');body=`<table><thead><tr><th>No</th><th>Description</th><th>Project</th><th>Type</th><th>Date</th><th>Severity</th><th>Status</th></tr></thead><tbody>${l.map(h=>`<tr><td style="color:var(--gold);font-size:10px">${esc(h.incident_no)}</td><td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(h.description)}</td><td style="color:var(--muted);font-size:11px">${esc(h.project?.project_no||'—')}</td><td>${pill(h.incident_type)}</td><td style="color:var(--muted);font-size:11px">${h.incident_date}</td><td>${pill(h.severity)}</td><td>${pill(h.status)}</td></tr>`).join('')}</tbody></table>`;}
-  else{const {data:L}=await sb.from('itps').select('*,project:projects(project_no)').order('inspection_date',{ascending:false});const l=L||[];kpis=kpi('Total',l.length,'#E2E8F0')+kpi('Approved',l.filter(t=>t.status==='approved').length,'#10B981')+kpi('In Progress',l.filter(t=>t.status==='in_progress').length,'#F97316')+kpi('Pending',l.filter(t=>t.status==='pending').length,'#94A3B8');body=`<table><thead><tr><th>No</th><th>Title</th><th>Project</th><th>Discipline</th><th>Date</th><th>Status</th></tr></thead><tbody>${l.map(t=>`<tr><td style="color:var(--gold);font-size:10px">${esc(t.itp_no)}</td><td style="font-weight:600;font-size:11px">${esc(t.title)}</td><td style="color:var(--muted);font-size:11px">${esc(t.project?.project_no||'—')}</td><td style="color:var(--muted);font-size:11px">${esc(t.discipline)}</td><td style="color:var(--muted);font-size:11px">${t.inspection_date||'—'}</td><td>${pill(t.status)}</td></tr>`).join('')}</tbody></table>`;}
-  el.innerHTML=`<div class="page-head"><div class="page-head-left"><span style="font-size:22px">🛡</span><div><h1>QHSE</h1><div class="sub">NCRs · Incidents · ITP</div></div></div></div><div class="grid4">${kpis}</div><div class="card">${tabs}${body}</div>`;
+  if(tab==='ncrs'){
+    const {data:list}=await sb.from('ncrs').select('*,project:projects(project_no)').order('raised_date',{ascending:false});
+    const L=list||[];
+    kpis=kpi('Total NCRs',L.length,'#E2E8F0')+kpi('Open',L.filter(n=>n.status==='open').length,'#EF4444')+kpi('Critical',L.filter(n=>n.severity==='critical'&&n.status==='open').length,'#EF4444','Immediate action')+kpi('Closed',L.filter(n=>n.status==='closed').length,'#10B981');
+    body=`<table><thead><tr><th>NCR No</th><th>Title</th><th>Project</th><th style="text-align:center">Severity</th><th>Raised</th><th>Root Cause</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${L.map(n=>`<tr><td style="color:var(--gold);font-size:10px">${esc(n.ncr_no)}</td><td style="font-weight:600;font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(n.title)}</td><td style="color:var(--muted);font-size:11px">${esc(n.project?.project_no||'—')}</td><td style="text-align:center">${pill(n.severity)}</td><td style="color:var(--muted);font-size:11px">${n.raised_date}</td><td style="color:var(--muted);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(n.root_cause||'')}</td><td style="text-align:center">${pill(n.status)}</td></tr>`).join('')}
+    </tbody></table>`;
+  } else if(tab==='incidents'){
+    const {data:list}=await sb.from('incidents').select('*,project:projects(project_no)').order('incident_date',{ascending:false});
+    const L=list||[];
+    kpis=kpi('Total',L.length,'#E2E8F0')+kpi('Open',L.filter(h=>h.status==='open').length,'#EF4444')+kpi('Near Miss',L.filter(h=>h.incident_type==='near_miss').length,'#F97316')+kpi('First Aid',L.filter(h=>h.incident_type==='first_aid').length,'#EF4444');
+    body=`<table><thead><tr><th>No</th><th>Description</th><th>Project</th><th style="text-align:center">Type</th><th>Date</th><th style="text-align:center">Severity</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${L.map(h=>`<tr><td style="color:var(--gold);font-size:10px">${esc(h.incident_no)}</td><td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(h.description)}</td><td style="color:var(--muted);font-size:11px">${esc(h.project?.project_no||'—')}</td><td style="text-align:center">${pill(h.incident_type)}</td><td style="color:var(--muted);font-size:11px">${h.incident_date}</td><td style="text-align:center">${pill(h.severity)}</td><td style="text-align:center">${pill(h.status)}</td></tr>`).join('')}
+    </tbody></table>`;
+  } else {
+    const {data:list}=await sb.from('itps').select('*,project:projects(project_no)').order('inspection_date',{ascending:false});
+    const L=list||[];
+    kpis=kpi('Total ITPs',L.length,'#E2E8F0')+kpi('Approved',L.filter(t=>t.status==='approved').length,'#10B981')+kpi('In Progress',L.filter(t=>t.status==='in_progress').length,'#F97316')+kpi('Pending',L.filter(t=>t.status==='pending').length,'#94A3B8');
+    body=`<table><thead><tr><th>ITP No</th><th>Title</th><th>Project</th><th>Discipline</th><th>Hold Point</th><th>Date</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${L.map(t=>`<tr><td style="color:var(--gold);font-size:10px">${esc(t.itp_no)}</td><td style="font-weight:600;font-size:11px">${esc(t.title)}</td><td style="color:var(--muted);font-size:11px">${esc(t.project?.project_no||'—')}</td><td style="color:var(--muted);font-size:11px">${esc(t.discipline)}</td><td style="color:var(--muted);font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.hold_point||'')}</td><td style="color:var(--muted);font-size:11px">${t.inspection_date||'—'}</td><td style="text-align:center">${pill(t.status)}</td></tr>`).join('')}
+    </tbody></table>`;
+  }
+  el.innerHTML=`
+  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">🛡</span><div><h1>QHSE</h1><div class="sub">NCRs · Incidents · Inspection Test Plans</div></div></div></div>
+  <div class="grid4">${kpis}</div>
+  <div class="card">${tabs}${body}</div>`;
 }
 
+// ── DOCUMENTS ────────────────────────────────────────────────
 async function loadDocs(tab='documents'){
-  curDocTab=tab;const el=document.getElementById('page-documents');el.innerHTML=`<div class="loading">Loading…</div>`;
-  const tabs=`<div class="tabs"><button class="tab${tab==='documents'?' act':''}" onclick="loadDocs('documents')">📄 Documents</button><button class="tab${tab==='submittals'?' act':''}" onclick="loadDocs('submittals')">📤 Submittals</button><button class="tab${tab==='rfis'?' act':''}" onclick="loadDocs('rfis')">❓ RFIs</button></div>`;
-  const today=new Date();let kpis='',body='';
-  if(tab==='documents'){const {data:L}=await sb.from('documents').select('*,project:projects(project_no)').order('created_at',{ascending:false});const l=L||[];kpis=kpi('Total',l.length,'#E2E8F0')+kpi('Approved',l.filter(d=>d.status==='approved').length,'#10B981')+kpi('Under Review',l.filter(d=>d.status==='under_review').length,'#F97316')+kpi('Drawings',l.filter(d=>d.category==='Drawing').length,'#3B82F6');body=`<table><thead><tr><th>No</th><th>Title</th><th>Project</th><th>Category</th><th>Rev</th><th>Date</th><th>Status</th></tr></thead><tbody>${l.map(d=>`<tr><td style="color:var(--gold);font-size:10px">${esc(d.doc_no)}</td><td style="font-weight:600;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.title)}</td><td style="color:var(--muted);font-size:11px">${esc(d.project?.project_no||'—')}</td><td style="color:var(--muted);font-size:11px">${esc(d.category)}</td><td style="font-weight:700">${esc(d.revision)}</td><td style="color:var(--muted);font-size:11px">${d.issue_date||'—'}</td><td>${pill(d.status)}</td></tr>`).join('')}</tbody></table>`;}
-  else if(tab==='submittals'){const {data:L}=await sb.from('submittals').select('*,project:projects(project_no)').order('submitted_date',{ascending:false});const l=L||[];kpis=kpi('Total',l.length,'#E2E8F0')+kpi('Approved',l.filter(s=>s.status==='approved').length,'#10B981')+kpi('Under Review',l.filter(s=>s.status==='under_review').length,'#F97316')+kpi('Overdue',l.filter(s=>s.response_due&&!s.responded_date&&new Date(s.response_due)<today).length,'#EF4444');body=`<table><thead><tr><th>No</th><th>Title</th><th>Project</th><th>Submitted</th><th>Due</th><th>Status</th></tr></thead><tbody>${l.map(s=>{const ov=s.response_due&&!s.responded_date&&new Date(s.response_due)<today;return`<tr><td style="color:var(--gold);font-size:10px">${esc(s.submittal_no)}</td><td style="font-weight:600;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.title)}</td><td style="color:var(--muted);font-size:11px">${esc(s.project?.project_no||'—')}</td><td style="color:var(--muted);font-size:11px">${s.submitted_date}</td><td style="color:${ov?'#EF4444':'#94A3B8'};font-size:11px">${s.response_due||'—'}${ov?' ⚠️':''}</td><td>${pill(s.status)}</td></tr>`;}).join('')}</tbody></table>`;}
-  else{const {data:L}=await sb.from('rfis').select('*,project:projects(project_no)').order('raised_date',{ascending:false});const l=L||[];kpis=kpi('Total',l.length,'#E2E8F0')+kpi('Open',l.filter(r=>r.status==='open').length,'#F97316')+kpi('Cost Impact',l.filter(r=>r.has_cost_impact).length,'#EF4444')+kpi('Answered',l.filter(r=>r.status==='answered').length,'#10B981');body=`<table><thead><tr><th>No</th><th>Subject</th><th>Project</th><th>Raised</th><th>Due</th><th>Cost</th><th>Status</th></tr></thead><tbody>${l.map(r=>{const ov=r.response_due&&r.status==='open'&&new Date(r.response_due)<today;return`<tr><td style="color:var(--gold);font-size:10px">${esc(r.rfi_no)}</td><td style="font-weight:600;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.subject)}</td><td style="color:var(--muted);font-size:11px">${esc(r.project?.project_no||'—')}</td><td style="color:var(--muted);font-size:11px">${r.raised_date}</td><td style="color:${ov?'#EF4444':'#94A3B8'};font-size:11px">${r.response_due||'—'}${ov?' ⚠️':''}</td><td>${r.has_cost_impact?pill('Cost','#EF4444'):pill('None','#475569')}</td><td>${pill(r.status)}</td></tr>`;}).join('')}</tbody></table>`;}
-  el.innerHTML=`<div class="page-head"><div class="page-head-left"><span style="font-size:22px">📄</span><div><h1>Document Control</h1><div class="sub">Documents · Submittals · RFIs</div></div></div></div><div class="grid4">${kpis}</div><div class="card">${tabs}${body}</div>`;
+  curDocTab=tab;
+  const el=document.getElementById('page-documents');
+  el.innerHTML=`<div class="loading">Loading…</div>`;
+  const tabs=`<div class="tabs">
+    <button class="tab${tab==='documents'?' act':''}" onclick="loadDocs('documents')">📄 Documents</button>
+    <button class="tab${tab==='submittals'?' act':''}" onclick="loadDocs('submittals')">📤 Submittals</button>
+    <button class="tab${tab==='rfis'?' act':''}" onclick="loadDocs('rfis')">❓ RFIs</button>
+  </div>`;
+  const today=new Date();
+  let kpis='',body='';
+  if(tab==='documents'){
+    const {data:list}=await sb.from('documents').select('*,project:projects(project_no)').order('created_at',{ascending:false});
+    const L=list||[];
+    kpis=kpi('Total Docs',L.length,'#E2E8F0')+kpi('Approved',L.filter(d=>d.status==='approved').length,'#10B981')+kpi('Under Review',L.filter(d=>d.status==='under_review').length,'#F97316')+kpi('Drawings',L.filter(d=>d.category==='Drawing').length,'#3B82F6');
+    body=`<table><thead><tr><th>Doc No</th><th>Title</th><th>Project</th><th>Category</th><th style="text-align:center">Rev</th><th>Date</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${L.map(d=>`<tr><td style="color:var(--gold);font-size:10px">${esc(d.doc_no)}</td><td style="font-weight:600;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.title)}</td><td style="color:var(--muted);font-size:11px">${esc(d.project?.project_no||'—')}</td><td style="color:var(--muted);font-size:11px">${esc(d.category)}</td><td style="text-align:center;font-weight:700">${esc(d.revision)}</td><td style="color:var(--muted);font-size:11px">${d.issue_date||'—'}</td><td style="text-align:center">${pill(d.status)}</td></tr>`).join('')}
+    </tbody></table>`;
+  } else if(tab==='submittals'){
+    const {data:list}=await sb.from('submittals').select('*,project:projects(project_no)').order('submitted_date',{ascending:false});
+    const L=list||[];
+    kpis=kpi('Total',L.length,'#E2E8F0')+kpi('Approved',L.filter(s=>s.status==='approved').length,'#10B981')+kpi('Under Review',L.filter(s=>s.status==='under_review').length,'#F97316')+kpi('Overdue',L.filter(s=>s.response_due&&!s.responded_date&&new Date(s.response_due)<today).length,'#EF4444');
+    body=`<table><thead><tr><th>No</th><th>Title</th><th>Project</th><th>Submitted</th><th>Response Due</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${L.map(s=>{const ov=s.response_due&&!s.responded_date&&new Date(s.response_due)<today;return`<tr><td style="color:var(--gold);font-size:10px">${esc(s.submittal_no)}</td><td style="font-weight:600;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.title)}</td><td style="color:var(--muted);font-size:11px">${esc(s.project?.project_no||'—')}</td><td style="color:var(--muted);font-size:11px">${s.submitted_date}</td><td style="color:${ov?'#EF4444':'#94A3B8'};font-size:11px">${s.response_due||'—'}${ov?' ⚠️':''}</td><td style="text-align:center">${pill(s.status)}</td></tr>`}).join('')}
+    </tbody></table>`;
+  } else {
+    const {data:list}=await sb.from('rfis').select('*,project:projects(project_no)').order('raised_date',{ascending:false});
+    const L=list||[];
+    kpis=kpi('Total RFIs',L.length,'#E2E8F0')+kpi('Open',L.filter(r=>r.status==='open').length,'#F97316')+kpi('Cost Impact',L.filter(r=>r.has_cost_impact).length,'#EF4444')+kpi('Answered',L.filter(r=>r.status==='answered').length,'#10B981');
+    body=`<table><thead><tr><th>No</th><th>Subject</th><th>Project</th><th>Raised</th><th>Due</th><th style="text-align:center">Cost</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${L.map(r=>{const ov=r.response_due&&r.status==='open'&&new Date(r.response_due)<today;return`<tr><td style="color:var(--gold);font-size:10px">${esc(r.rfi_no)}</td><td style="font-weight:600;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.subject)}</td><td style="color:var(--muted);font-size:11px">${esc(r.project?.project_no||'—')}</td><td style="color:var(--muted);font-size:11px">${r.raised_date}</td><td style="color:${ov?'#EF4444':'#94A3B8'};font-size:11px">${r.response_due||'—'}${ov?' ⚠️':''}</td><td style="text-align:center">${r.has_cost_impact?pill('Cost','#EF4444'):pill('None','#475569')}</td><td style="text-align:center">${pill(r.status)}</td></tr>`}).join('')}
+    </tbody></table>`;
+  }
+  el.innerHTML=`
+  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">📄</span><div><h1>Document Control</h1><div class="sub">Documents · Submittals · RFIs</div></div></div></div>
+  <div class="grid4">${kpis}</div>
+  <div class="card">${tabs}${body}</div>`;
 }
-  async function loadWorkflow(){
-  const el=document.getElementById('page-workflow');el.innerHTML=`<div class="loading">Loading…</div>`;
+
+// ── WORKFLOW ─────────────────────────────────────────────────
+async function loadWorkflow(){
+  const el=document.getElementById('page-workflow');
+  el.innerHTML=`<div class="loading">Loading…</div>`;
   const {data:list}=await sb.from('workflow_items').select('*,raised_by_profile:user_profiles!workflow_items_raised_by_fkey(full_name)').order('raised_date',{ascending:true});
-  const wfs=list||[],pending=wfs.filter(w=>w.status==='pending'||w.status==='overdue'),ov=wfs.filter(w=>w.status==='overdue').length,role=currentProfile?.role||'';
-  el.innerHTML=`<div class="page-head"><div class="page-head-left"><span style="font-size:22px">⚡</span><div><h1>Workflow & Approvals</h1><div class="sub">Pending Actions · SLA · Approval Queue</div></div></div></div>
-  <div class="grid4">${kpi('Total Pending',pending.length,'#8B5CF6')}${kpi('SLA Breaches',ov,ov>0?'#EF4444':'#10B981',ov>0?'Action required':'All within SLA')}${kpi('PO Approvals',pending.filter(w=>w.entity_type==='po').length,'#3B82F6')}${kpi('Invoice Approvals',pending.filter(w=>w.entity_type==='invoice').length,'#C9A84C')}</div>
-  <div class="card"><div class="sec-head"><div class="sec-title"><span>⚡</span>Approval Queue</div></div>
-  ${pending.length===0?'<div class="empty">All approvals cleared ✓</div>':`<table><thead><tr><th>Reference</th><th>Type</th><th>Current Step</th><th>Raised</th><th>Status</th><th>Action</th></tr></thead><tbody>
-  ${pending.map(w=>{const canAct=(STEP_APPROVERS[w.current_step]||[]).includes(role);return`<tr><td style="color:var(--gold);font-weight:700">${esc(w.ref_no)}</td><td style="color:var(--muted);font-size:11px">${w.entity_type==='po'?'Purchase Order':'Invoice'}</td><td style="font-weight:600;font-size:11px">${esc(w.current_step)}</td><td style="color:var(--muted);font-size:11px">${new Date(w.raised_date).toLocaleDateString('en-GB')}</td><td>${pill(w.status)}</td><td>${canAct?`<button class="btn btn-primary btn-sm" onclick="wfApprove('${w.id}','${w.entity_type}','${w.entity_id}','${w.current_step}')">Approve</button><button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="wfReturn('${w.id}','${w.entity_type}','${w.entity_id}')">Return</button>`:'<span style="color:var(--faint);font-size:10px">Not authorized</span>'}</td></tr>`;}).join('')}
-  </tbody></table>`}
+  const wfs=list||[];
+  const pending=wfs.filter(w=>w.status==='pending'||w.status==='overdue');
+  const ov=wfs.filter(w=>w.status==='overdue').length;
+  const role=currentProfile?.role||'';
+
+  el.innerHTML=`
+  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">⚡</span><div><h1>Workflow & Approvals</h1><div class="sub">Pending Actions · SLA · Approval Queue</div></div></div></div>
+  <div class="grid4">
+    ${kpi('Total Pending',pending.length,'#8B5CF6')}
+    ${kpi('SLA Breaches',ov,ov>0?'#EF4444':'#10B981',ov>0?'Immediate action':'All within SLA')}
+    ${kpi('PO Approvals',pending.filter(w=>w.entity_type==='po').length,'#3B82F6')}
+    ${kpi('Invoice Approvals',pending.filter(w=>w.entity_type==='invoice').length,'#C9A84C')}
+  </div>
+  <div class="card">
+    <div class="sec-head"><div class="sec-title"><span>⚡</span>Approval Queue</div></div>
+    ${pending.length===0?'<div class="empty">All approvals cleared — queue empty ✓</div>':`
+    <table><thead><tr><th>Reference</th><th>Type</th><th>Current Step</th><th>Raised By</th><th>Raised Date</th><th style="text-align:center">Status</th><th style="text-align:center">Action</th></tr></thead><tbody>
+    ${pending.map(w=>{
+      const canAct=(STEP_APPROVERS[w.current_step]||[]).includes(role);
+      return`<tr style="border-left:3px solid ${w.status==='overdue'?'#EF4444':'transparent'}">
+        <td style="color:var(--gold);font-weight:700">${esc(w.ref_no)}</td>
+        <td style="color:var(--muted);font-size:11px">${w.entity_type==='po'?'Purchase Order':'Invoice'}</td>
+        <td style="font-weight:600;font-size:11px">${esc(w.current_step)}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(w.raised_by_profile?.full_name||'—')}</td>
+        <td style="color:${w.status==='overdue'?'#EF4444':'#94A3B8'};font-size:11px">${new Date(w.raised_date).toLocaleDateString('en-GB')}</td>
+        <td style="text-align:center">${pill(w.status)}</td>
+        <td style="text-align:center">
+          ${canAct?`<button class="btn btn-primary btn-sm" onclick="wfApprove('${w.id}','${w.entity_type}','${w.entity_id}','${w.current_step}')">Approve</button>
+          <button class="btn btn-danger btn-sm" onclick="wfReturn('${w.id}','${w.entity_type}','${w.entity_id}')">Return</button>`
+          :`<span style="color:var(--faint);font-size:10px">Not authorized</span>`}
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`}
+  </div>
+  <div class="grid2">
+    ${[['PO Approval Workflow',['Dept. Approval','Finance Review','GM Approval','Issued']],['Invoice Approval Workflow',['PM Verification','Finance Approval','Completed']]].map(([name,steps])=>`
+    <div class="card">
+      <div class="sec-head"><div class="sec-title"><span>🗺</span>${name}</div></div>
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:8px 0">
+        ${steps.map((s,i,a)=>`<span style="background:var(--n4);border:1px solid var(--bdr);border-radius:5px;padding:3px 9px;font-size:10px;color:var(--muted)">${s}</span>${i<a.length-1?'<span style="color:var(--gold);font-size:11px">→</span>':''}`).join('')}
+      </div>
+    </div>`).join('')}
   </div>`;
 }
 
 async function wfApprove(wfId,entityType,entityId,currentStep){
+  // Determine next step and status change
   const POsteps={'Dept. Approval':'finance_approval','Finance Review':'gm_approval','GM Approval':'issued'};
   const INVsteps={'PM Verification':'Finance Approval','Finance Approval':'completed'};
+
   if(entityType==='po'){
     const newStatus=POsteps[currentStep];
     const nextStep=Object.keys(POsteps).find(k=>POsteps[k]===newStatus);
-    const {data:po}=await sb.from('purchase_orders').select('status').eq('id',entityId).single();
+    // Update PO status
+    const {data:po}=await sb.from('purchase_orders').select('*').eq('id',entityId).single();
     await sb.from('purchase_orders').update({status:newStatus}).eq('id',entityId);
-    if(newStatus==='issued'){await sb.from('workflow_items').update({status:'completed',approved_by:currentProfile.id,approved_date:new Date().toISOString()}).eq('id',wfId);}
-    else{await sb.from('workflow_items').update({current_step:nextStep,status:'pending'}).eq('id',wfId);}
-    await writeAudit('purchase_orders',entityId,'APPROVED',{status:po?.status},{status:newStatus},`Step: ${currentStep}`);
+    if(newStatus==='issued'){
+      // Close workflow
+      await sb.from('workflow_items').update({status:'completed',approved_by:currentProfile.id,approved_date:new Date().toISOString()}).eq('id',wfId);
+    } else {
+      // Advance to next step
+      await sb.from('workflow_items').update({current_step:nextStep,status:'pending'}).eq('id',wfId);
+    }
+    await writeAudit('purchase_orders',entityId,'APPROVED',{status:po?.status},{status:newStatus},`Workflow step: ${currentStep} → ${newStatus}`);
   } else {
     const newStep=INVsteps[currentStep];
     if(newStep==='completed'){
-      const {data:inv}=await sb.from('invoices').select('status').eq('id',entityId).single();
+      const {data:inv}=await sb.from('invoices').select('*').eq('id',entityId).single();
       await sb.from('invoices').update({status:'approved'}).eq('id',entityId);
       await sb.from('workflow_items').update({status:'completed',approved_by:currentProfile.id,approved_date:new Date().toISOString()}).eq('id',wfId);
-      await writeAudit('invoices',entityId,'APPROVED',{status:inv?.status},{status:'approved'},'Finance approval completed');
+      await writeAudit('invoices',entityId,'APPROVED',{status:inv?.status},{status:'approved'},`Finance approval completed`);
     } else {
       await sb.from('workflow_items').update({current_step:newStep,status:'pending'}).eq('id',wfId);
     }
   }
-  showToast('Approved successfully');loadWfBadge();loadWorkflow();
+  showToast('Approved successfully');
+  loadWfBadge();
+  loadWorkflow();
 }
 
 async function wfReturn(wfId,entityType,entityId){
-  const reason=prompt('Reason for return:');if(!reason)return;
-  if(entityType==='po'){const {data:po}=await sb.from('purchase_orders').select('status').eq('id',entityId).single();await sb.from('purchase_orders').update({status:'rejected'}).eq('id',entityId);await writeAudit('purchase_orders',entityId,'REJECTED',{status:po?.status},{status:'rejected'},reason);}
-  else{const {data:inv}=await sb.from('invoices').select('status').eq('id',entityId).single();await sb.from('invoices').update({status:'returned'}).eq('id',entityId);await writeAudit('invoices',entityId,'RETURNED',{status:inv?.status},{status:'returned'},reason);}
+  const reason=prompt('Reason for return:');
+  if(!reason)return;
+  if(entityType==='po'){
+    const {data:po}=await sb.from('purchase_orders').select('status').eq('id',entityId).single();
+    await sb.from('purchase_orders').update({status:'rejected'}).eq('id',entityId);
+    await writeAudit('purchase_orders',entityId,'REJECTED',{status:po?.status},{status:'rejected'},reason);
+  } else {
+    const {data:inv}=await sb.from('invoices').select('status').eq('id',entityId).single();
+    await sb.from('invoices').update({status:'returned'}).eq('id',entityId);
+    await writeAudit('invoices',entityId,'RETURNED',{status:inv?.status},{status:'returned'},reason);
+  }
   await sb.from('workflow_items').update({status:'rejected',reject_reason:reason}).eq('id',wfId);
-  showToast('Returned to originator','error');loadWfBadge();loadWorkflow();
+  showToast('Returned to originator','error');
+  loadWfBadge();
+  loadWorkflow();
 }
 
+// ── AUDIT TRAIL ──────────────────────────────────────────────
 async function loadAudit(){
-  const el=document.getElementById('page-audit');el.innerHTML=`<div class="loading">Loading…</div>`;
+  const el=document.getElementById('page-audit');
+  el.innerHTML=`<div class="loading">Loading…</div>`;
   const {data:list}=await sb.from('audit_log').select('*,user:user_profiles(full_name)').order('performed_at',{ascending:false}).limit(100);
   const L=list||[];
-  el.innerHTML=`<div class="page-head"><div class="page-head-left"><span style="font-size:22px">📋</span><div><h1>Audit Trail</h1><div class="sub">Last 100 system actions</div></div></div></div>
-  <div class="card"><div class="sec-head"><div class="sec-title"><span>📋</span>System Activity Log</div></div>
-  ${L.length===0?'<div class="empty">No audit records yet</div>':L.map(a=>`<div class="audit-row"><div class="audit-time">${new Date(a.performed_at).toLocaleString('en-GB')}</div><div class="audit-action">${esc(a.action)}</div><div style="color:var(--muted);font-size:11px;min-width:120px">${esc(a.user?.full_name||'System')}</div><div class="audit-detail">${esc(a.entity_type)} · ${esc(a.notes||'')}</div></div>`).join('')}
+  el.innerHTML=`
+  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">📋</span><div><h1>Audit Trail</h1><div class="sub">Last 100 system actions · Who · What · When</div></div></div></div>
+  <div class="card">
+    <div class="sec-head"><div class="sec-title"><span>📋</span>System Activity Log</div></div>
+    ${L.length===0?'<div class="empty">No audit records yet</div>':
+    L.map(a=>`<div class="audit-row">
+      <div class="audit-time">${new Date(a.performed_at).toLocaleString('en-GB')}</div>
+      <div class="audit-action">${esc(a.action)}</div>
+      <div style="color:var(--muted);font-size:11px;min-width:120px">${esc(a.user?.full_name||'System')}</div>
+      <div class="audit-detail">${esc(a.entity_type)} · ${esc(a.notes||'')}${a.new_values?` → ${esc(JSON.stringify(a.new_values))}`:''}</div>
+    </div>`).join('')}
   </div>`;
 }
 
+// ══════════════════════════════════════════════════════════════
+//  SAVE MODALS
+// ══════════════════════════════════════════════════════════════
+
 function openNewOppModal(){
-  openModal('New Opportunity',`<div class="form-row"><div class="form-field"><label>Title *</label><input id="f-title" placeholder="Opportunity title"/></div><div class="form-field"><label>Client *</label><input id="f-client" placeholder="Client name"/></div></div><div class="form-row"><div class="form-field"><label>Est. Value (KWD)</label><input id="f-value" type="number" placeholder="0"/></div><div class="form-field"><label>Win Probability %</label><input id="f-prob" type="number" value="50" min="0" max="100"/></div></div><div class="form-row"><div class="form-field"><label>Department</label><select id="f-dept">${['Security','AV/Broadcast','IT','Power','Civil','Wireless','Trading'].map(d=>`<option>${d}</option>`).join('')}</select></div><div class="form-field"><label>Deadline</label><input id="f-deadline" type="date"/></div></div><div class="form-field"><label>Notes</label><textarea id="f-notes" rows="2"></textarea></div><div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveOpp()">Create</button></div>`);
+  openModal('New Opportunity',`
+  <div class="form-row">
+    <div class="form-field"><label>Title *</label><input id="f-title" placeholder="Opportunity title"/></div>
+    <div class="form-field"><label>Client *</label><input id="f-client" placeholder="Client name"/></div>
+  </div>
+  <div class="form-row">
+    <div class="form-field"><label>Est. Value (KWD)</label><input id="f-value" type="number" placeholder="0"/></div>
+    <div class="form-field"><label>Win Probability %</label><input id="f-prob" type="number" value="50" min="0" max="100"/></div>
+  </div>
+  <div class="form-row">
+    <div class="form-field"><label>Department</label><select id="f-dept">${['Security','AV/Broadcast','IT','Power','Civil','Wireless','Trading'].map(d=>`<option>${d}</option>`).join('')}</select></div>
+    <div class="form-field"><label>Deadline</label><input id="f-deadline" type="date"/></div>
+  </div>
+  <div class="form-field"><label>Notes</label><textarea id="f-notes" rows="2" placeholder="Additional notes…"></textarea></div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveOpp()">Create Opportunity</button>
+  </div>`);
 }
 
 async function saveOpp(){
-  const title=document.getElementById('f-title').value.trim(),client=document.getElementById('f-client').value.trim();
+  const title=document.getElementById('f-title').value.trim();
+  const client=document.getElementById('f-client').value.trim();
   if(!title||!client){showToast('Title and Client required','error');return;}
+  // Generate opp_no
   const {data:last}=await sb.from('opportunities').select('opp_no').order('created_at',{ascending:false}).limit(1).single();
-  const year=new Date().getFullYear(),seq=last?String(Number(last.opp_no.split('-')[2])+1).padStart(3,'0'):'050';
-  const {error}=await sb.from('opportunities').insert({opp_no:`BD-${year}-${seq}`,title,client,department:document.getElementById('f-dept').value,est_value:Number(document.getElementById('f-value').value)||0,probability:Number(document.getElementById('f-prob').value)||50,status:'identified',deadline:document.getElementById('f-deadline').value||null,notes:document.getElementById('f-notes').value||null,created_by:currentProfile?.id});
+  const year=new Date().getFullYear();
+  const seq=last?String(Number(last.opp_no.split('-')[2])+1).padStart(3,'0'):'001';
+  const opp_no=`BD-${year}-${seq}`;
+  const {error}=await sb.from('opportunities').insert({
+    opp_no,title,client,
+    department:document.getElementById('f-dept').value,
+    est_value:Number(document.getElementById('f-value').value)||0,
+    probability:Number(document.getElementById('f-prob').value)||50,
+    status:'identified',
+    deadline:document.getElementById('f-deadline').value||null,
+    notes:document.getElementById('f-notes').value||null,
+    created_by:currentProfile?.id
+  });
   if(error){showToast('Error: '+error.message,'error');return;}
-  showToast('Opportunity created');closeModal();loadBizdev();
+  await writeAudit('opportunities',null,'CREATED',null,{opp_no,title},'New opportunity');
+  showToast('Opportunity created');
+  closeModal();loadBizdev();
 }
 
 function openNewProjectModal(){
-  openModal('New Project',`<div class="form-row"><div class="form-field"><label>Project Name *</label><input id="f-pname" placeholder="Project name"/></div><div class="form-field"><label>Client *</label><input id="f-pclient" placeholder="Client name"/></div></div><div class="form-row"><div class="form-field"><label>Contract Value (KWD) *</label><input id="f-pvalue" type="number" placeholder="0"/></div><div class="form-field"><label>Department</label><select id="f-pdept">${['Security','AV/Broadcast','IT','Power','Civil','Wireless','Trading'].map(d=>`<option>${d}</option>`).join('')}</select></div></div><div class="form-row"><div class="form-field"><label>Start Date</label><input id="f-pstart" type="date"/></div><div class="form-field"><label>End Date</label><input id="f-pend" type="date"/></div></div><div class="form-field"><label>Priority</label><select id="f-ppriority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="critical">Critical</option></select></div><div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveProject()">Create</button></div>`);
+  openModal('New Project',`
+  <div class="form-row">
+    <div class="form-field"><label>Project Name *</label><input id="f-pname" placeholder="Project name"/></div>
+    <div class="form-field"><label>Client *</label><input id="f-pclient" placeholder="Client name"/></div>
+  </div>
+  <div class="form-row">
+    <div class="form-field"><label>Contract Value (KWD) *</label><input id="f-pvalue" type="number" placeholder="0"/></div>
+    <div class="form-field"><label>Department</label><select id="f-pdept">${['Security','AV/Broadcast','IT','Power','Civil','Wireless','Trading'].map(d=>`<option>${d}</option>`).join('')}</select></div>
+  </div>
+  <div class="form-row">
+    <div class="form-field"><label>Start Date</label><input id="f-pstart" type="date"/></div>
+    <div class="form-field"><label>End Date</label><input id="f-pend" type="date"/></div>
+  </div>
+  <div class="form-field"><label>Priority</label><select id="f-ppriority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="critical">Critical</option></select></div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveProject()">Create Project</button>
+  </div>`);
 }
 
 async function saveProject(){
-  const name=document.getElementById('f-pname').value.trim(),client=document.getElementById('f-pclient').value.trim(),val=Number(document.getElementById('f-pvalue').value)||0;
+  const name=document.getElementById('f-pname').value.trim();
+  const client=document.getElementById('f-pclient').value.trim();
+  const val=Number(document.getElementById('f-pvalue').value)||0;
   if(!name||!client||!val){showToast('Name, Client and Value required','error');return;}
-  const dept=document.getElementById('f-pdept').value,dc={Security:'SEC','AV/Broadcast':'AV',IT:'IT',Power:'PW',Civil:'CV',Wireless:'WL',Trading:'TR'}[dept]||'XX';
-  const {data:last}=await sb.from('projects').select('project_no').ilike('project_no',`SP360-${dc}-%`).order('project_no',{ascending:false}).limit(1).single();
-  const seq=last?String(Number(last.project_no.split('-')[2])+1).padStart(3,'0'):'010';
-  const {data:proj,error}=await sb.from('projects').insert({project_no:`SP360-${dc}-${seq}`,name,client,department:dept,contract_value:val,bac:val,ac:0,ev:0,pv:0,pct:0,cpi:1,spi:1,status:'planning',priority:document.getElementById('f-ppriority').value,start_date:document.getElementById('f-pstart').value||null,end_date:document.getElementById('f-pend').value||null,pm_id:currentProfile?.id,created_by:currentProfile?.id}).select().single();
+  const dept=document.getElementById('f-pdept').value;
+  const deptCode={Security:'SEC','AV/Broadcast':'AV',IT:'IT',Power:'PW',Civil:'CV',Wireless:'WL',Trading:'TR'}[dept]||'XX';
+  const year=new Date().getFullYear();
+  const {data:last}=await sb.from('projects').select('project_no').ilike('project_no',`SP360-${deptCode}-%`).order('project_no',{ascending:false}).limit(1).single();
+  const seq=last?String(Number(last.project_no.split('-')[2])+1).padStart(3,'0'):'001';
+  const project_no=`SP360-${deptCode}-${seq}`;
+  const {data:proj,error}=await sb.from('projects').insert({
+    project_no,name,client,department:dept,
+    contract_value:val,bac:val,ac:0,ev:0,pv:0,pct:0,cpi:1,spi:1,
+    status:'planning',
+    priority:document.getElementById('f-ppriority').value,
+    start_date:document.getElementById('f-pstart').value||null,
+    end_date:document.getElementById('f-pend').value||null,
+    pm_id:currentProfile?.id,
+    created_by:currentProfile?.id
+  }).select().single();
   if(error){showToast('Error: '+error.message,'error');return;}
-  await writeAudit('projects',proj?.id,'CREATED',null,{name,contract_value:val},'New project');
-  showToast('Project created');closeModal();loadProjects();
+  await writeAudit('projects',proj?.id,'CREATED',null,{project_no,name,contract_value:val},'New project');
+  showToast('Project created');
+  closeModal();loadProjects();
 }
 
 function openNewInvoiceModal(){
   sb.from('projects').select('id,project_no').order('project_no').then(({data:projs})=>{
-    openModal('New Invoice',`<div class="form-row"><div class="form-field"><label>Project *</label><select id="f-iproj"><option value="">— Select —</option>${(projs||[]).map(p=>`<option value="${p.id}">${esc(p.project_no)}</option>`).join('')}</select></div><div class="form-field"><label>Type</label><select id="f-itype"><option value="client">Client</option><option value="supplier">Supplier</option><option value="subcontractor">Subcontractor</option></select></div></div><div class="form-row"><div class="form-field"><label>Gross Amount (KWD) *</label><input id="f-igross" type="number" placeholder="0"/></div><div class="form-field"><label>Retention %</label><input id="f-iret" type="number" value="0" min="0" max="100"/></div></div><div class="form-row"><div class="form-field"><label>Invoice Date *</label><input id="f-idate" type="date"/></div><div class="form-field"><label>Due Date</label><input id="f-idue" type="date"/></div></div><div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveInvoice()">Create</button></div>`);
+    openModal('New Invoice',`
+    <div class="form-row">
+      <div class="form-field"><label>Project *</label><select id="f-iproj"><option value="">— Select —</option>${(projs||[]).map(p=>`<option value="${p.id}">${esc(p.project_no)}</option>`).join('')}</select></div>
+      <div class="form-field"><label>Type</label><select id="f-itype"><option value="client">Client</option><option value="supplier">Supplier</option><option value="subcontractor">Subcontractor</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Gross Amount (KWD) *</label><input id="f-igross" type="number" placeholder="0"/></div>
+      <div class="form-field"><label>Retention %</label><input id="f-iret" type="number" value="0" min="0" max="100"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Invoice Date *</label><input id="f-idate" type="date"/></div>
+      <div class="form-field"><label>Due Date</label><input id="f-idue" type="date"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveInvoice()">Create Invoice</button>
+    </div>`);
   });
 }
 
 async function saveInvoice(){
-  const proj=document.getElementById('f-iproj').value,gross=Number(document.getElementById('f-igross').value)||0,date=document.getElementById('f-idate').value;
+  const proj=document.getElementById('f-iproj').value;
+  const gross=Number(document.getElementById('f-igross').value)||0;
+  const date=document.getElementById('f-idate').value;
   if(!proj||!gross||!date){showToast('Project, Amount and Date required','error');return;}
-  const ret=Number(document.getElementById('f-iret').value)||0,retAmt=Math.round(gross*ret/100*1000)/1000,net=gross-retAmt,type=document.getElementById('f-itype').value,prefix=type==='client'?'INV-C':type==='supplier'?'INV-S':'INV-SC';
+  const ret=Number(document.getElementById('f-iret').value)||0;
+  const retAmt=Math.round(gross*ret/100*1000)/1000;
+  const net=gross-retAmt;
+  const type=document.getElementById('f-itype').value;
+  const prefix=type==='client'?'INV-C':type==='supplier'?'INV-S':'INV-SC';
   const year=new Date().getFullYear();
   const {data:last}=await sb.from('invoices').select('invoice_no').ilike('invoice_no',`${prefix}-${year}-%`).order('invoice_no',{ascending:false}).limit(1).single();
-  const seq=last?String(Number(last.invoice_no.split('-').pop())+1).padStart(3,'0'):'030';
-  const {data:inv,error}=await sb.from('invoices').insert({invoice_no:`${prefix}-${year}-${seq}`,project_id:proj,invoice_type:type,gross_amount:gross,vat_pct:0,vat_amount:0,retention_pct:ret,retention_amt:retAmt,net_amount:net,status:'draft',invoice_date:date,due_date:document.getElementById('f-idue').value||null,created_by:currentProfile?.id}).select().single();
+  const seq=last?String(Number(last.invoice_no.split('-').pop())+1).padStart(3,'0'):'001';
+  const invoice_no=`${prefix}-${year}-${seq}`;
+  const {data:inv,error}=await sb.from('invoices').insert({
+    invoice_no,project_id:proj,invoice_type:type,
+    gross_amount:gross,vat_pct:0,vat_amount:0,
+    retention_pct:ret,retention_amt:retAmt,net_amount:net,
+    status:'draft',invoice_date:date,
+    due_date:document.getElementById('f-idue').value||null,
+    created_by:currentProfile?.id
+  }).select().single();
   if(error){showToast('Error: '+error.message,'error');return;}
-  await writeAudit('invoices',inv?.id,'CREATED',null,{invoice_no:inv?.invoice_no,net_amount:net},'New invoice');
-  showToast('Invoice created');closeModal();loadFinance();
+  // Auto-create workflow for non-draft invoices when submitted
+  await writeAudit('invoices',inv?.id,'CREATED',null,{invoice_no,gross_amount:gross,net_amount:net,status:'draft'},'New invoice created');
+  showToast('Invoice created — submit to trigger approval workflow');
+  closeModal();loadFinance();
 }
 
+// ── SESSION RESTORE ──────────────────────────────────────────
 (async()=>{
   const {data:{session}}=await sb.auth.getSession();
-  if(session){currentUser=session.user;await loadProfile();enterApp();}
+  if(session){
+    currentUser=session.user;
+    await loadProfile();
+    enterApp();
+  }
 })();
 
 sb.auth.onAuthStateChange((event,session)=>{
-  if(event==='SIGNED_OUT'||!session){currentUser=null;currentProfile=null;if(document.getElementById('app').style.display!=='none')location.reload();}
-  else if(session){currentUser=session.user;}
+  if(event==='SIGNED_OUT'||!session){
+    currentUser=null;currentProfile=null;
+    if(document.getElementById('app').style.display!=='none') location.reload();
+  } else if(session){
+    currentUser=session.user;
+  }
 });
 
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('auth-screen').style.display!=='none')doLogin();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('auth-screen').style.display!=='none')doLogin();
+});
 </script>
 </body>
 </html>
