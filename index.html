@@ -39,7 +39,6 @@ body{font-family:'Segoe UI',sans-serif;background:var(--n1);color:var(--text);mi
 .field label{display:block;color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:6px}
 .field input{width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:11px 14px;color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s}
 .field input:focus{border-color:var(--gold)}
-.field input[type=email],.field input[type=password]{-webkit-user-select:text!important;user-select:text!important;pointer-events:auto!important;cursor:text!important;position:relative;z-index:1}
 .btn-auth{width:100%;background:var(--gold);color:var(--n1);border:none;border-radius:9px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:4px;transition:background .15s}
 .btn-auth:hover{background:var(--goldL)}
 .btn-auth:disabled{opacity:.6;cursor:not-allowed}
@@ -146,11 +145,11 @@ tr:hover td{background:#1A366010}
     </div>
     <div class="field">
       <label>Email</label>
-      <input type="email" id="login-email" placeholder="your@sp360.com.kw" autocomplete="email" tabindex="1"/>
+      <input type="email" id="login-email" placeholder="your@sp360.com.kw" autocomplete="email"/>
     </div>
     <div class="field">
       <label>Password</label>
-      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" tabindex="2"/>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/>
     </div>
     <button class="btn-auth" id="btn-login" onclick="doLogin()">Sign In</button>
     <div id="auth-error">Invalid email or password.</div>
@@ -230,6 +229,7 @@ tr:hover td{background:#1A366010}
 <div class="toast" id="toast"></div>
 
 <script>
+
 'use strict';
 
 // ═══════════════════════════════════════════════════════════
@@ -237,11 +237,25 @@ tr:hover td{background:#1A366010}
 // ═══════════════════════════════════════════════════════════
 const SUPABASE_URL = 'https://sqizirpsatofcoqshwer.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxaXppcnBzYXRvZmNvcXNod2VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxNTM5MTAsImV4cCI6MjEwMjcyOTkxMH0.LnfA4pGIbv30uQVNHa7MeFioP9OF2ukNTol_cDUF8mk';
-if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-  document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0B1D3A;font-family:sans-serif"><div style="background:#0F2444;border:1px solid #1E3A5F;border-radius:12px;padding:32px;max-width:400px;text-align:center"><div style="color:#C9A84C;font-size:24px;font-weight:800;margin-bottom:12px">SP360 ERP v6</div><div style="color:#EF4444;font-size:14px;margin-bottom:8px">⚠️ Supabase library failed to load</div><div style="color:#94A3B8;font-size:12px">Please refresh the page. If the problem persists, contact IT support.</div><button onclick="location.reload()" style="margin-top:16px;background:#C9A84C;color:#0B1D3A;border:none;border-radius:8px;padding:10px 20px;font-weight:700;cursor:pointer">Refresh Page</button></div></div>';
-  throw new Error('SP360 startup failed: Supabase JS library was not loaded.');
+// ── SUPABASE INIT (safe, non-blocking) ───────────────────────
+let sb;
+try {
+  const _sb = window.supabase || supabase;
+  if (_sb && typeof _sb.createClient === 'function') {
+    sb = _sb.createClient(SUPABASE_URL, SUPABASE_KEY);
+  } else {
+    throw new Error('createClient not found');
+  }
+} catch(e) {
+  console.error('Supabase init error:', e);
+  // Show error banner but KEEP login form functional
+  const banner = document.createElement('div');
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#EF4444;color:#fff;text-align:center;padding:8px;font-size:12px;z-index:9999';
+  banner.textContent = '⚠️ Connection error — login may not work. Check your network.';
+  document.body.prepend(banner);
+  // Create a stub so the page doesn't crash
+  sb = { auth: { getSession: async()=>({data:{session:null},error:null}), signInWithPassword: async()=>({data:null,error:{message:'Service unavailable'}}), signOut: async()=>{}, onAuthStateChange: ()=>({data:{subscription:{unsubscribe:()=>{}}}}) }, from: ()=>({ select:()=>({eq:()=>({single:()=>Promise.resolve({data:null,error:null})}),in:()=>Promise.resolve({data:[],error:null}),order:()=>({limit:()=>Promise.resolve({data:[],error:null})})}), insert:()=>Promise.resolve({data:null,error:null}), update:()=>({eq:()=>Promise.resolve({data:null,error:null})}), delete:()=>({eq:()=>Promise.resolve({data:null,error:null})}) }) };
 }
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── ROLE-BASED ACCESS ────────────────────────────────────────
 const ROLE_PAGES = {
@@ -1056,13 +1070,22 @@ async function saveInvoice(){
   closeModal();loadFinance();
 }
 
-// ── SESSION RESTORE ──────────────────────────────────────────
+// ── SESSION RESTORE (with timeout) ──────────────────────────
 (async()=>{
-  const {data:{session}}=await sb.auth.getSession();
-  if(session){
-    currentUser=session.user;
-    await loadProfile();
-    enterApp();
+  try {
+    const sessionPromise = sb.auth.getSession();
+    const timeoutPromise = new Promise(resolve => setTimeout(() => resolve({data:{session:null},error:{message:'timeout'}}), 5000));
+    const {data:{session}, error} = await Promise.race([sessionPromise, timeoutPromise]);
+    if (error) console.warn('Session restore:', error.message);
+    if (session) {
+      currentUser = session.user;
+      await loadProfile();
+      enterApp();
+    }
+    // If no session or timeout: auth-screen stays visible (already shown by CSS)
+  } catch(e) {
+    console.warn('Session restore failed:', e);
+    // Auth screen stays visible — user can still log in
   }
 })();
 
@@ -1075,22 +1098,10 @@ sb.auth.onAuthStateChange((event,session)=>{
   }
 });
 
-// Ensure login inputs are always focusable
-document.addEventListener('click', e => {
-  if (e.target.id === 'login-email' || e.target.id === 'login-pass') {
-    e.target.focus();
-  }
-});
-document.addEventListener('touchend', e => {
-  if (e.target.id === 'login-email' || e.target.id === 'login-pass') {
-    e.preventDefault();
-    e.target.focus();
-  }
-});
-
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&document.getElementById('auth-screen').style.display!=='none')doLogin();
 });
+
 </script>
 </body>
 </html>
