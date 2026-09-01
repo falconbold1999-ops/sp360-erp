@@ -362,9 +362,14 @@ function enterApp(){
   loadWfBadge();
 }
 
-async function doLogout(){
-  await sb.auth.signOut();
-  currentUser=null;currentProfile=null;
+function doLogout(){
+  // Clear session from localStorage (no network call, instant)
+  try {
+    Object.keys(localStorage).forEach(k => {
+      if(k.startsWith('sb-') || k.includes('supabase')) localStorage.removeItem(k);
+    });
+  } catch(e) {}
+  currentUser=null; currentProfile=null;
   document.getElementById('app').style.display='none';
   document.getElementById('auth-screen').style.display='flex';
   document.getElementById('login-email').value='';
@@ -1052,21 +1057,20 @@ async function saveInvoice(){
 }
 
 // ── SESSION RESTORE ─────────────────────────────────────────
-// Always show login screen — user must sign in every time
-// Sign out any existing session to ensure clean state
-(async()=>{
+// Clear any cached session so user always sees login screen
+// Use localStorage directly — no network call, no hang
+(()=>{
   try {
-    await sb.auth.signOut();
+    // Clear Supabase session from localStorage (instant, no network)
+    Object.keys(localStorage).forEach(k => {
+      if(k.startsWith('sb-') || k.includes('supabase')) localStorage.removeItem(k);
+    });
   } catch(e) {}
 })();
 
+// Auth state monitoring (no auto-reload)
 sb.auth.onAuthStateChange((event,session)=>{
-  if(event==='SIGNED_OUT'||!session){
-    currentUser=null;currentProfile=null;
-    if(document.getElementById('app').style.display!=='none') location.reload();
-  } else if(session){
-    currentUser=session.user;
-  }
+  if(session){ currentUser=session.user; }
 });
 
 document.addEventListener('keydown',e=>{
