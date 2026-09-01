@@ -184,6 +184,7 @@ tr:hover td{background:#1A366010}
         <button class="nav-btn active" type="button" data-page="dashboard"><span class="nav-icon">📊</span>Dashboard</button>
         <div class="nav-section" data-sec="biz">Business</div>
         <button class="nav-btn" type="button" data-page="bizdev"><span class="nav-icon">🎯</span>Business Dev</button>
+        <button class="nav-btn" type="button" data-page="tenders"><span class="nav-icon">📋</span>Tenders</button>
         <button class="nav-btn" type="button" data-page="projects"><span class="nav-icon">🏗</span>Projects</button>
         <div class="nav-section" data-sec="ops">Operations</div>
         <button class="nav-btn" type="button" data-page="procurement"><span class="nav-icon">📦</span>Procurement</button>
@@ -194,6 +195,7 @@ tr:hover td{background:#1A366010}
         <button class="nav-btn" type="button" data-page="documents"><span class="nav-icon">📄</span>Document Control</button>
         <div class="nav-section" data-sec="sys">System</div>
         <button class="nav-btn" type="button" data-page="workflow"><span class="nav-icon">⚡</span>Workflow<span class="nav-badge" id="wf-badge" style="display:none">0</span></button>
+        <button class="nav-btn" data-page="ceo" onclick="navTo('ceo',this)"><span class="nav-icon">📊</span>CEO Report</button>
         <button class="nav-btn" data-page="audit" onclick="navTo('audit',this)"><span class="nav-icon">📋</span>Audit Trail</button>
       </nav>
       <div class="sidebar-foot">SP360 ERP v5.1 · local prototype</div>
@@ -209,6 +211,8 @@ tr:hover td{background:#1A366010}
       <div class="page" id="page-qhse"></div>
       <div class="page" id="page-documents"></div>
       <div class="page" id="page-workflow"></div>
+      <div class="page" id="page-tenders"></div>
+      <div class="page" id="page-ceo"></div>
       <div class="page" id="page-audit"></div>
     </main>
   </div>
@@ -232,10 +236,10 @@ const SESSION_KEY = 'SP360_ERP_v5_1_user';
 const AUTH_PIN = ['sp','360'].join('');
 
 const ROLE_PAGES = {
-  'PMO Manager':        ['dashboard','bizdev','projects','procurement','finance','hr','qhse','documents','workflow','audit'],
+  'PMO Manager':        ['dashboard','bizdev','tenders','projects','procurement','finance','hr','qhse','documents','workflow','ceo','audit'],
   'Finance Manager':    ['dashboard','projects','procurement','finance','workflow','audit'],
   'Procurement Lead':   ['dashboard','projects','procurement','workflow'],
-  'BD Manager':         ['dashboard','bizdev','projects'],
+  'BD Manager':         ['dashboard','bizdev','tenders','projects'],
   'QHSE Engineer':      ['dashboard','projects','qhse','documents']
 };
 
@@ -378,7 +382,22 @@ workflows: [
   {id:'w4', ref:'INV-C-2026-023',type:'Client Invoice', step:'Finance Approval', status:'overdue',  raised:'2026-07-30', entity:'inv', entityId:'i3'},
   {id:'w5', ref:'PO-2026-093', type:'Purchase Order',  step:'Dept. Approval',   status:'pending',  raised:'2026-08-12', entity:'po', entityId:'po7'},
   {id:'w6', ref:'INV-S-2026-056',type:'Supplier Invoice',step:'PM Verification', status:'overdue',  raised:'2026-07-20', entity:'inv', entityId:'i7'}
-]
+],
+tenders: [
+  {id:'tn1', no:'TND-2026-041', title:'Integrated Security System — Kuwait Airport T4',  client:'DGCA Kuwait',            dept:'Security',     budget:850000,  type:'open',      source:'NITA',              deadline:'2026-09-15', status:'bidding',     bidDecision:'bid',    submittedDate:'2026-08-20', notes:'Shortlisted — final negotiation'},
+  {id:'tn2', no:'TND-2026-042', title:'Fiber Optic Network — Smart City Phase 2',        client:'Kuwait Municipality',    dept:'IT',           budget:1200000, type:'open',      source:'Municipality Portal',deadline:'2026-10-01', status:'evaluating',  bidDecision:'bid',    submittedDate:'2026-09-01', notes:'Technical evaluation ongoing'},
+  {id:'tn3', no:'TND-2026-043', title:'UPS & Generator Systems — NBK Data Center',       client:'National Bank of Kuwait',dept:'Power',        budget:380000,  type:'direct',    source:'Direct Invitation', deadline:'2026-09-30', status:'awarded',     bidDecision:'bid',    submittedDate:'2026-08-15', notes:'Contract awarded — PO in progress'},
+  {id:'tn4', no:'TND-2026-044', title:'AV & Conferencing — Zain Corporate HQ',           client:'Zain Telecom',           dept:'AV/Broadcast', budget:220000,  type:'selective', source:'Direct Invitation', deadline:'2026-11-10', status:'preparation', bidDecision:'bid',    submittedDate:null,         notes:'Technical proposal in progress'},
+  {id:'tn5', no:'TND-2026-038', title:'Cisco Switches Supply — KPC',                     client:'Kuwait Petroleum Corp',  dept:'Trading',      budget:60000,   type:'open',      source:'NITA',              deadline:'2026-05-15', status:'lost',        bidDecision:'bid',    submittedDate:'2026-05-01', notes:'Lost on price — competitor 12% lower'},
+  {id:'tn6', no:'TND-2026-039', title:'CCTV Upgrade — Ministry of Finance',              client:'Ministry of Finance',    dept:'Security',     budget:95000,   type:'selective', source:'Direct Invitation', deadline:'2026-06-01', status:'awarded',     bidDecision:'bid',    submittedDate:'2026-05-20', notes:'Contract signed'},
+  {id:'tn7', no:'TND-2026-045', title:'Wireless Coverage — Avenues Mall Phase 4',        client:'Mabanee Company',        dept:'Wireless',     budget:145000,  type:'selective', source:'Direct Invitation', deadline:'2026-12-01', status:'no_bid',      bidDecision:'no_bid', submittedDate:null,         notes:'Capacity constraints — Q4 2026 backlog full'}
+],
+bidDecisions: [
+  {id:'bd1', tenderNo:'TND-2026-045', title:'Wireless Coverage — Avenues Mall Phase 4',        client:'Mabanee Company',          budget:145000,  decision:'no_bid', score:38, reasons:['Resource conflict with active projects','Low margin potential below 12%','Short mobilization period'],                by:'u1', date:'2026-08-10'},
+  {id:'bd2', tenderNo:'TND-2026-041', title:'Integrated Security System — Kuwait Airport T4',  client:'DGCA Kuwait',              budget:850000,  decision:'bid',    score:82, reasons:['Strong technical fit with Security division','High strategic value — airport reference','Capacity available Q4 2026'], by:'u1', date:'2026-07-15'},
+  {id:'bd3', tenderNo:'TND-2026-043', title:'UPS & Generator Systems — NBK Data Center',       client:'National Bank of Kuwait',  budget:380000,  decision:'bid',    score:75, reasons:['Repeat client — strong NBK relationship','Power division available','Margin above 18%'],                     by:'u1', date:'2026-07-20'}
+],
+auditLog: []
   };
 }
 
@@ -388,6 +407,9 @@ try{
   if(raw){
     const saved = JSON.parse(raw);
     if(saved && saved.projects) DB = saved;
+    if(!DB.tenders) DB.tenders = seedDB().tenders;
+    if(!DB.bidDecisions) DB.bidDecisions = seedDB().bidDecisions;
+    if(!DB.auditLog) DB.auditLog = [];
   }
 }catch(e){ /* keep seed */ }
 
@@ -402,7 +424,8 @@ const SC = {
   identified:'#94A3B8', proposal:'#3B82F6', negotiation:'#8B5CF6', won:'#10B981', lost:'#EF4444',
   good:'#10B981', partial:'#F97316', damaged:'#EF4444', blacklisted:'#EF4444',
   annual:'#3B82F6', sick:'#F97316', answered:'#10B981',
-  near_miss:'#F97316', first_aid:'#EF4444'
+  near_miss:'#F97316', first_aid:'#EF4444',
+  preparation:'#3B82F6', bidding:'#8B5CF6', evaluating:'#F97316', no_bid:'#94A3B8'
 };
 
 function esc(s){
@@ -605,11 +628,281 @@ function renderPage(id){
     dashboard:renderDashboard, bizdev:renderBizdev, projects:renderProjects,
     procurement:function(){renderProc(curTab.proc);}, finance:renderFinance,
     hr:function(){renderHR(curTab.hr);}, qhse:function(){renderQHSE(curTab.qhse);},
-    documents:function(){renderDocs(curTab.doc);}, workflow:renderWorkflow,
+    documents:function(){renderDocs(curTab.doc);}, tenders:renderTenders,
+    ceo:renderCEO,
+    workflow:renderWorkflow,
     audit:renderAudit
   };
   if(fn[id]) fn[id]();
 }
+
+function renderTenders(){
+  const el=document.getElementById('page-tenders');
+  if(!el) return;
+  const list=DB.tenders||[];
+  const active=list.filter(t=>['preparation','bidding','evaluating'].includes(t.status));
+  const awarded=list.filter(t=>t.status==='awarded');
+  const lost=list.filter(t=>t.status==='lost');
+  const noBid=list.filter(t=>t.bidDecision==='no_bid');
+  const totalBid=list.filter(t=>t.bidDecision==='bid').reduce(function(s,t){return s+t.budget;},0);
+  const winRate=awarded.length&&(awarded.length+lost.length)>0?Math.round(awarded.length/(awarded.length+lost.length)*100):0;
+
+  el.innerHTML=`
+  <div class="page-head">
+    <div class="page-head-left"><span style="font-size:22px">📋</span><div><h1>Tenders</h1><div class="sub">Tender Register · Bid/No-Bid · Status Tracking</div></div></div>
+    <button class="btn btn-primary btn-sm" type="button" onclick="openNewTenderModal()">+ New Tender</button>
+  </div>
+  <div class="grid4">
+    ${kpi('Total Tenders',list.length,'#E2E8F0',list.length+' registered')}
+    ${kpi('Active Bids',active.length,'#3B82F6','In preparation or submitted')}
+    ${kpi('Win Rate',winRate+'%',winRate>=50?'#10B981':'#F97316',awarded.length+' won / '+(awarded.length+lost.length)+' decided')}
+    ${kpi('Total Bid Value',fmtKWD(totalBid),'#C9A84C','Value of submitted tenders')}
+  </div>
+  <div class="card">
+    <div class="sec-head"><div class="sec-title"><span>📋</span>Tender Register</div></div>
+    <table><thead><tr>
+      <th>Tender No</th><th>Title</th><th>Client</th><th>Dept</th><th>Type</th>
+      <th style="text-align:right">Budget (KWD)</th><th>Deadline</th>
+      <th style="text-align:center">Decision</th><th style="text-align:center">Status</th>
+      <th></th>
+    </tr></thead><tbody>
+    ${list.map(function(t){
+      const decColor=t.bidDecision==='bid'?'#10B981':'#EF4444';
+      const stColor={'preparation':'#3B82F6','bidding':'#8B5CF6','evaluating':'#F97316','awarded':'#10B981','lost':'#EF4444','no_bid':'#94A3B8'}[t.status]||'#94A3B8';
+      return \`<tr>
+        <td style="color:var(--gold);font-size:10px;white-space:nowrap">\${esc(t.no)}</td>
+        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600" title="\${esc(t.title)}">\${esc(t.title)}</td>
+        <td style="color:var(--muted);font-size:11px">\${esc(t.client)}</td>
+        <td style="color:var(--muted);font-size:11px">\${esc(t.dept)}</td>
+        <td style="font-size:10px">\${pill(t.type,t.type==='open'?'#3B82F6':t.type==='direct'?'#8B5CF6':'#06B6D4')}</td>
+        <td style="text-align:right;font-weight:700">\${fmtKWD(t.budget)}</td>
+        <td style="color:\${t.deadline&&new Date(t.deadline)<new Date()&&!['awarded','lost','no_bid'].includes(t.status)?'#EF4444':'#94A3B8'};font-size:11px">\${t.deadline||'—'}</td>
+        <td style="text-align:center"><span class="pill" style="color:\${decColor};background:\${decColor}22;border:1px solid \${decColor}44">\${t.bidDecision==='bid'?'BID':'NO BID'}</span></td>
+        <td style="text-align:center"><span class="pill" style="color:\${stColor};background:\${stColor}22;border:1px solid \${stColor}44">\${t.status.replace('_',' ')}</span></td>
+        <td><button class="btn btn-ghost btn-sm" type="button" onclick="openBidDecisionModal('\${t.id}')">Decision</button></td>
+      </tr>\`;
+    }).join('')}
+    </tbody></table>
+  </div>
+  <div class="card">
+    <div class="sec-head"><div class="sec-title"><span>⚖️</span>Bid / No-Bid Decisions</div></div>
+    ${(DB.bidDecisions||[]).length===0?'<div class="empty">No bid decisions recorded yet</div>':
+    (DB.bidDecisions||[]).map(function(bd){
+      const col=bd.decision==='bid'?'#10B981':'#EF4444';
+      return \`<div style="background:var(--card);border:1px solid \${col}44;border-radius:9px;padding:12px 14px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div>
+            <div style="font-weight:700;font-size:12px">\${esc(bd.title)}</div>
+            <div style="color:var(--muted);font-size:10px">\${esc(bd.tenderNo)} · \${esc(bd.client)} · \${fmtKWD(bd.budget)}</div>
+          </div>
+          <div style="text-align:right">
+            <span class="pill" style="color:\${col};background:\${col}22;border:1px solid \${col}44;font-size:11px">\${bd.decision==='bid'?'✓ BID':'✗ NO BID'}</span>
+            <div style="color:var(--muted);font-size:9px;margin-top:2px">Score: \${bd.score}/100</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          \${bd.reasons.map(function(r){return '<span style="background:var(--n4);border:1px solid var(--bdr);border-radius:4px;padding:2px 8px;font-size:10px;color:var(--muted)">'+esc(r)+'</span>';}).join('')}
+        </div>
+        <div style="color:var(--faint);font-size:9px;margin-top:6px">Decided by \${uName(bd.by)} · \${bd.date||'—'}</div>
+      </div>\`;
+    }).join('')}
+  </div>`;
+}
+
+function openNewTenderModal(){
+  const html='<div class="form-row">'+
+    '<div class="form-field"><label>Tender Title *</label><input id="f-tn-title" placeholder="Tender title"/></div>'+
+    '<div class="form-field"><label>Client *</label><input id="f-tn-client" placeholder="Client name"/></div>'+
+    '</div>'+
+    '<div class="form-row">'+
+    '<div class="form-field"><label>Budget (KWD) *</label><input id="f-tn-budget" type="number" placeholder="0"/></div>'+
+    '<div class="form-field"><label>Department</label><select id="f-tn-dept">'+
+    ['Security','AV/Broadcast','IT','Power','Civil','Wireless','Trading'].map(function(d){return '<option>'+d+'</option>';}).join('')+
+    '</select></div>'+
+    '</div>'+
+    '<div class="form-row">'+
+    '<div class="form-field"><label>Tender Type</label><select id="f-tn-type"><option value="open">Open</option><option value="selective">Selective</option><option value="direct">Direct Invitation</option></select></div>'+
+    '<div class="form-field"><label>Source</label><input id="f-tn-source" placeholder="NITA, Direct, etc."/></div>'+
+    '</div>'+
+    '<div class="form-row">'+
+    '<div class="form-field"><label>Submission Deadline</label><input id="f-tn-deadline" type="date"/></div>'+
+    '<div class="form-field"><label>Bid Decision</label><select id="f-tn-decision"><option value="bid">BID</option><option value="no_bid">NO BID</option></select></div>'+
+    '</div>'+
+    '<div class="form-field"><label>Notes</label><textarea id="f-tn-notes" rows="2" placeholder="Notes..."></textarea></div>'+
+    '<div class="modal-foot">'+
+    '<button class="btn btn-ghost" type="button" onclick="closeModal()">Cancel</button>'+
+    '<button class="btn btn-primary" type="button" onclick="saveTender()">Create Tender</button>'+
+    '</div>';
+  openModal('New Tender', html);
+}
+
+function saveTender(){
+  const title=document.getElementById('f-tn-title').value.trim();
+  const client=document.getElementById('f-tn-client').value.trim();
+  const budget=Number(document.getElementById('f-tn-budget').value)||0;
+  if(!title||!client||!budget){showToast('Title, Client and Budget required','error');return;}
+  const y=new Date().getFullYear();
+  const no=nextNo(DB.tenders,'TND-'+y+'-');
+  const decision=document.getElementById('f-tn-decision').value;
+  DB.tenders=DB.tenders||[];
+  DB.tenders.push({
+    id:nextId(DB.tenders,'tn'),
+    no:no, title:title, client:client,
+    dept:document.getElementById('f-tn-dept').value,
+    budget:budget,
+    type:document.getElementById('f-tn-type').value,
+    source:document.getElementById('f-tn-source').value||'',
+    deadline:document.getElementById('f-tn-deadline').value||null,
+    status:decision==='bid'?'preparation':'no_bid',
+    bidDecision:decision,
+    submittedDate:null,
+    notes:document.getElementById('f-tn-notes').value||''
+  });
+  DB.auditLog=DB.auditLog||[];
+  DB.auditLog.unshift({id:'al'+Date.now(),entity:'tender',ref:no,action:'CREATED',by:currentUser&&currentUser.name,role:currentUser&&currentUser.role,at:new Date().toISOString()});
+  persist(); closeModal(); renderTenders();
+  showToast('Tender '+no+' created');
+}
+
+function openBidDecisionModal(tenderId){
+  const t=DB.tenders.find(function(x){return x.id===tenderId;});
+  if(!t) return;
+  const html='<div style="background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px 12px;margin-bottom:12px">'+
+    '<div style="font-weight:700">'+esc(t.title)+'</div>'+
+    '<div style="color:var(--muted);font-size:11px">'+esc(t.client)+' · '+fmtKWD(t.budget)+'</div>'+
+    '</div>'+
+    '<div class="form-row">'+
+    '<div class="form-field"><label>Decision *</label><select id="f-bd-decision"><option value="bid">BID — We will submit</option><option value="no_bid">NO BID — We will not submit</option></select></div>'+
+    '<div class="form-field"><label>Score (0-100)</label><input id="f-bd-score" type="number" min="0" max="100" value="50"/></div>'+
+    '</div>'+
+    '<div class="form-field"><label>Reasons (one per line)</label><textarea id="f-bd-reasons" rows="4" placeholder="Strong technical fit&#10;Available capacity&#10;High margin potential"></textarea></div>'+
+    '<div class="modal-foot">'+
+    '<button class="btn btn-ghost" type="button" onclick="closeModal()">Cancel</button>'+
+    '<button class="btn btn-primary" type="button" onclick="saveBidDecision(''+tenderId+'')">Record Decision</button>'+
+    '</div>';
+  openModal('Bid / No-Bid Decision — '+t.no, html);
+}
+
+function saveBidDecision(tenderId){
+  const t=DB.tenders.find(function(x){return x.id===tenderId;});
+  if(!t) return;
+  const decision=document.getElementById('f-bd-decision').value;
+  const score=Number(document.getElementById('f-bd-score').value)||50;
+  const rawReasons=document.getElementById('f-bd-reasons').value;
+  const reasons=rawReasons.split('
+').map(function(r){return r.trim();}).filter(Boolean);
+  t.bidDecision=decision;
+  t.status=decision==='bid'?'preparation':'no_bid';
+  DB.bidDecisions=DB.bidDecisions||[];
+  DB.bidDecisions.unshift({
+    id:nextId(DB.bidDecisions,'bd'),
+    tenderNo:t.no, title:t.title, client:t.client, budget:t.budget,
+    decision:decision, score:score, reasons:reasons,
+    by:currentUser&&currentUser.id, date:new Date().toISOString().split('T')[0]
+  });
+  DB.auditLog=DB.auditLog||[];
+  DB.auditLog.unshift({id:'al'+Date.now(),entity:'tender',ref:t.no,action:decision==='bid'?'BID DECISION':'NO BID DECISION',by:currentUser&&currentUser.name,role:currentUser&&currentUser.role,at:new Date().toISOString()});
+  persist(); closeModal(); renderTenders();
+  showToast('Bid decision recorded for '+t.no);
+}
+
+function renderCEO(){
+  const el=document.getElementById('page-ceo');
+  if(!el) return;
+  const projs=DB.projects;
+  const active=projs.filter(function(p){return p.status==='active';});
+  const totalVal=projs.reduce(function(s,p){return s+p.value;},0);
+  const totalEV=projs.reduce(function(s,p){return s+p.ev;},0);
+  const totalAC=projs.reduce(function(s,p){return s+p.ac;},0);
+  const totalPV=projs.reduce(function(s,p){return s+p.pv;},0);
+  const portCPI=totalAC>0?(totalEV/totalAC).toFixed(2):'1.00';
+  const portSPI=totalPV>0?(totalEV/totalPV).toFixed(2):'1.00';
+  const invs=DB.invoices||[];
+  const rev=invs.filter(function(i){return i.type==='client'&&i.status==='paid';}).reduce(function(s,i){return s+i.net;},0);
+  const cost=invs.filter(function(i){return i.type!=='client'&&i.status==='paid';}).reduce(function(s,i){return s+i.net;},0);
+  const ar=invs.filter(function(i){return i.type==='client'&&i.status!=='paid'&&i.status!=='cancelled';}).reduce(function(s,i){return s+i.net;},0);
+  const openNCRs=DB.ncrs.filter(function(n){return n.status==='open';});
+  const critNCRs=openNCRs.filter(function(n){return n.severity==='critical';});
+  const wfPending=(DB.workflows||[]).filter(function(w){return w.status==='pending'||w.status==='overdue';});
+  const tenders=DB.tenders||[];
+  const activeTenders=tenders.filter(function(t){return ['preparation','bidding','evaluating'].includes(t.status);});
+  const pipeline=tenders.filter(function(t){return t.bidDecision==='bid'&&!['awarded','lost'].includes(t.status);}).reduce(function(s,t){return s+t.budget;},0);
+  const today=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+
+  el.innerHTML=`
+  <div class="page-head">
+    <div class="page-head-left"><span style="font-size:22px">📊</span><div><h1>CEO / Board Report</h1><div class="sub">Executive Summary · ${today} · SP360 Smart Projects 360</div></div></div>
+  </div>
+
+  <!-- HEADLINE KPIs -->
+  <div class="grid4" style="margin-bottom:8px">
+    ${kpi('Portfolio Value',fmtKWD(totalVal),'#C9A84C',active.length+' active · '+projs.filter(function(p){return p.status==='completed';}).length+' completed')}
+    ${kpi('Portfolio CPI',portCPI,Number(portCPI)>=1?'#10B981':Number(portCPI)>=0.9?'#F97316':'#EF4444','ΣEV/ΣAC — BAC-weighted')}
+    ${kpi('Portfolio SPI',portSPI,Number(portSPI)>=1?'#10B981':Number(portSPI)>=0.9?'#F97316':'#EF4444','ΣEV/ΣPV — BAC-weighted')}
+    ${kpi('Gross Profit',fmtKWD(rev-cost),rev-cost>=0?'#C9A84C':'#EF4444',rev>0?(((rev-cost)/rev*100).toFixed(1)+'% margin'):'Cash basis')}
+  </div>
+  <div class="grid4" style="margin-bottom:16px">
+    ${kpi('Revenue Collected',fmtKWD(rev),'#10B981','Client invoices paid')}
+    ${kpi('AR Outstanding',fmtKWD(ar),'#F97316','Pending collection')}
+    ${kpi('BD Pipeline',fmtKWD(pipeline),'#8B5CF6',activeTenders.length+' active tenders')}
+    ${kpi('Pending Approvals',wfPending.length,wfPending.filter(function(w){return w.status==='overdue';}).length>0?'#EF4444':'#F97316',wfPending.filter(function(w){return w.status==='overdue';}).length+' overdue')}
+  </div>
+
+  <div class="grid2">
+    <!-- PROJECT HEALTH -->
+    <div class="card">
+      <div class="sec-head"><div class="sec-title"><span>🏗</span>Project Health — EVM Summary</div></div>
+      <table><thead><tr><th>Project</th><th style="text-align:center">%</th><th style="text-align:center">CPI</th><th style="text-align:center">SPI</th><th style="text-align:center">Health</th></tr></thead><tbody>
+      ${active.map(function(p){
+        const health=p.cpi>=1&&p.spi>=0.95?'🟢 On Track':p.cpi>=0.9&&p.spi>=0.85?'🟡 At Risk':'🔴 Critical';
+        return \`<tr>
+          <td style="font-size:11px;font-weight:600;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="\${esc(p.name)}">\${esc(p.name.split('—')[0].trim())}<div style="color:var(--faint);font-size:9px">\${esc(p.no)}</div></td>
+          <td style="text-align:center"><span style="font-weight:700">\${p.pct}%</span><div class="evm-bar-bg"><div class="evm-bar-fill" style="width:\${p.pct}%;background:\${p.pct>=75?'#10B981':p.pct>=40?'#F97316':'#EF4444'}"></div></div></td>
+          <td style="text-align:center;font-weight:800;color:\${p.cpi>=1?'#10B981':p.cpi>=0.9?'#F97316':'#EF4444'}">\${p.cpi.toFixed(2)}</td>
+          <td style="text-align:center;font-weight:800;color:\${p.spi>=1?'#10B981':p.spi>=0.9?'#F97316':'#EF4444'}">\${p.spi.toFixed(2)}</td>
+          <td style="font-size:10px">\${health}</td>
+        </tr>\`;
+      }).join('')}
+      </tbody></table>
+    </div>
+
+    <!-- RISKS & ACTIONS -->
+    <div class="card">
+      <div class="sec-head"><div class="sec-title"><span>⚠️</span>Key Risks & Actions Required</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${critNCRs.length>0?critNCRs.map(function(n){return \`<div style="background:#EF444411;border:1px solid #EF444444;border-radius:8px;padding:9px 12px"><div style="color:#EF4444;font-size:10px;font-weight:800">🔴 CRITICAL NCR</div><div style="font-size:11px;font-weight:600">\${esc(n.title)}</div><div style="color:var(--muted);font-size:10px">\${esc(n.no)}</div></div>\`;}).join(''):''}
+        ${wfPending.filter(function(w){return w.status==='overdue';}).map(function(w){return \`<div style="background:#EF444411;border:1px solid #EF444444;border-radius:8px;padding:9px 12px"><div style="color:#EF4444;font-size:10px;font-weight:800">⚡ OVERDUE APPROVAL</div><div style="font-size:11px;font-weight:600">\${esc(w.ref)}</div><div style="color:var(--muted);font-size:10px">\${esc(w.step)}</div></div>\`;}).join('')}
+        ${active.filter(function(p){return p.cpi<0.9||p.spi<0.85;}).map(function(p){return \`<div style="background:#F9731611;border:1px solid #F9731644;border-radius:8px;padding:9px 12px"><div style="color:#F97316;font-size:10px;font-weight:800">🟠 AT RISK PROJECT</div><div style="font-size:11px;font-weight:600">\${esc(p.name.split('—')[0].trim())}</div><div style="color:var(--muted);font-size:10px">CPI: \${p.cpi.toFixed(2)} · SPI: \${p.spi.toFixed(2)}</div></div>\`;}).join('')}
+        ${critNCRs.length===0&&wfPending.filter(function(w){return w.status==='overdue';}).length===0&&active.filter(function(p){return p.cpi<0.9||p.spi<0.85;}).length===0?'<div class="empty">✅ No critical risks at this time</div>':''}
+      </div>
+    </div>
+  </div>
+
+  <!-- BD PIPELINE -->
+  <div class="card">
+    <div class="sec-head"><div class="sec-title"><span>🎯</span>Business Development Pipeline</div></div>
+    <div class="grid4" style="margin-bottom:12px">
+      ${kpi('Active Tenders',activeTenders.length,'#3B82F6')}
+      ${kpi('Awarded This Cycle',tenders.filter(function(t){return t.status==='awarded';}).length,'#10B981',fmtKWD(tenders.filter(function(t){return t.status==='awarded';}).reduce(function(s,t){return s+t.budget;},0)))}
+      ${kpi('Win Rate',tenders.filter(function(t){return t.status==='awarded';}).length&&(tenders.filter(function(t){return t.status==='awarded';}).length+tenders.filter(function(t){return t.status==='lost';}).length)>0?Math.round(tenders.filter(function(t){return t.status==='awarded';}).length/(tenders.filter(function(t){return t.status==='awarded';}).length+tenders.filter(function(t){return t.status==='lost';}).length)*100)+'%':'N/A','#8B5CF6')}
+      ${kpi('No-Bid Decisions',tenders.filter(function(t){return t.bidDecision==='no_bid';}).length,'#94A3B8')}
+    </div>
+    <table><thead><tr><th>Tender</th><th>Client</th><th>Dept</th><th style="text-align:right">Budget</th><th>Deadline</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${activeTenders.map(function(t){
+      const stColor={'preparation':'#3B82F6','bidding':'#8B5CF6','evaluating':'#F97316'}[t.status]||'#94A3B8';
+      return \`<tr>
+        <td style="font-weight:600;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${esc(t.title)}</td>
+        <td style="color:var(--muted);font-size:11px">\${esc(t.client)}</td>
+        <td style="color:var(--muted);font-size:11px">\${esc(t.dept)}</td>
+        <td style="text-align:right;font-weight:700">\${fmtKWD(t.budget)}</td>
+        <td style="color:var(--muted);font-size:11px">\${t.deadline||'—'}</td>
+        <td style="text-align:center"><span class="pill" style="color:\${stColor};background:\${stColor}22;border:1px solid \${stColor}44">\${t.status}</span></td>
+      </tr>\`;
+    }).join('')}
+    </tbody></table>
+  </div>`;
+}
+
 
 function renderAudit(){
   const el=document.getElementById('page-audit');
