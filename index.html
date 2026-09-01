@@ -223,7 +223,7 @@ let sb = null;
 
 function initApp() {
   'use strict';
-  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  sb = (window.supabase || supabase).createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ═══════════════════════════════════════════════════════════
 //  SP360 ERP v6 — Supabase Production System
