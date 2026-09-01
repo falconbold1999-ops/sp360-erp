@@ -215,17 +215,13 @@ tr:hover td{background:#1A366010}
 
 <div class="toast" id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
-<script>
 
+<script>
 'use strict';
 
-// ═══════════════════════════════════════════════════════════
-//  SP360 ERP v6 — Supabase Production System
-// ═══════════════════════════════════════════════════════════
 const SUPABASE_URL = 'https://sqizirpsatofcoqshwer.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxaXppcnBzYXRvZmNvcXNod2VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxNTM5MTAsImV4cCI6MjEwMjcyOTkxMH0.LnfA4pGIbv30uQVNHa7MeFioP9OF2ukNTol_cDUF8mk';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let sb = null;
 
 // ── ROLE-BASED ACCESS ────────────────────────────────────────
 const ROLE_PAGES = {
@@ -1040,7 +1036,12 @@ async function saveInvoice(){
   closeModal();loadFinance();
 }
 
-// ── SESSION RESTORE (with timeout) ──────────────────────────
+
+
+function initApp() {
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // ── SESSION RESTORE (with timeout) ──────────────────────────
 (async()=>{
   try {
     const sessionPromise = sb.auth.getSession();
@@ -1072,6 +1073,13 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&document.getElementById('auth-screen').style.display!=='none')doLogin();
 });
 
+
+}
 </script>
+<script
+  src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"
+  onload="initApp();"
+  onerror="document.getElementById('auth-error').textContent='Network error — cannot load. Check connection.'; document.getElementById('auth-error').style.display='block';"
+></script>
 </body>
 </html>
