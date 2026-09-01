@@ -217,11 +217,38 @@ tr:hover td{background:#1A366010}
 
 
 <script>
-'use strict';
-
 const SUPABASE_URL = 'https://sqizirpsatofcoqshwer.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxaXppcnBzYXRvZmNvcXNod2VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxNTM5MTAsImV4cCI6MjEwMjcyOTkxMH0.LnfA4pGIbv30uQVNHa7MeFioP9OF2ukNTol_cDUF8mk';
 let sb = null;
+
+function initApp() {
+  'use strict';
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ═══════════════════════════════════════════════════════════
+//  SP360 ERP v6 — Supabase Production System
+// ═══════════════════════════════════════════════════════════
+
+
+// ── SUPABASE INIT (safe, non-blocking) ───────────────────────
+let sb;
+try {
+  const _sb = window.supabase || supabase;
+  if (_sb && typeof _sb.createClient === 'function') {
+    sb = _sb.createClient(SUPABASE_URL, SUPABASE_KEY);
+  } else {
+    throw new Error('createClient not found');
+  }
+} catch(e) {
+  console.error('Supabase init error:', e);
+  // Show error banner but KEEP login form functional
+  const banner = document.createElement('div');
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#EF4444;color:#fff;text-align:center;padding:8px;font-size:12px;z-index:9999';
+  banner.textContent = '⚠️ Connection error — login may not work. Check your network.';
+  document.body.prepend(banner);
+  // Create a stub so the page doesn't crash
+  sb = { auth: { getSession: async()=>({data:{session:null},error:null}), signInWithPassword: async()=>({data:null,error:{message:'Service unavailable'}}), signOut: async()=>{}, onAuthStateChange: ()=>({data:{subscription:{unsubscribe:()=>{}}}}) }, from: ()=>({ select:()=>({eq:()=>({single:()=>Promise.resolve({data:null,error:null})}),in:()=>Promise.resolve({data:[],error:null}),order:()=>({limit:()=>Promise.resolve({data:[],error:null})})}), insert:()=>Promise.resolve({data:null,error:null}), update:()=>({eq:()=>Promise.resolve({data:null,error:null})}), delete:()=>({eq:()=>Promise.resolve({data:null,error:null})}) }) };
+}
 
 // ── ROLE-BASED ACCESS ────────────────────────────────────────
 const ROLE_PAGES = {
@@ -1036,12 +1063,7 @@ async function saveInvoice(){
   closeModal();loadFinance();
 }
 
-
-
-function initApp() {
-  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-  // ── SESSION RESTORE (with timeout) ──────────────────────────
+// ── SESSION RESTORE (with timeout) ──────────────────────────
 (async()=>{
   try {
     const sessionPromise = sb.auth.getSession();
@@ -1073,13 +1095,12 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&document.getElementById('auth-screen').style.display!=='none')doLogin();
 });
 
-
 }
 </script>
 <script
   src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"
   onload="initApp();"
-  onerror="document.getElementById('auth-error').textContent='Network error — cannot load. Check connection.'; document.getElementById('auth-error').style.display='block';"
+  onerror="document.getElementById('auth-error').textContent='Network error — cannot load Supabase.'; document.getElementById('auth-error').style.display='block';"
 ></script>
 </body>
 </html>
