@@ -144,7 +144,7 @@ tr:hover td{background:#1A366010}
       <div class="auth-logo-sq">SP</div>
       <div>
         <div class="auth-title">SP360 ERP</div>
-        <div class="auth-sub">Smart Projects 360 · Kuwait · Prototype v5.1</div>
+        <div class="auth-sub">Smart Projects 360 · Kuwait</div>
       </div>
     </div>
     <div class="auth-note">Prototype — data is stored in this browser only (not a hosted ERP). Demo PIN is the same for all accounts. Roles limit which modules you can open.</div>
@@ -158,10 +158,10 @@ tr:hover td{background:#1A366010}
 
 <div id="app">
   <div class="demo-banner">
-    <span>Prototype v5.1 — local browser store · not a production ERP of record · Workflows_Rev_24 not fully implemented</span>
+    <span>SP360 ERP v5.1 — Smart Projects 360 · Kuwait</span>
     <span>
       <button class="btn btn-ghost btn-sm" type="button" id="btn-export">Export JSON</button>
-      <button class="btn btn-ghost btn-sm" type="button" id="btn-reset">Reset demo data</button>
+      
     </span>
   </div>
   <header>
@@ -194,6 +194,7 @@ tr:hover td{background:#1A366010}
         <button class="nav-btn" type="button" data-page="documents"><span class="nav-icon">📄</span>Document Control</button>
         <div class="nav-section" data-sec="sys">System</div>
         <button class="nav-btn" type="button" data-page="workflow"><span class="nav-icon">⚡</span>Workflow<span class="nav-badge" id="wf-badge" style="display:none">0</span></button>
+        <button class="nav-btn" data-page="audit" onclick="navTo('audit',this)"><span class="nav-icon">📋</span>Audit Trail</button>
       </nav>
       <div class="sidebar-foot">SP360 ERP v5.1 · local prototype</div>
     </aside>
@@ -208,6 +209,7 @@ tr:hover td{background:#1A366010}
       <div class="page" id="page-qhse"></div>
       <div class="page" id="page-documents"></div>
       <div class="page" id="page-workflow"></div>
+      <div class="page" id="page-audit"></div>
     </main>
   </div>
 </div>
@@ -457,8 +459,10 @@ function nextId(arr, prefix){
 function nextNo(arr, prefix){
   let max=0;
   arr.forEach(function(x){
-    const m=String(x.no).match(/(\d+)$/);
-    if(m) max=Math.max(max, Number(m[1]));
+    if(x.no && String(x.no).startsWith(prefix)){
+      const m=String(x.no).match(/(\d+)$/);
+      if(m) max=Math.max(max, Number(m[1]));
+    }
   });
   return prefix+String(max+1).padStart(3,'0');
 }
@@ -601,9 +605,29 @@ function renderPage(id){
     dashboard:renderDashboard, bizdev:renderBizdev, projects:renderProjects,
     procurement:function(){renderProc(curTab.proc);}, finance:renderFinance,
     hr:function(){renderHR(curTab.hr);}, qhse:function(){renderQHSE(curTab.qhse);},
-    documents:function(){renderDocs(curTab.doc);}, workflow:renderWorkflow
+    documents:function(){renderDocs(curTab.doc);}, workflow:renderWorkflow,
+    audit:renderAudit
   };
   if(fn[id]) fn[id]();
+}
+
+function renderAudit(){
+  const el=document.getElementById('page-audit');
+  if(!el) return;
+  const log=(DB.auditLog||[]);
+  el.innerHTML='<div class="page-head"><div class="page-head-left"><span style="font-size:22px">📋</span><div><h1>Audit Trail</h1><div class="sub">System activity log — who did what and when</div></div></div></div>'+
+  '<div class="card"><div class="sec-head"><div class="sec-title"><span>📋</span>Activity Log</div></div>'+
+  (log.length===0?'<div class="empty">No audit records yet — approve or return a workflow item to begin logging</div>':
+  '<table><thead><tr><th>Time</th><th>Action</th><th>Reference</th><th>Step</th><th>By</th><th>Role</th><th>Reason</th></tr></thead><tbody>'+
+  log.map(function(a){return '<tr><td style="color:var(--muted);font-size:10px;white-space:nowrap">'+new Date(a.at).toLocaleString("en-GB")+'</td>'+
+  '<td><span class="pill" style="color:'+(a.action==="APPROVED"?"#10B981":"#EF4444")+';background:'+(a.action==="APPROVED"?"#10B98122":"#EF444422")+';border:1px solid '+(a.action==="APPROVED"?"#10B98144":"#EF444444")+'">'+(a.action||"—")+'</span></td>'+
+  '<td style="font-weight:700;color:var(--gold)">'+(a.ref||"—")+'</td>'+
+  '<td style="color:var(--muted);font-size:11px">'+(a.step||"—")+'</td>'+
+  '<td style="font-weight:600;font-size:11px">'+(a.by||"—")+'</td>'+
+  '<td style="color:var(--muted);font-size:11px">'+(a.role||"—")+'</td>'+
+  '<td style="color:var(--muted);font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(a.reason||"—")+'</td></tr>';}).join("")+
+  "</tbody></table>")+
+  "</div>";
 }
 
 function renderDashboard(){
@@ -941,9 +965,21 @@ function renderDocs(tab){
 
 function canApprove(w){
   const r = currentUser && currentUser.role;
-  if(r==='PMO Manager') return true;
-  if(r==='Finance Manager' && (w.type.indexOf('Invoice')!==-1 || w.step.indexOf('Finance')!==-1)) return true;
-  if(r==='Procurement Lead' && w.type==='Purchase Order' && w.step.indexOf('Dept')!==-1) return true;
+  const step = w.step || '';
+  const type = w.type || '';
+  // Strict Segregation of Duties — each role approves only their designated step
+  if(r==='PMO Manager'){
+    // PMO approves: GM Approval step and PM Verification step only
+    return step.indexOf('GM')!==-1 || step.indexOf('PM Verif')!==-1;
+  }
+  if(r==='Finance Manager'){
+    // Finance approves: Finance steps only
+    return step.indexOf('Finance')!==-1;
+  }
+  if(r==='Procurement Lead'){
+    // Procurement approves: Dept Approval step for POs only
+    return type==='Purchase Order' && step.indexOf('Dept')!==-1;
+  }
   return false;
 }
 
@@ -963,23 +999,31 @@ function wfApprove(id){
     if(w.step.indexOf('PM')!==-1){ w.step='Finance Approval'; w.status='pending'; }
     else { inv.status='approved'; DB.workflows = DB.workflows.filter(function(x){return x.id!==w.id;}); }
   }
+  // Audit log
+  DB.auditLog = DB.auditLog||[];
+  DB.auditLog.unshift({id:'al'+Date.now(),entity:w.entity,ref:w.ref,action:'APPROVED',step:w.step,by:currentUser.name,role:currentUser.role,at:new Date().toISOString()});
   persist(); refreshWfBadges(); renderWorkflow();
-  showToast(w.ref+' advanced');
+  showToast(w.ref+' approved — step advanced');
 }
 function wfReturn(id){
   const w = DB.workflows.find(function(x){return x.id===id;});
   if(!w) return;
   if(!canApprove(w)){ showToast('Your role cannot return this item','error'); return; }
+  const reason = prompt('Return reason (required):');
+  if(!reason || !reason.trim()){ showToast('Return reason is required','error'); return; }
   if(w.entity==='po'){
     const po = DB.pos.find(function(p){return p.id===w.entityId;});
-    if(po) po.status='rejected';
+    if(po){ po.status='rejected'; po.rejectReason=reason; }
   } else if(w.entity==='inv'){
     const inv = DB.invoices.find(function(i){return i.id===w.entityId;});
-    if(inv) inv.status='returned';
+    if(inv){ inv.status='returned'; inv.rejectReason=reason; }
   }
+  // Audit log
+  DB.auditLog = DB.auditLog||[];
+  DB.auditLog.unshift({id:'al'+Date.now(),entity:w.entity,ref:w.ref,action:'RETURNED',reason:reason,by:currentUser.name,role:currentUser.role,at:new Date().toISOString()});
   DB.workflows = DB.workflows.filter(function(x){return x.id!==id;});
   persist(); refreshWfBadges(); renderWorkflow();
-  showToast(w.ref+' returned','error');
+  showToast(w.ref+' returned — reason recorded','error');
 }
 
 function renderWorkflow(){
@@ -1148,7 +1192,7 @@ document.getElementById('btn-auth').addEventListener('click', doLogin);
 document.getElementById('btn-logout').addEventListener('click', doLogout);
 document.getElementById('btn-side').addEventListener('click', function(){ document.getElementById('sidebar').classList.toggle('collapsed'); });
 document.getElementById('btn-export').addEventListener('click', exportJSON);
-document.getElementById('btn-reset').addEventListener('click', resetDemo);
+// Reset demo removed from production
 document.getElementById('btn-modal-x').addEventListener('click', closeModal);
 document.getElementById('modal-overlay').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
 document.querySelector('nav').addEventListener('click', function(e){
