@@ -884,7 +884,7 @@ async function wfReturn(wfId,entityType,entityId){
 async function loadAudit(){
   const el=document.getElementById('page-audit');
   el.innerHTML=`<div class="loading">Loading…</div>`;
-  const {data:list}=await sb.from('audit_log').select('*,user:user_profiles(full_name)').order('performed_at',{ascending:false}).limit(100);
+  const {data:list}=await sb.from('audit_log').select('*').order('performed_at',{ascending:false}).limit(100);
   const L=list||[];
   el.innerHTML=`
   <div class="page-head"><div class="page-head-left"><span style="font-size:22px">📋</span><div><h1>Audit Trail</h1><div class="sub">Last 100 system actions · Who · What · When</div></div></div></div>
@@ -894,7 +894,7 @@ async function loadAudit(){
     L.map(a=>`<div class="audit-row">
       <div class="audit-time">${new Date(a.performed_at).toLocaleString('en-GB')}</div>
       <div class="audit-action">${esc(a.action)}</div>
-      <div style="color:var(--muted);font-size:11px;min-width:120px">${esc(a.user?.full_name||'System')}</div>
+      <div style="color:var(--muted);font-size:11px;min-width:120px">${esc(a.performed_by||'System')}</div>
       <div class="audit-detail">${esc(a.entity_type)} · ${esc(a.notes||'')}${a.new_values?` → ${esc(JSON.stringify(a.new_values))}`:''}</div>
     </div>`).join('')}
   </div>`;
