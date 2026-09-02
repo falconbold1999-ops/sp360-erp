@@ -631,6 +631,8 @@ async function loadProjects(tab){
     <button class="tab${tab==='portfolio'?' act':''}" onclick="loadProjects('portfolio')">📊 Portfolio EVM</button>
     <button class="tab${tab==='lifecycle'?' act':''}" onclick="loadProjects('lifecycle')">🔄 Life Cycle</button>
     <button class="tab${tab==='progress'?' act':''}" onclick="loadProjects('progress')">📈 Progress Update</button>
+    <button class="tab${tab==='changeorders'?' act':''}" onclick="loadProjects('changeorders')">📝 Change Orders</button>
+    <button class="tab${tab==='report'?' act':''}" onclick="loadProjects('report')">📋 Monthly Report</button>
   </div>`;
 
   let body='';
@@ -706,6 +708,80 @@ async function loadProjects(tab){
       <td style="text-align:center"><button class="btn btn-primary btn-sm" onclick="saveProgress('${p.id}',${p.bac})">Save</button></td>
     </tr>`).join('')}
     </tbody></table>`;
+  }
+
+  // ── Change Orders tab
+  if(tab==='changeorders'){
+    const {data:cos}=await sb.from('change_orders').select('*,project:projects(project_no,name)').order('created_at',{ascending:false}).limit(100);
+    const coList=cos||[];
+    const approved=coList.filter(c=>c.status==='approved');
+    const totalCOVal=approved.reduce((s,c)=>s+Number(c.amount),0);
+    body=`
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Total COs',coList.length,'#E2E8F0')}
+      ${kpi('Approved',approved.length,'#10B981')}
+      ${kpi('Pending',coList.filter(c=>c.status==='pending').length,'#F97316')}
+      ${kpi('Total Approved Value',fmtKWD(totalCOVal),'#C9A84C')}
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <button class="btn btn-primary btn-sm" onclick="openNewCOModal()">+ New Change Order</button>
+    </div>
+    ${coList.length===0?'<div class="empty">No change orders yet</div>':`
+    <table><thead><tr><th>CO No</th><th>Project</th><th>Description</th><th style="text-align:right">Amount (KWD)</th><th style="text-align:center">Type</th><th style="text-align:center">Status</th><th>Date</th></tr></thead><tbody>
+    ${coList.map(c=>`<tr>
+      <td style="color:var(--gold);font-size:10px;font-weight:700">${esc(c.co_no||'—')}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(c.project?.project_no||'—')}</td>
+      <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.description||'')}</td>
+      <td style="text-align:right;font-weight:700;color:${Number(c.amount)>=0?'#10B981':'#EF4444'}">${Number(c.amount)>=0?'+':''}${fmtKWD(Math.abs(c.amount))}</td>
+      <td style="text-align:center">${pill(c.co_type||'addition')}</td>
+      <td style="text-align:center">${pill(c.status)}</td>
+      <td style="color:var(--muted);font-size:11px">${c.submitted_date||'—'}</td>
+    </tr>`).join('')}
+    </tbody></table>`}`;
+  }
+
+  // ── Monthly Report tab
+  if(tab==='report'){
+    const today=new Date();
+    const monthStr=today.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+    body=`
+    <div style="margin-bottom:12px;padding:10px 14px;background:#8B5CF611;border:1px solid #8B5CF633;border-radius:8px;font-size:11px;color:var(--muted)">
+      📋 Monthly Progress Report — ${monthStr} · Use <strong style="color:var(--gold)">Print / PDF</strong> to export
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 Print / Export PDF</button>
+    </div>
+    <table><thead><tr>
+      <th>Project</th><th>Client</th><th style="text-align:center">Phase</th>
+      <th style="text-align:center">% Plan</th><th style="text-align:center">% Actual</th>
+      <th style="text-align:right">BAC</th><th style="text-align:right">EV</th><th style="text-align:right">AC</th>
+      <th style="text-align:center">CPI</th><th style="text-align:center">SPI</th>
+      <th style="text-align:right">EAC</th><th style="text-align:center">RAG</th>
+    </tr></thead><tbody>
+    ${projs.filter(p=>p.status!=='completed').map(p=>{
+      const eac=Number(p.cpi)>0?Number(p.ac)+(Number(p.bac)-Number(p.ev))/Number(p.cpi):Number(p.bac);
+      const ragVal=Math.min(Number(p.cpi),Number(p.spi));
+      const rag=ragVal>=1?'🟢':ragVal>=0.9?'🟡':'🔴';
+      const pvPct=Number(p.pv)>0?Math.round(Number(p.pv)/Number(p.bac)*100):0;
+      return`<tr>
+        <td><div style="font-weight:600;font-size:11px">${esc(p.name.split('—')[0].trim())}</div><div style="color:var(--gold);font-size:9px">${esc(p.project_no)}</div></td>
+        <td style="color:var(--muted);font-size:11px">${esc(p.client)}</td>
+        <td style="text-align:center">${pill(p.status)}</td>
+        <td style="text-align:center;color:var(--muted)">${pvPct}%</td>
+        <td style="text-align:center;font-weight:700;color:${Number(p.pct)>=pvPct?'#10B981':'#EF4444'}">${p.pct}%</td>
+        <td style="text-align:right;font-size:11px">${fmtKWD(p.bac)}</td>
+        <td style="text-align:right;font-size:11px">${fmtKWD(p.ev)}</td>
+        <td style="text-align:right;font-size:11px">${fmtKWD(p.ac)}</td>
+        <td style="text-align:center;font-weight:800;color:${cpiColor(p.cpi)}">${Number(p.cpi).toFixed(2)}</td>
+        <td style="text-align:center;font-weight:800;color:${cpiColor(p.spi)}">${Number(p.spi).toFixed(2)}</td>
+        <td style="text-align:right;font-size:11px">${fmtKWD(eac)}</td>
+        <td style="text-align:center;font-size:16px">${rag}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>
+    <div style="margin-top:14px;padding:10px;background:var(--n3);border-radius:8px;font-size:10px;color:var(--faint);text-align:center">
+      SP360 ERP v6 · Monthly Progress Report · ${monthStr} · Confidential
+    </div>`;
   }
 
   el.innerHTML=`
@@ -1059,6 +1135,53 @@ async function wfReturn(wfId,entityType,entityId){
 }
 
 // ── AUDIT TRAIL ──────────────────────────────────────────────
+// ── CHANGE ORDERS ────────────────────────────────────────────
+function openNewCOModal(){
+  sb.from('projects').select('id,project_no,name').order('project_no').then(({data:projs})=>{
+    openModal('New Change Order',`
+    <div class="form-row">
+      <div class="form-field"><label>Project *</label><select id="f-coproj"><option value="">— Select —</option>${(projs||[]).map(p=>`<option value="${p.id}">${esc(p.project_no)} — ${esc(p.name.split('—')[0].trim())}</option>`).join('')}</select></div>
+      <div class="form-field"><label>Type</label><select id="f-cotype"><option value="addition">Addition</option><option value="omission">Omission</option><option value="substitution">Substitution</option><option value="acceleration">Acceleration</option></select></div>
+    </div>
+    <div class="form-field"><label>Description *</label><input id="f-codesc" placeholder="Brief description of change"/></div>
+    <div class="form-row">
+      <div class="form-field"><label>Amount (KWD) — negative for omissions</label><input id="f-coamt" type="number" placeholder="0"/></div>
+      <div class="form-field"><label>Submitted Date</label><input id="f-codate" type="date" value="${new Date().toISOString().split('T')[0]}"/></div>
+    </div>
+    <div class="form-field"><label>Justification</label><textarea id="f-cojust" rows="2" placeholder="Reason for change…"></textarea></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCO()">Submit Change Order</button>
+    </div>`);
+  });
+}
+
+async function saveCO(){
+  const proj=document.getElementById('f-coproj').value;
+  const desc=document.getElementById('f-codesc').value.trim();
+  const amt=Number(document.getElementById('f-coamt').value)||0;
+  const date=document.getElementById('f-codate').value;
+  if(!proj||!desc){showToast('Project and Description required','error');return;}
+  // Generate CO number
+  const {data:allCOs}=await sb.from('change_orders').select('co_no');
+  const maxCO=(allCOs||[]).reduce((max,c)=>{const n=Number((c.co_no||'').split('-')[2]||0);return n>max?n:max;},0);
+  const year=new Date().getFullYear();
+  const co_no=`CO-${year}-${String(maxCO+1).padStart(3,'0')}`;
+  const {error}=await sb.from('change_orders').insert({
+    co_no,project_id:proj,
+    co_type:document.getElementById('f-cotype').value,
+    description:desc,amount:amt,
+    justification:document.getElementById('f-cojust').value||null,
+    submitted_date:date,
+    status:'pending',
+    submitted_by:currentProfile?.id
+  });
+  if(error){showToast('Error: '+error.message,'error');return;}
+  await writeAudit('change_orders',null,'SUBMITTED',null,{co_no,description:desc,amount:amt},'Change order submitted');
+  showToast('Change Order '+co_no+' submitted');
+  closeModal();loadProjects('changeorders');
+}
+
 // ── CEO FLASH REPORT ────────────────────────────────────────
 async function loadCEO(){
   const el=document.getElementById('page-ceo');
