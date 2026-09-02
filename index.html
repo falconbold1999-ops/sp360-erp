@@ -884,8 +884,13 @@ async function wfReturn(wfId,entityType,entityId){
 async function loadAudit(){
   const el=document.getElementById('page-audit');
   el.innerHTML=`<div class="loading">Loading…</div>`;
-  const {data:list}=await sb.from('audit_log').select('*').order('performed_at',{ascending:false}).limit(100);
+  const [{data:list},{data:profiles}]=await Promise.all([
+    sb.from('audit_log').select('*').order('performed_at',{ascending:false}).limit(100),
+    sb.from('user_profiles').select('id,full_name')
+  ]);
   const L=list||[];
+  const profMap=(profiles||[]).reduce((m,p)=>{m[p.id]=p.full_name;return m;},{});
+  const fmtVals=v=>{if(!v)return'';try{const o=JSON.parse(v);return Object.entries(o).map(([k,val])=>`${k}: ${val}`).join(' | ');}catch{return v;}};
   el.innerHTML=`
   <div class="page-head"><div class="page-head-left"><span style="font-size:22px">📋</span><div><h1>Audit Trail</h1><div class="sub">Last 100 system actions · Who · What · When</div></div></div></div>
   <div class="card">
@@ -894,8 +899,8 @@ async function loadAudit(){
     L.map(a=>`<div class="audit-row">
       <div class="audit-time">${new Date(a.performed_at).toLocaleString('en-GB')}</div>
       <div class="audit-action">${esc(a.action)}</div>
-      <div style="color:var(--muted);font-size:11px;min-width:120px">${esc(a.performed_by||'System')}</div>
-      <div class="audit-detail">${esc(a.entity_type)} · ${esc(a.notes||'')}${a.new_values?` → ${esc(JSON.stringify(a.new_values))}`:''}</div>
+      <div style="color:var(--gold);font-size:11px;min-width:140px;font-weight:600">${esc(profMap[a.performed_by]||'System')}</div>
+      <div class="audit-detail">${esc(a.entity_type)}${a.notes?' · '+esc(a.notes):''}${a.new_values?' → '+esc(fmtVals(a.new_values)):''}</div>
     </div>`).join('')}
   </div>`;
 }
@@ -980,8 +985,9 @@ async function saveProject(){
   const dept=document.getElementById('f-pdept').value;
   const deptCode={Security:'SEC','AV/Broadcast':'AV',IT:'IT',Power:'PW',Civil:'CV',Wireless:'WL',Trading:'TR'}[dept]||'XX';
   const year=new Date().getFullYear();
-  const {data:last}=await sb.from('projects').select('project_no').ilike('project_no',`SP360-${deptCode}-%`).order('project_no',{ascending:false}).limit(1).single();
-  const seq=last?String(Number(last.project_no.split('-')[2])+1).padStart(3,'0'):'001';
+  const {data:allProjs}=await sb.from('projects').select('project_no').ilike('project_no',`SP360-${deptCode}-%`);
+  const maxProjSeq=(allProjs||[]).reduce((max,p)=>{const n=Number((p.project_no||'').split('-')[2]||0);return n>max?n:max;},0);
+  const seq=String(maxProjSeq+1).padStart(3,'0');
   const project_no=`SP360-${deptCode}-${seq}`;
   const {data:proj,error}=await sb.from('projects').insert({
     project_no,name,client,department:dept,
@@ -1032,8 +1038,9 @@ async function saveInvoice(){
   const type=document.getElementById('f-itype').value;
   const prefix=type==='client'?'INV-C':type==='supplier'?'INV-S':'INV-SC';
   const year=new Date().getFullYear();
-  const {data:last}=await sb.from('invoices').select('invoice_no').ilike('invoice_no',`${prefix}-${year}-%`).order('invoice_no',{ascending:false}).limit(1).single();
-  const seq=last?String(Number(last.invoice_no.split('-').pop())+1).padStart(3,'0'):'001';
+  const {data:allInvs}=await sb.from('invoices').select('invoice_no').ilike('invoice_no',`${prefix}-${year}-%`);
+  const maxInvSeq=(allInvs||[]).reduce((max,i)=>{const n=Number((i.invoice_no||'').split('-').pop()||0);return n>max?n:max;},0);
+  const seq=String(maxInvSeq+1).padStart(3,'0');
   const invoice_no=`${prefix}-${year}-${seq}`;
   const {data:inv,error}=await sb.from('invoices').insert({
     invoice_no,project_id:proj,invoice_type:type,
