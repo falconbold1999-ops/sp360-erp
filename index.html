@@ -1430,17 +1430,8 @@ async function saveInvoice(){
 })();
 
 // Auth state monitoring (no auto-reload)
-sb.auth.onAuthStateChange((event,session)=>{
-  if(event==='SIGNED_OUT'){
-    currentUser=null;currentProfile=null;
-    if(document.getElementById('app').style.display!=='none'){
-      document.getElementById('app').style.display='none';
-      document.getElementById('auth-screen').style.display='flex';
-    }
-  } else if(session){
-    currentUser=session.user;
-  }
-});
+// Auth state handled manually via doLogin() and doLogout()
+// No onAuthStateChange needed - prevents token refresh loops
 
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&document.getElementById('auth-screen').style.display!=='none')doLogin();
