@@ -130,6 +130,7 @@ tr:hover td{background:#1A366010}
 @media(max-width:900px){.grid4{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.grid4,.grid2{grid-template-columns:1fr};aside{display:none};main{padding:12px}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -632,6 +633,8 @@ async function loadProjects(tab){
     <button class="tab${tab==='lifecycle'?' act':''}" onclick="loadProjects('lifecycle')">🔄 Life Cycle</button>
     <button class="tab${tab==='progress'?' act':''}" onclick="loadProjects('progress')">📈 Progress Update</button>
     <button class="tab${tab==='changeorders'?' act':''}" onclick="loadProjects('changeorders')">📝 Change Orders</button>
+    <button class="tab${tab==='baseline'?' act':''}" onclick="loadProjects('baseline')">📐 Baseline vs Actual</button>
+    <button class="tab${tab==='scurve'?' act':''}" onclick="loadProjects('scurve')">📉 S-Curve</button>
     <button class="tab${tab==='report'?' act':''}" onclick="loadProjects('report')">📋 Monthly Report</button>
   </div>`;
 
@@ -727,17 +730,144 @@ async function loadProjects(tab){
       <button class="btn btn-primary btn-sm" onclick="openNewCOModal()">+ New Change Order</button>
     </div>
     ${coList.length===0?'<div class="empty">No change orders yet</div>':`
-    <table><thead><tr><th>CO No</th><th>Project</th><th>Description</th><th style="text-align:right">Amount (KWD)</th><th style="text-align:center">Type</th><th style="text-align:center">Status</th><th>Date</th></tr></thead><tbody>
-    ${coList.map(c=>`<tr>
-      <td style="color:var(--gold);font-size:10px;font-weight:700">${esc(c.co_no||'—')}</td>
-      <td style="color:var(--muted);font-size:11px">${esc(c.project?.project_no||'—')}</td>
-      <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.description||'')}</td>
-      <td style="text-align:right;font-weight:700;color:${Number(c.amount)>=0?'#10B981':'#EF4444'}">${Number(c.amount)>=0?'+':''}${fmtKWD(Math.abs(c.amount))}</td>
-      <td style="text-align:center">${pill(c.co_type||'addition')}</td>
-      <td style="text-align:center">${pill(c.status)}</td>
-      <td style="color:var(--muted);font-size:11px">${c.submitted_date||'—'}</td>
-    </tr>`).join('')}
+    <table><thead><tr><th>CO No</th><th>Project</th><th>Description</th><th style="text-align:right">Amount (KWD)</th><th style="text-align:center">Type</th><th style="text-align:center">Workflow</th><th>Date</th><th style="text-align:center">Action</th></tr></thead><tbody>
+    ${coList.map(c=>{
+      const ws=c.workflow_status||'draft';
+      const wsColors={draft:'#94A3B8',submitted:'#3B82F6',under_review:'#F97316',approved:'#10B981',rejected:'#EF4444',cancelled:'#94A3B8'};
+      const wsLabels={draft:'Draft',submitted:'Submitted',under_review:'Under Review',approved:'Approved',rejected:'Rejected',cancelled:'Cancelled'};
+      const wc=wsColors[ws]||'#94A3B8';
+      const isPMO=currentProfile?.role==='PMO Manager';
+      const canReview=isPMO&&(ws==='submitted'||ws==='under_review');
+      const canSubmit=ws==='draft';
+      return`<tr>
+        <td style="color:var(--gold);font-size:10px;font-weight:700">${esc(c.co_no||'—')}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(c.project?.project_no||'—')}</td>
+        <td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.description||'')}</td>
+        <td style="text-align:right;font-weight:700;color:${Number(c.amount)>=0?'#10B981':'#EF4444'}">${Number(c.amount)>=0?'+':''}${fmtKWD(Math.abs(c.amount))}</td>
+        <td style="text-align:center">${pill(c.co_type||'addition')}</td>
+        <td style="text-align:center"><span class="pill" style="color:${wc};background:${wc}22;border:1px solid ${wc}44">${wsLabels[ws]||ws}</span></td>
+        <td style="color:var(--muted);font-size:11px">${c.submitted_date||'—'}</td>
+        <td style="text-align:center;white-space:nowrap">
+          ${canSubmit?`<button class="btn btn-ghost btn-sm" onclick="submitCO('${c.id}')">Submit</button>`:''}
+          ${canReview?`<button class="btn btn-primary btn-sm" style="background:#10B981" onclick="reviewCO('${c.id}','approve')">✓ Approve</button> <button class="btn btn-danger btn-sm" onclick="reviewCO('${c.id}','reject')">✗ Reject</button>`:''}
+          ${!canSubmit&&!canReview?`<span style="color:var(--faint);font-size:10px">—</span>`:''}
+        </td>
+      </tr>`;
+    }).join('')}
     </tbody></table>`}`;
+  }
+
+  // ── Baseline vs Actual tab
+  if(tab==='baseline'){
+    const {data:bvList,error:bvErr}=await sb.from('v_baseline_vs_actual').select('*');
+    const bvData=bvList||[];
+    body=bvData.length===0?'<div class="empty">No baseline data. Run Migration 008+009 first.</div>':`
+    <div style="margin-bottom:14px;padding:10px 14px;background:#1E3A5F22;border:1px solid #1E3A5F44;border-radius:8px;font-size:11px;color:var(--muted)">
+      📐 Comparing current project data against the original baseline. CO approvals automatically update the baseline.
+    </div>
+    <table><thead><tr>
+      <th>Project</th><th>Baseline</th>
+      <th style="text-align:right">Baseline BAC</th><th style="text-align:right">Current BAC</th>
+      <th style="text-align:right">BAC Variance</th>
+      <th style="text-align:center">SPI</th><th style="text-align:center">CPI</th>
+      <th style="text-align:right">SV</th><th style="text-align:right">CV</th>
+      <th style="text-align:center">%</th>
+    </tr></thead><tbody>
+    ${bvData.map(r=>{
+      const bv=Number(r.bac_variance)||0;
+      const sv=Number(r.sv)||0;
+      const cv=Number(r.cv)||0;
+      const spi=Number(r.spi)||0;
+      const cpi=Number(r.cpi)||0;
+      return`<tr>
+        <td><div style="font-weight:600;font-size:11px">${esc(r.project_name||'')}</div><div style="color:var(--gold);font-size:9px">${esc(r.project_id||'')}</div></td>
+        <td style="color:var(--muted);font-size:10px">${esc(r.baseline_version||'—')}</td>
+        <td style="text-align:right;font-size:11px">${fmtKWD(r.baseline_bac||0)}</td>
+        <td style="text-align:right;font-size:11px;font-weight:700">${fmtKWD(r.current_bac||0)}</td>
+        <td style="text-align:right;font-size:11px;font-weight:700;color:${bv>0?'#EF4444':bv<0?'#10B981':'#94A3B8'}">${bv>0?'+':''}${fmtKWD(bv)}<div style="font-size:9px;color:var(--muted)">${r.bac_variance_pct||0}%</div></td>
+        <td style="text-align:center;font-weight:800;color:${cpiColor(spi)}">${spi.toFixed(3)}</td>
+        <td style="text-align:center;font-weight:800;color:${cpiColor(cpi)}">${cpi.toFixed(3)}</td>
+        <td style="text-align:right;font-size:11px;color:${sv>=0?'#10B981':'#EF4444'};font-weight:700">${sv>=0?'+':''}${fmtKWD(sv)}</td>
+        <td style="text-align:right;font-size:11px;color:${cv>=0?'#10B981':'#EF4444'};font-weight:700">${cv>=0?'+':''}${fmtKWD(cv)}</td>
+        <td style="text-align:center;font-weight:700">${r.progress_pct||0}%</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+  }
+
+  // ── S-Curve tab
+  if(tab==='scurve'){
+    // Get all projects for selector
+    const {data:snapProjs}=await sb.from('projects').select('id,project_no,name').order('project_no');
+    const spList=snapProjs||[];
+    const selProjId=spList[0]?.id||'';
+
+    // Load snapshots for first project
+    let snapHTML='<div class="empty">No projects found.</div>';
+    if(selProjId){
+      const {data:snaps}=await sb.from('project_evm_snapshots').select('*').eq('project_id',selProjId).order('snapshot_date',{ascending:true});
+      const {data:sproj}=await sb.from('projects').select('pv,ev,ac,bac').eq('id',selProjId).single();
+      const rows=snaps||[];
+      const today=new Date().toISOString().split('T')[0];
+      if(sproj&&!rows.find(r=>r.snapshot_date===today)){
+        rows.push({snapshot_date:today,period_label:'Current',pv:sproj.pv,ev:sproj.ev,ac:sproj.ac});
+      }
+      const labels=JSON.stringify(rows.map(r=>r.period_label||r.snapshot_date?.substring(0,7)||''));
+      const pvArr=JSON.stringify(rows.map(r=>Number(r.pv)||0));
+      const evArr=JSON.stringify(rows.map(r=>Number(r.ev)||0));
+      const acArr=JSON.stringify(rows.map(r=>Number(r.ac)||0));
+      snapHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="color:var(--muted);font-size:11px">Project:</label>
+          <select onchange="loadProjects('scurve')" id="scurve-proj" style="background:var(--n4);border:1px solid var(--bdr);border-radius:6px;padding:5px 8px;color:var(--text);font-size:11px">
+            ${spList.map(p=>`<option value="${p.id}">${esc(p.project_no)} — ${esc(p.name.split('—')[0].trim().substring(0,30))}</option>`).join('')}
+          </select>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openAddSnapshotModal('${selProjId}')">+ Add Snapshot</button>
+      </div>
+      ${rows.length<2?'<div class="empty">Add monthly EVM snapshots to build the S-Curve.</div>':`
+      <div style="position:relative;height:320px;margin-bottom:16px">
+        <canvas id="scurve-canvas"></canvas>
+      </div>
+      <table style="font-size:11px"><thead><tr><th>Period</th><th style="text-align:right">PV</th><th style="text-align:right">EV</th><th style="text-align:right">AC</th><th style="text-align:center">SPI</th><th style="text-align:center">CPI</th></tr></thead><tbody>
+      ${rows.map(r=>`<tr>
+        <td style="color:var(--gold);font-weight:600">${esc(r.period_label||r.snapshot_date||'')}</td>
+        <td style="text-align:right">${fmtKWD(r.pv||0)}</td>
+        <td style="text-align:right">${fmtKWD(r.ev||0)}</td>
+        <td style="text-align:right">${fmtKWD(r.ac||0)}</td>
+        <td style="text-align:center;font-weight:700;color:${cpiColor(r.spi||1)}">${r.spi?Number(r.spi).toFixed(3):'—'}</td>
+        <td style="text-align:center;font-weight:700;color:${cpiColor(r.cpi||1)}">${r.cpi?Number(r.cpi).toFixed(3):'—'}</td>
+      </tr>`).join('')}
+      </tbody></table>
+      <script>
+      (function(){
+        if(window._scChart){try{window._scChart.destroy();}catch(e){}}
+        var ctx=document.getElementById('scurve-canvas');
+        if(!ctx)return;
+        window._scChart=new Chart(ctx,{
+          type:'line',
+          data:{
+            labels:${labels},
+            datasets:[
+              {label:'PV (Planned)',data:${pvArr},borderColor:'#1E3A5F',backgroundColor:'#1E3A5F18',tension:0.4,fill:true,borderWidth:2},
+              {label:'EV (Earned)',data:${evArr},borderColor:'#10B981',backgroundColor:'#10B98115',tension:0.4,fill:true,borderWidth:2},
+              {label:'AC (Actual)',data:${acArr},borderColor:'#EF4444',backgroundColor:'transparent',tension:0.4,fill:false,borderWidth:2,borderDash:[5,5]}
+            ]
+          },
+          options:{
+            responsive:true,maintainAspectRatio:true,
+            plugins:{legend:{position:'top',labels:{color:'#94A3B8',font:{size:11}}}},
+            scales:{
+              x:{ticks:{color:'#94A3B8',font:{size:10}},grid:{color:'#1E3A5F33'}},
+              y:{ticks:{color:'#94A3B8',font:{size:10},callback:function(v){return 'KD '+v.toLocaleString()}},grid:{color:'#1E3A5F33'}}
+            }
+          }
+        });
+      })();
+      <\/script>`}`;
+    }
+    body=snapHTML;
   }
 
   // ── Monthly Report tab
@@ -1136,6 +1266,72 @@ async function wfReturn(wfId,entityType,entityId){
 
 // ── AUDIT TRAIL ──────────────────────────────────────────────
 // ── CHANGE ORDERS ────────────────────────────────────────────
+async function submitCO(coId){
+  const {error}=await sb.from('change_orders').update({
+    workflow_status:'submitted',
+    submitted_by:currentUser.id,
+    submitted_at:new Date().toISOString()
+  }).eq('id',coId);
+  if(error){showToast('Error: '+error.message,'error');return;}
+  await writeAudit('change_orders',coId,'CO_SUBMITTED',null,{workflow_status:'submitted'},'CO submitted for review');
+  showToast('CO submitted for review');
+  loadProjects('changeorders');
+}
+
+async function reviewCO(coId, action){
+  const comments=prompt((action==='approve'?'Approval':'Rejection')+' comments (optional):');
+  if(comments===null)return;
+  const {data,error}=await sb.rpc('apply_co_to_baseline',{
+    p_co_id:coId,
+    p_reviewed_by:currentUser.id,
+    p_action:action,
+    p_comments:comments||null
+  });
+  if(error||!data?.success){showToast(error?.message||data?.error||'Review failed','error');return;}
+  await writeAudit('change_orders',coId,action==='approve'?'CO_APPROVED':'CO_REJECTED',null,{action,comments},'CO reviewed');
+  showToast(action==='approve'?'CO Approved — Baseline updated ✓':'CO Rejected');
+  loadProjects('changeorders');
+}
+
+function openAddSnapshotModal(projId){
+  const today=new Date().toISOString().split('T')[0];
+  sb.from('projects').select('pv,ev,ac').eq('id',projId).single().then(({data:p})=>{
+    openModal('Add EVM Snapshot',`
+    <div class="form-row">
+      <div class="form-field"><label>Period Label *</label><input id="f-snap-label" placeholder="e.g. Aug 2026"/></div>
+      <div class="form-field"><label>Snapshot Date</label><input id="f-snap-date" type="date" value="${today}"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Planned Value (PV) KWD</label><input id="f-snap-pv" type="number" value="${p?.pv||0}"/></div>
+      <div class="form-field"><label>Earned Value (EV) KWD</label><input id="f-snap-ev" type="number" value="${p?.ev||0}"/></div>
+    </div>
+    <div class="form-field"><label>Actual Cost (AC) KWD</label><input id="f-snap-ac" type="number" value="${p?.ac||0}"/></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSnapshot('${projId}')">Save Snapshot</button>
+    </div>`);
+  });
+}
+
+async function saveSnapshot(projId){
+  const label=document.getElementById('f-snap-label').value.trim();
+  const date=document.getElementById('f-snap-date').value;
+  if(!label||!date){showToast('Label and date required','error');return;}
+  const pv=Number(document.getElementById('f-snap-pv').value)||0;
+  const ev=Number(document.getElementById('f-snap-ev').value)||0;
+  const ac=Number(document.getElementById('f-snap-ac').value)||0;
+  const spi=pv>0?Math.round(ev/pv*10000)/10000:null;
+  const cpi=ac>0?Math.round(ev/ac*10000)/10000:null;
+  const {error}=await sb.from('project_evm_snapshots').upsert({
+    project_id:projId,snapshot_date:date,period_label:label,
+    pv,ev,ac,spi,cpi,created_by:currentProfile?.id
+  },{onConflict:'project_id,snapshot_date'});
+  if(error){showToast('Error: '+error.message,'error');return;}
+  await writeAudit('project_evm_snapshots',projId,'SNAPSHOT_ADDED',null,{label,pv,ev,ac,spi,cpi},'EVM snapshot saved');
+  showToast('Snapshot saved ✓');
+  closeModal();loadProjects('scurve');
+}
+
 function openNewCOModal(){
   sb.from('projects').select('id,project_no,name').order('project_no').then(({data:projs})=>{
     openModal('New Change Order',`
@@ -1168,12 +1364,15 @@ async function saveCO(){
   const year=new Date().getFullYear();
   const co_no=`CO-${year}-${String(maxCO+1).padStart(3,'0')}`;
   const {error}=await sb.from('change_orders').insert({
-    co_no,project_id:proj,
+    co_no,co_number:co_no,project_id:proj,
     co_type:document.getElementById('f-cotype').value,
     description:desc,amount:amt,
+    cost_impact:amt,schedule_impact:0,
+    title:desc,
     justification:document.getElementById('f-cojust').value||null,
     submitted_date:date,
     status:'pending',
+    workflow_status:'draft',
     submitted_by:currentProfile?.id
   });
   if(error){showToast('Error: '+error.message,'error');return;}
