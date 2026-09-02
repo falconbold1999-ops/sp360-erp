@@ -192,6 +192,7 @@ tr:hover td{background:#1A366010}
         <div class="nav-section">System</div>
         <button class="nav-btn" id="nav-workflow" onclick="navTo('workflow',this)"><span class="nav-icon">⚡</span>Workflow<span class="nav-badge" id="wf-badge" style="display:none">0</span></button>
         <button class="nav-btn" id="nav-audit" onclick="navTo('audit',this)"><span class="nav-icon">📋</span>Audit Trail</button>
+        <button class="nav-btn" id="nav-ceo" onclick="navTo('ceo',this)"><span class="nav-icon">👔</span>CEO Report</button>
       </nav>
       <div class="sidebar-foot">SP360 ERP v6.0 · Production</div>
     </aside>
@@ -207,6 +208,7 @@ tr:hover td{background:#1A366010}
       <div class="page" id="page-documents"></div>
       <div class="page" id="page-workflow"></div>
       <div class="page" id="page-audit"></div>
+      <div class="page" id="page-ceo"></div>
     </main>
   </div>
 </div>
@@ -233,8 +235,8 @@ var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── ROLE-BASED ACCESS ────────────────────────────────────────
 const ROLE_PAGES = {
-  'PMO Manager':       ['dashboard','bizdev','projects','procurement','finance','hr','qhse','documents','workflow','audit'],
-  'Finance Manager':   ['dashboard','projects','procurement','finance','workflow','audit'],
+  'PMO Manager':       ['dashboard','bizdev','projects','procurement','finance','hr','qhse','documents','workflow','audit','ceo'],
+  'Finance Manager':   ['dashboard','projects','procurement','finance','workflow','audit','ceo'],
   'Procurement Lead':  ['dashboard','projects','procurement','workflow'],
   'BD Manager':        ['dashboard','bizdev','projects'],
   'QHSE Engineer':     ['dashboard','projects','qhse','documents']
@@ -347,7 +349,7 @@ function enterApp(){
   document.getElementById('app').style.display='flex';
   // Show/hide nav based on role
   const allowed=ROLE_PAGES[currentProfile?.role]||['dashboard'];
-  ['bizdev','projects','procurement','finance','hr','qhse','documents','workflow','audit'].forEach(p=>{
+  ['bizdev','projects','procurement','finance','hr','qhse','documents','workflow','audit','ceo'].forEach(p=>{
     const btn=document.getElementById('nav-'+p);
     if(btn)btn.style.display=allowed.includes(p)?'':'none';
   });
@@ -1057,6 +1059,182 @@ async function wfReturn(wfId,entityType,entityId){
 }
 
 // ── AUDIT TRAIL ──────────────────────────────────────────────
+// ── CEO FLASH REPORT ────────────────────────────────────────
+async function loadCEO(){
+  const el=document.getElementById('page-ceo');
+  el.innerHTML=`<div class="loading">Loading CEO Report…</div>`;
+  const today=new Date();
+  const monthStr=today.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+
+  const [projR,invR,wfR,ncrR,oppR,hrR]=await Promise.all([
+    sb.from('projects').select('*'),
+    sb.from('invoices').select('*'),
+    sb.from('workflow_items').select('id,status,entity_type'),
+    sb.from('ncrs').select('id,severity,status'),
+    sb.from('opportunities').select('id,status,est_value,probability'),
+    sb.from('employees').select('id,status')
+  ]);
+
+  const projs=projR.data||[], invs=invR.data||[], wfs=wfR.data||[];
+  const ncrs=ncrR.data||[], opps=oppR.data||[], emps=hrR.data||[];
+
+  // EVM Portfolio
+  const totalEV=projs.reduce((s,p)=>s+Number(p.ev),0);
+  const totalAC=projs.reduce((s,p)=>s+Number(p.ac),0);
+  const totalPV=projs.reduce((s,p)=>s+Number(p.pv),0);
+  const totalBAC=projs.reduce((s,p)=>s+Number(p.bac),0);
+  const portCPI=totalAC>0?(totalEV/totalAC).toFixed(2):'1.00';
+  const portSPI=totalPV>0?(totalEV/totalPV).toFixed(2):'1.00';
+  const totalEAC=projs.reduce((p,proj)=>{
+    const eac=Number(proj.cpi)>0?Number(proj.ac)+(Number(proj.bac)-Number(proj.ev))/Number(proj.cpi):Number(proj.bac);
+    return p+eac;
+  },0);
+  const totalVAC=totalBAC-totalEAC;
+
+  // Finance
+  const rev=invs.filter(i=>i.invoice_type==='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+  const cost=invs.filter(i=>i.invoice_type!=='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+  const outstanding=invs.filter(i=>i.status!=='paid'&&i.status!=='cancelled').reduce((s,i)=>s+Number(i.net_amount),0);
+  const gp=rev-cost;
+  const gpPct=rev>0?((gp/rev)*100).toFixed(1):0;
+
+  // RAG Status
+  const rag=v=>v>=1?'🟢':v>=0.9?'🟡':'🔴';
+  const ragColor=v=>v>=1?'#10B981':v>=0.9?'#F97316':'#EF4444';
+  const ragLabel=v=>v>=1?'On Track':v>=0.9?'At Risk':'Critical';
+
+  // Pipeline
+  const pipeline=opps.reduce((s,o)=>s+Number(o.est_value)*o.probability/100,0);
+  const won=opps.filter(o=>o.status==='won').length;
+  const pendingWF=wfs.filter(w=>w.status==='pending'||w.status==='overdue').length;
+  const overdueWF=wfs.filter(w=>w.status==='overdue').length;
+  const critNCR=ncrs.filter(n=>n.severity==='critical'&&n.status==='open').length;
+  const openNCR=ncrs.filter(n=>n.status==='open').length;
+
+  el.innerHTML=`
+  <div class="page-head">
+    <div class="page-head-left"><span style="font-size:22px">👔</span>
+      <div><h1>CEO Flash Report</h1><div class="sub">${monthStr} · Smart Projects 360 · Kuwait · Confidential</div></div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 Print / PDF</button>
+  </div>
+
+  <!-- RAG SUMMARY ROW -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+    ${[
+      ['Schedule Performance',portSPI],
+      ['Cost Performance',portCPI],
+      ['Quality (NCR)',openNCR>0?openNCR===0?1:critNCR>0?0.7:0.9:1],
+      ['Cashflow',outstanding>rev*0.5?0.7:0.9]
+    ].map(([lbl,val])=>`<div style="background:${ragColor(val)}18;border:2px solid ${ragColor(val)}66;border-radius:12px;padding:14px 16px;text-align:center">
+      <div style="font-size:28px">${rag(val)}</div>
+      <div style="color:${ragColor(val)};font-weight:800;font-size:13px;margin-top:4px">${ragLabel(val)}</div>
+      <div style="color:var(--muted);font-size:10px;margin-top:2px">${lbl}</div>
+    </div>`).join('')}
+  </div>
+
+  <!-- PORTFOLIO EVM -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="sec-head"><div class="sec-title"><span>🏗</span>Portfolio Performance — EVM Summary</div></div>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px">
+      ${[
+        ['Projects',projs.filter(p=>p.status!=='completed').length,'#E2E8F0','active'],
+        ['Portfolio CPI',portCPI,ragColor(portCPI),'ΣEV/ΣAC'],
+        ['Portfolio SPI',portSPI,ragColor(portSPI),'ΣEV/ΣPV'],
+        ['BAC',fmtKWD(totalBAC),'#C9A84C','Total budget'],
+        ['EAC',fmtKWD(totalEAC),ragColor(totalVAC>=0?1:0.7),'Est. at completion'],
+        ['VAC',fmtKWD(totalVAC),totalVAC>=0?'#10B981':'#EF4444','Variance at completion']
+      ].map(([l,v,c,s])=>`<div class="kpi" style="--kpi-color:${c}"><div class="kpi-lbl">${l}</div><div class="kpi-val">${v}</div><div class="kpi-sub">${s}</div></div>`).join('')}
+    </div>
+    <table><thead><tr><th>Project</th><th>Client</th><th style="text-align:center">Phase</th><th style="text-align:center">%</th><th style="text-align:center">CPI</th><th style="text-align:center">SPI</th><th style="text-align:right">EAC</th><th style="text-align:right">VAC</th><th style="text-align:center">RAG</th></tr></thead><tbody>
+    ${projs.filter(p=>p.status!=='completed').map(p=>{
+      const eac=Number(p.cpi)>0?Number(p.ac)+(Number(p.bac)-Number(p.ev))/Number(p.cpi):Number(p.bac);
+      const vac=Number(p.bac)-eac;
+      const ragVal=Math.min(Number(p.cpi),Number(p.spi));
+      return`<tr>
+        <td><div style="font-weight:600;font-size:11px">${esc(p.name.split('—')[0].trim())}</div><div style="color:var(--muted);font-size:9px">${esc(p.project_no)}</div></td>
+        <td style="color:var(--muted);font-size:11px">${esc(p.client)}</td>
+        <td style="text-align:center">${pill(p.status)}</td>
+        <td style="text-align:center;font-weight:700">${p.pct}%</td>
+        <td style="text-align:center;font-weight:800;color:${cpiColor(p.cpi)}">${Number(p.cpi).toFixed(2)}</td>
+        <td style="text-align:center;font-weight:800;color:${cpiColor(p.spi)}">${Number(p.spi).toFixed(2)}</td>
+        <td style="text-align:right;font-size:11px">${fmtKWD(eac)}</td>
+        <td style="text-align:right;font-size:11px;color:${vac>=0?'#10B981':'#EF4444'};font-weight:700">${vac>=0?'+':''}${fmtKWD(vac)}</td>
+        <td style="text-align:center;font-size:16px">${rag(ragVal)}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>
+  </div>
+
+  <!-- FINANCE + BUSINESS DEV -->
+  <div class="grid2" style="margin-bottom:12px">
+    <div class="card">
+      <div class="sec-head"><div class="sec-title"><span>💰</span>Financial Performance</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${[
+          ['Revenue Collected',fmtKWD(rev),'#10B981'],
+          ['Cost Paid',fmtKWD(cost),'#EF4444'],
+          ['Gross Profit',fmtKWD(gp)+' ('+gpPct+'%)',gp>=0?'#C9A84C':'#EF4444'],
+          ['Outstanding AR',fmtKWD(outstanding),'#F97316']
+        ].map(([l,v,c])=>`<div style="background:${c}11;border:1px solid ${c}33;border-radius:8px;padding:10px 12px">
+          <div style="color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase">${l}</div>
+          <div style="color:${c};font-size:16px;font-weight:800;margin-top:4px">${v}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-head"><div class="sec-title"><span>🎯</span>Business Development</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${[
+          ['Weighted Pipeline',fmtKWD(pipeline),'#C9A84C'],
+          ['Won Contracts',won,'#10B981'],
+          ['Pending Approvals',pendingWF,pendingWF>0?'#F97316':'#10B981'],
+          ['SLA Breaches',overdueWF,overdueWF>0?'#EF4444':'#10B981']
+        ].map(([l,v,c])=>`<div style="background:${c}11;border:1px solid ${c}33;border-radius:8px;padding:10px 12px">
+          <div style="color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase">${l}</div>
+          <div style="color:${c};font-size:16px;font-weight:800;margin-top:4px">${v}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  <!-- QHSE + HR -->
+  <div class="grid2">
+    <div class="card">
+      <div class="sec-head"><div class="sec-title"><span>🛡</span>QHSE Status</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${[
+          ['Open NCRs',openNCR,openNCR>0?'#F97316':'#10B981'],
+          ['Critical NCRs',critNCR,critNCR>0?'#EF4444':'#10B981'],
+          ['Closed NCRs',ncrs.filter(n=>n.status==='closed').length,'#10B981'],
+          ['Total NCRs',ncrs.length,'#E2E8F0']
+        ].map(([l,v,c])=>`<div style="background:${c}11;border:1px solid ${c}33;border-radius:8px;padding:10px 12px">
+          <div style="color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase">${l}</div>
+          <div style="color:${c};font-size:16px;font-weight:800;margin-top:4px">${v}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-head"><div class="sec-title"><span>👥</span>Human Resources</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${[
+          ['Total Staff',emps.length,'#E2E8F0'],
+          ['Active',emps.filter(e=>e.status==='active').length,'#10B981'],
+          ['Headcount','SP360','#C9A84C'],
+          ['Report Date',today.toLocaleDateString('en-GB'),'#8B5CF6']
+        ].map(([l,v,c])=>`<div style="background:${c}11;border:1px solid ${c}33;border-radius:8px;padding:10px 12px">
+          <div style="color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase">${l}</div>
+          <div style="color:${c};font-size:16px;font-weight:800;margin-top:4px">${v}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:12px;padding:10px 14px;background:var(--n3);border-radius:8px;font-size:10px;color:var(--faint);text-align:center">
+    SP360 ERP v6 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only
+  </div>`;
+}
+
 async function loadAudit(){
   const el=document.getElementById('page-audit');
   el.innerHTML=`<div class="loading">Loading…</div>`;
