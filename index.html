@@ -930,9 +930,10 @@ async function saveOpp(){
   const client=document.getElementById('f-client').value.trim();
   if(!title||!client){showToast('Title and Client required','error');return;}
   // Generate opp_no
-  const {data:last}=await sb.from('opportunities').select('opp_no').order('created_at',{ascending:false}).limit(1).single();
   const year=new Date().getFullYear();
-  const seq=last?String(Number(last.opp_no.split('-')[2])+1).padStart(3,'0'):'001';
+  const {data:allOpps}=await sb.from('opportunities').select('opp_no').ilike('opp_no',`BD-${year}-%`);
+  const maxSeq=(allOpps||[]).reduce((max,o)=>{const n=Number((o.opp_no||'').split('-')[2]||0);return n>max?n:max;},0);
+  const seq=String(maxSeq+1).padStart(3,'0');
   const opp_no=`BD-${year}-${seq}`;
   const {error}=await sb.from('opportunities').insert({
     opp_no,title,client,
