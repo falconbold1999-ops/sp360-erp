@@ -768,7 +768,7 @@ async function loadDocs(tab='documents'){
 async function loadWorkflow(){
   const el=document.getElementById('page-workflow');
   el.innerHTML=`<div class="loading">Loading…</div>`;
-  const {data:list}=await sb.from('workflow_items').select('*,raised_by_profile:user_profiles!workflow_items_raised_by_fkey(full_name)').order('raised_date',{ascending:true});
+  const {data:list}=await sb.from('workflow_items').select('*').order('raised_date',{ascending:true});
   const wfs=list||[];
   const pending=wfs.filter(w=>w.status==='pending'||w.status==='overdue');
   const ov=wfs.filter(w=>w.status==='overdue').length;
