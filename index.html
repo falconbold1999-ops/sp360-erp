@@ -1062,7 +1062,9 @@ async function wfReturn(wfId,entityType,entityId){
 // ── CEO FLASH REPORT ────────────────────────────────────────
 async function loadCEO(){
   const el=document.getElementById('page-ceo');
+  if(!el)return;
   el.innerHTML=`<div class="loading">Loading CEO Report…</div>`;
+  try{
   const today=new Date();
   const monthStr=today.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
 
@@ -1233,6 +1235,10 @@ async function loadCEO(){
   <div style="margin-top:12px;padding:10px 14px;background:var(--n3);border-radius:8px;font-size:10px;color:var(--faint);text-align:center">
     SP360 ERP v6 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only
   </div>`;
+  }catch(err){
+    if(el)el.innerHTML=`<div class="empty">Error loading CEO Report: ${err.message}</div>`;
+    console.error('loadCEO error:',err);
+  }
 }
 
 async function loadAudit(){
@@ -1425,7 +1431,15 @@ async function saveInvoice(){
 
 // Auth state monitoring (no auto-reload)
 sb.auth.onAuthStateChange((event,session)=>{
-  if(session){ currentUser=session.user; }
+  if(event==='SIGNED_OUT'){
+    currentUser=null;currentProfile=null;
+    if(document.getElementById('app').style.display!=='none'){
+      document.getElementById('app').style.display='none';
+      document.getElementById('auth-screen').style.display='flex';
+    }
+  } else if(session){
+    currentUser=session.user;
+  }
 });
 
 document.addEventListener('keydown',e=>{
