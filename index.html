@@ -496,43 +496,125 @@ async function loadDashboard(){
 }
 
 // ── BUSINESS DEV ─────────────────────────────────────────────
+// ── PIPELINE STAGES (PMBOK-aligned) ─────────────────────────
+const OPP_STAGES=['identified','bid_review','no_bid','tender_prep','submitted','under_evaluation','won','lost'];
+const STAGE_LABELS={'identified':'Identified','bid_review':'Bid/No-Bid','no_bid':'No Bid','tender_prep':'Tender Prep','submitted':'Submitted','under_evaluation':'Under Evaluation','won':'Won','lost':'Lost'};
+const STAGE_COLORS={'identified':'#94A3B8','bid_review':'#8B5CF6','no_bid':'#EF4444','tender_prep':'#F97316','submitted':'#3B82F6','under_evaluation':'#06B6D4','won':'#10B981','lost':'#EF4444'};
+
 async function loadBizdev(){
   const el=document.getElementById('page-bizdev');
   el.innerHTML=`<div class="loading">Loading…</div>`;
   const {data:list}=await sb.from('opportunities').select('*').order('created_at',{ascending:false});
   const opps=list||[];
   const weighted=opps.reduce((s,o)=>s+Number(o.est_value)*o.probability/100,0);
-  const active=opps.filter(o=>['proposal','negotiation'].includes(o.status));
+  const active=opps.filter(o=>['bid_review','tender_prep','submitted','under_evaluation'].includes(o.status));
+  const won=opps.filter(o=>o.status==='won');
+  const lost=opps.filter(o=>o.status==='lost'||o.status==='no_bid');
+  const winRate=won.length+lost.length>0?Math.round(won.length/(won.length+lost.length)*100):0;
   el.innerHTML=`
   <div class="page-head">
-    <div class="page-head-left"><span style="font-size:22px">🎯</span><div><h1>Business Development</h1><div class="sub">Opportunities · Pipeline · Win/Loss</div></div></div>
+    <div class="page-head-left"><span style="font-size:22px">🎯</span><div><h1>Business Development</h1><div class="sub">Opportunity → Bid/No-Bid → Tender → Award · PMBOK Aligned</div></div></div>
     <button class="btn btn-primary btn-sm" onclick="openNewOppModal()">+ New Opportunity</button>
   </div>
+
+  <!-- Pipeline Funnel -->
+  <div class="card" style="margin-bottom:14px">
+    <div class="sec-head"><div class="sec-title"><span>🔄</span>Pipeline Stages</div></div>
+    <div style="display:flex;gap:4px;align-items:stretch;flex-wrap:wrap">
+      ${['identified','bid_review','tender_prep','submitted','under_evaluation','won'].map(s=>{
+        const count=opps.filter(o=>o.status===s).length;
+        const val=opps.filter(o=>o.status===s).reduce((sum,o)=>sum+Number(o.est_value),0);
+        return`<div style="flex:1;min-width:80px;background:${STAGE_COLORS[s]}18;border:1px solid ${STAGE_COLORS[s]}44;border-radius:8px;padding:10px 8px;text-align:center">
+          <div style="color:${STAGE_COLORS[s]};font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${STAGE_LABELS[s]}</div>
+          <div style="font-size:20px;font-weight:800;color:${STAGE_COLORS[s]}">${count}</div>
+          <div style="color:var(--muted);font-size:9px;margin-top:2px">${fmtKWD(val)}</div>
+        </div>`;
+      }).join('<div style="display:flex;align-items:center;color:var(--gold);font-size:14px;padding:0 2px">→</div>')}
+    </div>
+  </div>
+
   <div class="grid4">
     ${kpi('Weighted Pipeline',fmtKWD(weighted),'#C9A84C','Probability-adjusted')}
     ${kpi('Active Pursuits',active.length,'#3B82F6','of '+opps.length+' total')}
-    ${kpi('Won',opps.filter(o=>o.status==='won').length,'#10B981',fmtKWD(opps.filter(o=>o.status==='won').reduce((s,o)=>s+Number(o.est_value),0)))}
-    ${kpi('Avg Win Prob',active.length?Math.round(active.reduce((s,o)=>s+o.probability,0)/active.length)+'%':'—','#8B5CF6')}
+    ${kpi('Won Value',fmtKWD(won.reduce((s,o)=>s+Number(o.est_value),0)),'#10B981',won.length+' contracts')}
+    ${kpi('Win Rate',winRate+'%',winRate>=50?'#10B981':winRate>=30?'#F97316':'#EF4444',won.length+' won / '+lost.length+' lost/no-bid')}
   </div>
+
   <div class="card">
     <div class="sec-head"><div class="sec-title"><span>🎯</span>Opportunity Register</div></div>
-    <table><thead><tr><th>Ref</th><th>Title</th><th>Client</th><th>Dept</th><th style="text-align:right">Value (KWD)</th><th style="text-align:center">Win%</th><th>Deadline</th><th style="text-align:center">Stage</th></tr></thead><tbody>
+    <table><thead><tr><th>Ref</th><th>Title</th><th>Client</th><th>Dept</th><th style="text-align:right">Value (KWD)</th><th style="text-align:center">Win%</th><th>Deadline</th><th style="text-align:center">Stage</th><th style="text-align:center">Action</th></tr></thead><tbody>
     ${opps.map(o=>`<tr>
       <td style="color:var(--gold);font-size:10px">${esc(o.opp_no)}</td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">${esc(o.title)}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">${esc(o.title)}</td>
       <td style="color:var(--muted);font-size:11px">${esc(o.client)}</td>
       <td style="color:var(--muted);font-size:11px">${esc(o.department)}</td>
       <td style="text-align:right;font-weight:700">${fmtKWD(o.est_value)}</td>
       <td style="text-align:center;font-weight:800;color:${o.probability>=70?'#10B981':o.probability>=40?'#F97316':'#EF4444'}">${o.probability}%</td>
       <td style="color:var(--muted);font-size:11px">${o.deadline||'—'}</td>
-      <td style="text-align:center">${pill(o.status)}</td>
+      <td style="text-align:center"><span class="pill" style="color:${STAGE_COLORS[o.status]||'#94A3B8'};background:${STAGE_COLORS[o.status]||'#94A3B8'}22;border:1px solid ${STAGE_COLORS[o.status]||'#94A3B8'}44">${STAGE_LABELS[o.status]||o.status}</span></td>
+      <td style="text-align:center;white-space:nowrap">
+        ${o.status==='identified'?`<button class="btn btn-ghost btn-sm" onclick="advanceOpp('${o.id}','bid_review')">Bid Review</button>`:''}
+        ${o.status==='bid_review'?`<button class="btn btn-primary btn-sm" onclick="advanceOpp('${o.id}','tender_prep')">Go Bid</button> <button class="btn btn-danger btn-sm" onclick="advanceOpp('${o.id}','no_bid')">No Bid</button>`:''}
+        ${o.status==='tender_prep'?`<button class="btn btn-primary btn-sm" onclick="advanceOpp('${o.id}','submitted')">Submit</button>`:''}
+        ${o.status==='submitted'?`<button class="btn btn-ghost btn-sm" onclick="advanceOpp('${o.id}','under_evaluation')">Evaluating</button>`:''}
+        ${o.status==='under_evaluation'?`<button class="btn btn-primary btn-sm" onclick="awardOpp('${o.id}','${o.opp_no}','${esc(o.title)}','${esc(o.client)}',${o.est_value},'${o.department}')">Award ✓</button> <button class="btn btn-danger btn-sm" onclick="advanceOpp('${o.id}','lost')">Lost</button>`:''}
+        ${o.status==='won'&&!o.project_id?`<button class="btn btn-primary btn-sm" style="background:#8B5CF6" onclick="convertToProject('${o.id}','${o.opp_no}','${esc(o.title)}','${esc(o.client)}',${o.est_value},'${o.department}')">→ Convert to Project</button>`:''}
+        ${o.status==='won'&&o.project_id?`<span style="color:#10B981;font-size:10px;font-weight:700">✓ Project Created</span>`:''}
+      </td>
     </tr>`).join('')}
     </tbody></table>
   </div>`;
 }
 
+async function advanceOpp(id, newStatus){
+  const {error}=await sb.from('opportunities').update({status:newStatus}).eq('id',id);
+  if(error){showToast('Error: '+error.message,'error');return;}
+  await writeAudit('opportunities',id,'STAGE_CHANGE',null,{status:newStatus},'Pipeline stage advanced');
+  showToast('Stage updated');
+  loadBizdev();
+}
+
+async function awardOpp(id, opp_no, title, client, value, dept){
+  if(!confirm(`Award "${title}" to ${client}?`))return;
+  await sb.from('opportunities').update({status:'won',probability:100}).eq('id',id);
+  await writeAudit('opportunities',id,'AWARDED',null,{status:'won',opp_no},'Opportunity awarded');
+  showToast('Opportunity awarded — now convert to Project');
+  loadBizdev();
+}
+
+async function convertToProject(oppId, opp_no, title, client, value, dept){
+  const role=currentProfile?.role;
+  if(!['PMO Manager','BD Manager'].includes(role)){
+    showToast('Only BD Manager or PMO Manager can convert to Project','error');return;
+  }
+  const deptCode={Security:'SEC','AV/Broadcast':'AV',IT:'IT',Power:'PW',Civil:'CV',Wireless:'WL',Trading:'TR'}[dept]||'XX';
+  const year=new Date().getFullYear();
+  const {data:allProjs}=await sb.from('projects').select('project_no').ilike('project_no',`SP360-${deptCode}-%`);
+  const maxSeq=(allProjs||[]).reduce((max,p)=>{const n=Number((p.project_no||'').split('-')[2]||0);return n>max?n:max;},0);
+  const project_no=`SP360-${deptCode}-${String(maxSeq+1).padStart(3,'0')}`;
+  const {data:proj,error}=await sb.from('projects').insert({
+    project_no,name:title,client,department:dept,
+    contract_value:value,bac:value,ac:0,ev:0,pv:0,pct:0,cpi:1,spi:1,
+    status:'initiation',priority:'high',
+    pm_id:currentProfile?.id,created_by:currentProfile?.id
+  }).select().single();
+  if(error){showToast('Error: '+error.message,'error');return;}
+  await sb.from('opportunities').update({project_id:proj.id}).eq('id',oppId);
+  await writeAudit('projects',proj.id,'CREATED_FROM_OPPORTUNITY',null,{project_no,opp_no,contract_value:value},'Converted from opportunity '+opp_no);
+  showToast(`Project ${project_no} created from ${opp_no} ✓`);
+  loadBizdev();
+}
+
 // ── PROJECTS ─────────────────────────────────────────────────
-async function loadProjects(){
+// Project status lifecycle
+const PROJ_LIFECYCLE=['initiation','planning','execution','monitoring','closeout','completed'];
+const PROJ_LIFECYCLE_LABELS={'initiation':'Initiation','planning':'Planning','execution':'Execution','monitoring':'Monitoring & Control','closeout':'Closeout','completed':'Completed'};
+const PROJ_LIFECYCLE_COLORS={'initiation':'#8B5CF6','planning':'#3B82F6','execution':'#F97316','monitoring':'#06B6D4','closeout':'#C9A84C','completed':'#10B981'};
+let curProjTab='portfolio';
+
+async function loadProjects(tab){
+  tab=tab||curProjTab||'portfolio';
+  curProjTab=tab;
   const el=document.getElementById('page-projects');
   el.innerHTML=`<div class="loading">Loading…</div>`;
   const {data:list}=await sb.from('projects').select('*').order('created_at',{ascending:false});
@@ -542,39 +624,133 @@ async function loadProjects(){
   const totalPV=projs.reduce((s,p)=>s+Number(p.pv),0);
   const portCPI=totalAC>0?(totalEV/totalAC).toFixed(2):'1.00';
   const portSPI=totalPV>0?(totalEV/totalPV).toFixed(2):'1.00';
-  el.innerHTML=`
-  <div class="page-head">
-    <div class="page-head-left"><span style="font-size:22px">🏗</span><div><h1>Projects</h1><div class="sub">Portfolio · EVM · Schedule · Cost</div></div></div>
-    <button class="btn btn-primary btn-sm" onclick="openNewProjectModal()">+ New Project</button>
-  </div>
-  <div class="grid4">
-    ${kpi('Portfolio Value',fmtKWD(projs.reduce((s,p)=>s+Number(p.contract_value),0)),'#C9A84C',projs.length+' projects')}
-    ${kpi('Active',projs.filter(p=>p.status==='active').length,'#10B981',projs.filter(p=>p.status==='planning').length+' planning')}
-    ${kpi('Portfolio CPI',portCPI,cpiColor(portCPI),'ΣEV/ΣAC')}
-    ${kpi('Portfolio SPI',portSPI,cpiColor(portSPI),'ΣEV/ΣPV')}
-  </div>
-  <div class="card">
-    <div class="sec-head"><div class="sec-title"><span>🏗</span>Project Portfolio — EVM View</div></div>
-    <table><thead><tr><th>No</th><th>Project</th><th>Client</th><th>Dept</th><th style="text-align:right">BAC</th><th style="text-align:center">%</th><th style="text-align:right">EV</th><th style="text-align:right">AC</th><th style="text-align:center">CPI</th><th style="text-align:center">SPI</th><th style="text-align:right">EAC</th><th style="text-align:center">Status</th></tr></thead><tbody>
+
+  const tabs=`<div class="tabs">
+    <button class="tab${tab==='portfolio'?' act':''}" onclick="loadProjects('portfolio')">📊 Portfolio EVM</button>
+    <button class="tab${tab==='lifecycle'?' act':''}" onclick="loadProjects('lifecycle')">🔄 Life Cycle</button>
+    <button class="tab${tab==='progress'?' act':''}" onclick="loadProjects('progress')">📈 Progress Update</button>
+  </div>`;
+
+  let body='';
+
+  if(tab==='portfolio'){
+    body=`<table><thead><tr><th>No</th><th>Project</th><th>Client</th><th>Dept</th><th style="text-align:right">BAC</th><th style="text-align:center">%</th><th style="text-align:right">EV</th><th style="text-align:right">AC</th><th style="text-align:center">CPI</th><th style="text-align:center">SPI</th><th style="text-align:right">EAC</th><th style="text-align:right">VAC</th><th style="text-align:center">Status</th></tr></thead><tbody>
     ${projs.map(p=>{
       const eac=Number(p.cpi)>0?Number(p.ac)+(Number(p.bac)-Number(p.ev))/Number(p.cpi):Number(p.bac);
+      const vac=Number(p.bac)-eac;
       return`<tr>
         <td style="color:var(--gold);font-size:10px;white-space:nowrap">${esc(p.project_no)}</td>
-        <td style="max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:11px" title="${esc(p.name)}">${esc(p.name)}</td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:11px">${esc(p.name)}</td>
         <td style="color:var(--muted);font-size:11px">${esc(p.client)}</td>
         <td style="color:var(--muted);font-size:11px">${esc(p.department)}</td>
         <td style="text-align:right;font-size:11px">${fmtKWD(p.bac)}</td>
-        <td style="text-align:center"><span style="font-weight:700;font-size:11px">${p.pct}%</span><div class="evm-bar-bg"><div class="evm-bar-fill" style="width:${p.pct}%;background:${Number(p.pct)>=75?'#10B981':Number(p.pct)>=40?'#F97316':'#EF4444'}"></div></div></td>
+        <td style="text-align:center"><span style="font-weight:700;font-size:11px">${p.pct}%</span><div class="evm-bar-bg"><div class="evm-bar-fill" style="width:${Math.min(p.pct,100)}%;background:${Number(p.pct)>=75?'#10B981':Number(p.pct)>=40?'#F97316':'#EF4444'}"></div></div></td>
         <td style="text-align:right;color:var(--muted);font-size:11px">${fmtKWD(p.ev)}</td>
         <td style="text-align:right;color:var(--muted);font-size:11px">${fmtKWD(p.ac)}</td>
         <td style="text-align:center;font-weight:800;font-size:13px;color:${cpiColor(p.cpi)}">${Number(p.cpi).toFixed(2)}</td>
         <td style="text-align:center;font-weight:800;font-size:13px;color:${cpiColor(p.spi)}">${Number(p.spi).toFixed(2)}</td>
         <td style="text-align:right;font-size:11px">${fmtKWD(eac)}</td>
+        <td style="text-align:right;font-size:11px;color:${vac>=0?'#10B981':'#EF4444'};font-weight:700">${vac>=0?'+':''}${fmtKWD(vac)}</td>
         <td style="text-align:center">${pill(p.status)}</td>
       </tr>`;
     }).join('')}
-    </tbody></table>
-  </div>`;
+    </tbody></table>`;
+
+  } else if(tab==='lifecycle'){
+    body=`
+    <!-- Lifecycle funnel -->
+    <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+      ${PROJ_LIFECYCLE.map(s=>{
+        const count=projs.filter(p=>p.status===s).length;
+        return`<div style="flex:1;min-width:80px;background:${PROJ_LIFECYCLE_COLORS[s]}18;border:1px solid ${PROJ_LIFECYCLE_COLORS[s]}44;border-radius:8px;padding:10px 8px;text-align:center">
+          <div style="color:${PROJ_LIFECYCLE_COLORS[s]};font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${PROJ_LIFECYCLE_LABELS[s]}</div>
+          <div style="font-size:22px;font-weight:800;color:${PROJ_LIFECYCLE_COLORS[s]}">${count}</div>
+        </div>`;
+      }).join('<div style="display:flex;align-items:center;color:var(--gold);font-size:14px">→</div>')}
+    </div>
+    <table><thead><tr><th>No</th><th>Project</th><th>Client</th><th style="text-align:center">Phase</th><th>Start</th><th>End</th><th style="text-align:center">%</th><th style="text-align:center">Action</th></tr></thead><tbody>
+    ${projs.map(p=>`<tr>
+      <td style="color:var(--gold);font-size:10px">${esc(p.project_no)}</td>
+      <td style="font-weight:600;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(p.client)}</td>
+      <td style="text-align:center"><span class="pill" style="color:${PROJ_LIFECYCLE_COLORS[p.status]||'#94A3B8'};background:${PROJ_LIFECYCLE_COLORS[p.status]||'#94A3B8'}22;border:1px solid ${PROJ_LIFECYCLE_COLORS[p.status]||'#94A3B8'}44">${PROJ_LIFECYCLE_LABELS[p.status]||p.status}</span></td>
+      <td style="color:var(--muted);font-size:11px">${p.start_date||'—'}</td>
+      <td style="color:var(--muted);font-size:11px">${p.end_date||'—'}</td>
+      <td style="text-align:center;font-weight:700">${p.pct}%</td>
+      <td style="text-align:center">
+        ${p.status!=='completed'&&p.status!=='closeout'?`<select onchange="advanceProject('${p.id}',this.value,event)" style="background:var(--n4);border:1px solid var(--bdr);border-radius:5px;padding:3px 6px;color:var(--text);font-size:10px;cursor:pointer">
+          <option value="">Move to…</option>
+          ${PROJ_LIFECYCLE.filter(s=>s!==p.status).map(s=>`<option value="${s}">${PROJ_LIFECYCLE_LABELS[s]}</option>`).join('')}
+        </select>`:'<span style="color:#10B981;font-size:10px">✓ Done</span>'}
+      </td>
+    </tr>`).join('')}
+    </tbody></table>`;
+
+  } else {
+    // Progress Update tab
+    body=`
+    <div style="margin-bottom:12px;padding:10px 14px;background:#C9A84C11;border:1px solid #C9A84C33;border-radius:8px;font-size:11px;color:var(--muted)">
+      💡 Update project progress: enter actual % complete, Actual Cost (AC), and Earned Value (EV) will be auto-calculated from BAC × %
+    </div>
+    <table><thead><tr><th>No</th><th>Project</th><th style="text-align:right">BAC</th><th style="text-align:center">% Complete</th><th style="text-align:right">AC (KWD)</th><th style="text-align:right">EV (auto)</th><th style="text-align:center">CPI</th><th style="text-align:center">Save</th></tr></thead><tbody>
+    ${projs.filter(p=>['planning','execution','monitoring','active'].includes(p.status)).map(p=>`<tr>
+      <td style="color:var(--gold);font-size:10px">${esc(p.project_no)}</td>
+      <td style="font-weight:600;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</td>
+      <td style="text-align:right;font-size:11px">${fmtKWD(p.bac)}</td>
+      <td style="text-align:center"><input type="number" id="pct_${p.id}" value="${p.pct}" min="0" max="100" style="width:60px;background:var(--n4);border:1px solid var(--bdr);border-radius:5px;padding:4px 6px;color:var(--text);font-size:12px;text-align:center" oninput="previewEV('${p.id}',${p.bac})"/>%</td>
+      <td style="text-align:right"><input type="number" id="ac_${p.id}" value="${p.ac}" min="0" style="width:90px;background:var(--n4);border:1px solid var(--bdr);border-radius:5px;padding:4px 6px;color:var(--text);font-size:12px;text-align:right" oninput="previewEV('${p.id}',${p.bac})"/></td>
+      <td style="text-align:right;font-weight:700;color:var(--gold)" id="ev_${p.id}">${fmtKWD(p.ev)}</td>
+      <td style="text-align:center;font-weight:800;color:${cpiColor(p.cpi)}" id="cpi_${p.id}">${Number(p.cpi).toFixed(2)}</td>
+      <td style="text-align:center"><button class="btn btn-primary btn-sm" onclick="saveProgress('${p.id}',${p.bac})">Save</button></td>
+    </tr>`).join('')}
+    </tbody></table>`;
+  }
+
+  el.innerHTML=`
+  <div class="page-head">
+    <div class="page-head-left"><span style="font-size:22px">🏗</span><div><h1>Projects</h1><div class="sub">Portfolio · Life Cycle · Progress · PMBOK Aligned</div></div></div>
+    <button class="btn btn-primary btn-sm" onclick="openNewProjectModal()">+ New Project</button>
+  </div>
+  <div class="grid4">
+    ${kpi('Portfolio Value',fmtKWD(projs.reduce((s,p)=>s+Number(p.contract_value),0)),'#C9A84C',projs.length+' projects')}
+    ${kpi('Active/Execution',projs.filter(p=>['active','execution','monitoring'].includes(p.status)).length,'#10B981',projs.filter(p=>p.status==='planning'||p.status==='initiation').length+' in planning')}
+    ${kpi('Portfolio CPI',portCPI,cpiColor(portCPI),'ΣEV/ΣAC')}
+    ${kpi('Portfolio SPI',portSPI,cpiColor(portSPI),'ΣEV/ΣPV')}
+  </div>
+  <div class="card">${tabs}${body}</div>`;
+}
+
+function previewEV(projId, bac){
+  const pct=Number(document.getElementById('pct_'+projId).value)||0;
+  const ac=Number(document.getElementById('ac_'+projId).value)||0;
+  const ev=bac*pct/100;
+  const cpi=ac>0?(ev/ac).toFixed(2):'1.00';
+  const evEl=document.getElementById('ev_'+projId);
+  const cpiEl=document.getElementById('cpi_'+projId);
+  if(evEl)evEl.textContent=fmtKWD(ev);
+  if(cpiEl){cpiEl.textContent=cpi;cpiEl.style.color=cpiColor(cpi);}
+}
+
+async function saveProgress(projId, bac){
+  const pct=Number(document.getElementById('pct_'+projId).value)||0;
+  const ac=Number(document.getElementById('ac_'+projId).value)||0;
+  const ev=Math.round(bac*pct/100*100)/100;
+  const cpi=ac>0?Math.round(ev/ac*100)/100:1;
+  const {data:old}=await sb.from('projects').select('pct,ac,ev,cpi').eq('id',projId).single();
+  const {error}=await sb.from('projects').update({pct,ac,ev,cpi,spi:cpi}).eq('id',projId);
+  if(error){showToast('Error: '+error.message,'error');return;}
+  await writeAudit('projects',projId,'PROGRESS_UPDATE',{pct:old?.pct,ac:old?.ac},{pct,ac,ev,cpi},'Progress updated');
+  showToast('Progress saved ✓');
+  loadProjects('progress');
+}
+
+async function advanceProject(projId, newStatus, event){
+  if(!newStatus)return;
+  const {error}=await sb.from('projects').update({status:newStatus}).eq('id',projId);
+  if(error){showToast('Error: '+error.message,'error');return;}
+  await writeAudit('projects',projId,'LIFECYCLE_ADVANCE',null,{status:newStatus},'Project phase advanced');
+  showToast('Project phase updated to: '+PROJ_LIFECYCLE_LABELS[newStatus]);
+  loadProjects('lifecycle');
 }
 
 // ── PROCUREMENT ──────────────────────────────────────────────
