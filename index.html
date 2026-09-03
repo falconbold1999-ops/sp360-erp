@@ -493,23 +493,8 @@ window.addEventListener('unhandledrejection', e=>{
   console.warn('Unhandled rejection:', msg);
 });
 
-// Intercept Supabase errors globally — check for auth errors on every response
-const _origFetch = window.fetch;
-window.fetch = async function(...args){
-  const res = await _origFetch(...args);
-  // Clone to read body without consuming it
-  if(res.status === 401 && currentUser){
-    const clone = res.clone();
-    try{
-      const body = await clone.json();
-      if(body?.message?.includes('JWT')||body?.error?.includes('JWT')){
-        showToast('Session expired — signing out','error');
-        setTimeout(()=>doLogout(), 1500);
-      }
-    }catch(e){}
-  }
-  return res;
-};
+// ── SESSION EXPIRY ────────────────────────────────────────────
+// Handled via unhandledrejection + Supabase auth state
 
 // ── BUTTON PROTECTION ────────────────────────────────────────
 // Prevent double-clicks on any .btn-primary or .btn-danger
@@ -1275,7 +1260,6 @@ async function loadProjects(tab){
   curProjTab=tab;
   const el=document.getElementById('page-projects');
   el.innerHTML=`<div class="loading">Loading…</div>`;
-  try{
   const {data:list}=await sb.from('projects').select('*').order('created_at',{ascending:false});
   const projs=list||[];
   const totalEV=projs.reduce((s,p)=>s+Number(p.ev),0);
@@ -1841,7 +1825,6 @@ function previewEV(projId, bac){
   const cpiEl=document.getElementById('cpi_'+projId);
   if(evEl)evEl.textContent=fmtKWD(ev);
   if(cpiEl){cpiEl.textContent=cpi;cpiEl.style.color=cpiColor(cpi);}
-  }catch(e){ pageError('page-projects',e); }
 }
 
 async function saveProgress(projId, bac){
