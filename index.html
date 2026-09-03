@@ -2766,6 +2766,7 @@ async function loadUsers(){
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm" onclick="openEditUserModal('${u.id}')">✏️ Edit</button>
+          <button class="btn btn-ghost btn-sm" onclick="openResetPasswordModal('${u.id}','${esc(u.full_name||'')}')">🔑 Reset PWD</button>
           <button class="btn btn-ghost btn-sm" onclick="openEmailUserModal('${esc(u.email||'')}','${esc(u.full_name||'')}')">📧 Email</button>
           ${isActive?`<button class="btn btn-danger btn-sm" onclick="toggleUserActive('${u.id}',false,'${esc(u.full_name||'')}')">Deactivate</button>`:`<button class="btn btn-primary btn-sm" style="font-size:9px" onclick="toggleUserActive('${u.id}',true,'${esc(u.full_name||'')}')">Activate</button>`}
         </div>
@@ -2806,46 +2807,94 @@ async function loadUsers(){
   </div>`;
 }
 
+// ── USER PROVISIONING — Edge Function powered ────────────────
+const CREATE_USER_URL = `${SUPABASE_URL}/functions/v1/create-user`;
+const RESET_PWD_URL   = `${SUPABASE_URL}/functions/v1/reset-user-password`;
+
 function openNewUserModal(){
-  openModal('New User Profile',`
-  <div style="padding:6px 0 10px;font-size:11px;color:var(--muted)">
-    ⚠️ Create the user in Supabase Auth Dashboard first, then register their profile here.
-    <br><a href="https://supabase.com/dashboard/project/sqizirpsatofcoqshwer/auth/users" target="_blank" style="color:var(--gold)">→ Open Supabase Auth Dashboard</a>
+  const roleColors2={'PMO Manager':'#C9A84C','Finance Manager':'#10B981','Procurement Lead':'#3B82F6','BD Manager':'#8B5CF6','QHSE Engineer':'#EF4444','Staff':'#94A3B8'};
+  openModal('New User',`
+  <div style="padding:8px 12px;background:#10B98111;border:1px solid #10B98133;border-radius:6px;font-size:11px;color:var(--muted);margin-bottom:12px">
+    ✅ User will be created automatically — no need to visit Supabase Dashboard.
   </div>
   <div class="form-row">
-    <div class="form-field"><label>Full Name *</label><input id="nu-name" placeholder="Full name"/></div>
-    <div class="form-field"><label>Email *</label><input id="nu-email" type="email" placeholder="user@sp360.com.kw"/></div>
+    <div class="form-field"><label>Full Name *</label><input id="nu-name" placeholder="e.g. Ahmed Al-Rashidi" oninput="autoInitials()"/></div>
+    <div class="form-field"><label>Email *</label><input id="nu-email" type="email" placeholder="ahmed@sp360.com.kw"/></div>
   </div>
   <div class="form-row">
-    <div class="form-field"><label>Role *</label><select id="nu-role">
-      ${['PMO Manager','Finance Manager','Procurement Lead','BD Manager','QHSE Engineer'].map(r=>`<option>${r}</option>`).join('')}
-    </select></div>
-    <div class="form-field"><label>Initials (2 chars)</label><input id="nu-initials" maxlength="2" placeholder="IB" style="text-transform:uppercase"/></div>
+    <div class="form-field"><label>Role *</label>
+      <select id="nu-role">
+        ${['PMO Manager','Finance Manager','Procurement Lead','BD Manager','QHSE Engineer','Staff'].map(r=>`<option value="${r}">${r}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-field"><label>Initials (auto)</label>
+      <input id="nu-initials" maxlength="2" placeholder="AR" style="text-transform:uppercase;font-weight:800;font-size:16px;text-align:center"/>
+    </div>
   </div>
-  <div class="form-field"><label>Supabase Auth User ID (UUID) *</label><input id="nu-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" style="font-family:monospace;font-size:11px"/></div>
+  <div class="form-row">
+    <div class="form-field"><label>Password *</label>
+      <input id="nu-pass" type="password" placeholder="Min 8 characters" autocomplete="new-password"/>
+    </div>
+    <div class="form-field"><label>Confirm Password *</label>
+      <input id="nu-pass2" type="password" placeholder="Repeat password" autocomplete="new-password"/>
+    </div>
+  </div>
+  <div id="nu-err" style="display:none;padding:6px 10px;background:#EF444411;border:1px solid #EF444433;border-radius:5px;font-size:11px;color:#EF4444;margin-bottom:8px"></div>
   <div class="modal-foot">
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    <button class="btn btn-primary" onclick="saveNewUser()">Create Profile</button>
+    <button class="btn btn-primary" onclick="saveNewUser()">Create User</button>
   </div>`);
 }
 
+function autoInitials(){
+  const name=document.getElementById('nu-name')?.value||'';
+  const init=name.trim().split(/\s+/).map(w=>w[0]||'').join('').substring(0,2).toUpperCase();
+  const el=document.getElementById('nu-initials');
+  if(el&&!el._manuallyEdited) el.value=init;
+}
+
 async function saveNewUser(){
-  const id=document.getElementById('nu-id').value.trim();
-  const name=document.getElementById('nu-name').value.trim();
-  const email=document.getElementById('nu-email').value.trim();
-  const role=document.getElementById('nu-role').value;
+  const name   =document.getElementById('nu-name').value.trim();
+  const email  =document.getElementById('nu-email').value.trim();
+  const role   =document.getElementById('nu-role').value;
   const initials=(document.getElementById('nu-initials').value.trim()||name.split(' ').map(w=>w[0]).join('').substring(0,2)).toUpperCase();
-  if(!id||!name||!email){showToast('ID, Name and Email are required','error');return;}
-  const roleColors2={'PMO Manager':'#C9A84C','Finance Manager':'#10B981','Procurement Lead':'#3B82F6','BD Manager':'#8B5CF6','QHSE Engineer':'#EF4444'};
-  const {error}=await sb.from('user_profiles').insert({
-    id,full_name:name,email,role,initials,
-    color:roleColors2[role]||'#C9A84C',
-    is_active:true,created_by:currentProfile?.id
-  });
-  if(error){showToast('Error: '+error.message,'error');return;}
-  await writeAudit('user_profiles',id,'USER_CREATED',null,{name,email,role},'New user profile created');
-  showToast('User profile created ✓');
-  closeModal();loadUsers();
+  const pass   =document.getElementById('nu-pass').value;
+  const pass2  =document.getElementById('nu-pass2').value;
+  const errEl  =document.getElementById('nu-err');
+  const btn    =event?.target;
+
+  const showErr=msg=>{errEl.textContent=msg;errEl.style.display='block';};
+  errEl.style.display='none';
+
+  if(!name||!email||!pass){showErr('Name, Email and Password are required');return;}
+  if(pass.length<8){showErr('Password must be at least 8 characters');return;}
+  if(pass!==pass2){showErr('Passwords do not match');return;}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showErr('Invalid email address');return;}
+
+  if(btn){btn.disabled=true;btn.textContent='Creating…';}
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const token=session?.access_token;
+    if(!token){showErr('Session expired — please log in again');return;}
+
+    const res=await fetch(CREATE_USER_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,'apikey':SUPABASE_KEY},
+      body:JSON.stringify({email,password:pass,full_name:name,role,initials})
+    });
+    const data=await res.json();
+
+    if(!res.ok||!data.ok){
+      showErr(data.error||'User creation failed');
+      return;
+    }
+    showToast(`User ${name} created ✓`);
+    closeModal();loadUsers();
+  }catch(e){
+    showErr('Network error: '+e.message);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='Create User';}
+  }
 }
 
 async function openEditUserModal(userId){
@@ -2854,13 +2903,16 @@ async function openEditUserModal(userId){
   openModal('Edit User — '+esc(u.full_name),`
   <div class="form-row">
     <div class="form-field"><label>Full Name</label><input id="eu-name" value="${esc(u.full_name||'')}"/></div>
-    <div class="form-field"><label>Email</label><input id="eu-email" value="${esc(u.email||'')}"/></div>
-  </div>
-  <div class="form-row">
-    <div class="form-field"><label>Role</label><select id="eu-role">
-      ${['PMO Manager','Finance Manager','Procurement Lead','BD Manager','QHSE Engineer'].map(r=>`<option${r===u.role?' selected':''}>${r}</option>`).join('')}
-    </select></div>
     <div class="form-field"><label>Initials</label><input id="eu-initials" value="${esc(u.initials||'')}" maxlength="2" style="text-transform:uppercase"/></div>
+  </div>
+  <div class="form-field"><label>Role</label>
+    <select id="eu-role">
+      ${['PMO Manager','Finance Manager','Procurement Lead','BD Manager','QHSE Engineer','Staff'].map(r=>`<option${r===u.role?' selected':''}>${r}</option>`).join('')}
+    </select>
+  </div>
+  <div style="padding:8px 12px;background:#F97316
+11;border:1px solid #F9741633;border-radius:6px;font-size:11px;color:var(--muted);margin:10px 0">
+    🔒 To reset password: use the Reset Password button on the user card.
   </div>
   <div class="modal-foot">
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -2869,18 +2921,66 @@ async function openEditUserModal(userId){
 }
 
 async function saveEditUser(userId){
-  const name=document.getElementById('eu-name').value.trim();
-  const email=document.getElementById('eu-email').value.trim();
-  const role=document.getElementById('eu-role').value;
+  const name    =document.getElementById('eu-name').value.trim();
+  const role    =document.getElementById('eu-role').value;
   const initials=(document.getElementById('eu-initials').value.trim()||name.split(' ').map(w=>w[0]).join('').substring(0,2)).toUpperCase();
-  const roleColors3={'PMO Manager':'#C9A84C','Finance Manager':'#10B981','Procurement Lead':'#3B82F6','BD Manager':'#8B5CF6','QHSE Engineer':'#EF4444'};
+  const roleColors3={'PMO Manager':'#C9A84C','Finance Manager':'#10B981','Procurement Lead':'#3B82F6','BD Manager':'#8B5CF6','QHSE Engineer':'#EF4444','Staff':'#94A3B8'};
   const {error}=await sb.from('user_profiles').update({
-    full_name:name,email,role,initials,color:roleColors3[role]||'#C9A84C',updated_at:new Date().toISOString()
+    full_name:name,role,initials,color:roleColors3[role]||'#C9A84C',updated_at:new Date().toISOString()
   }).eq('id',userId);
   if(error){showToast('Error: '+error.message,'error');return;}
-  await writeAudit('user_profiles',userId,'USER_UPDATED',null,{name,email,role},'Profile updated');
+  await writeAudit('user_profiles',userId,'USER_UPDATED',null,{name,role},'Profile updated');
   showToast('Profile updated ✓');
   closeModal();loadUsers();
+}
+
+async function openResetPasswordModal(userId,userName){
+  openModal(`Reset Password — ${esc(userName)}`,`
+  <div style="padding:8px 12px;background:#EF444411;border:1px solid #EF444433;border-radius:6px;font-size:11px;color:var(--muted);margin-bottom:12px">
+    ⚠️ This will immediately change the user's password. Inform them of the new password.
+  </div>
+  <div class="form-row">
+    <div class="form-field"><label>New Password *</label>
+      <input id="rp-pass" type="password" placeholder="Min 8 characters" autocomplete="new-password"/>
+    </div>
+    <div class="form-field"><label>Confirm *</label>
+      <input id="rp-pass2" type="password" placeholder="Repeat" autocomplete="new-password"/>
+    </div>
+  </div>
+  <div id="rp-err" style="display:none;padding:6px 10px;background:#EF444411;border-radius:5px;font-size:11px;color:#EF4444;margin-bottom:8px"></div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-danger" onclick="doResetPassword('${userId}')">Reset Password</button>
+  </div>`);
+}
+
+async function doResetPassword(userId){
+  const pass =document.getElementById('rp-pass').value;
+  const pass2=document.getElementById('rp-pass2').value;
+  const errEl=document.getElementById('rp-err');
+  const btn  =event?.target;
+  errEl.style.display='none';
+  if(pass.length<8){errEl.textContent='Min 8 characters';errEl.style.display='block';return;}
+  if(pass!==pass2){errEl.textContent='Passwords do not match';errEl.style.display='block';return;}
+  if(btn){btn.disabled=true;btn.textContent='Resetting…';}
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    const token=session?.access_token;
+    if(!token){errEl.textContent='Session expired';errEl.style.display='block';return;}
+    const res=await fetch(RESET_PWD_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,'apikey':SUPABASE_KEY},
+      body:JSON.stringify({user_id:userId,new_password:pass})
+    });
+    const data=await res.json();
+    if(!data.ok){errEl.textContent=data.error||'Reset failed';errEl.style.display='block';return;}
+    showToast('Password reset ✓ — Inform user of new password');
+    closeModal();
+  }catch(e){
+    errEl.textContent='Network error: '+e.message;errEl.style.display='block';
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='Reset Password';}
+  }
 }
 
 async function toggleUserActive(userId,active,name){
@@ -2890,6 +2990,7 @@ async function toggleUserActive(userId,active,name){
   showToast(name+' '+(active?'activated':'deactivated')+' ✓');
   loadUsers();
 }
+
 
 // ── EMAIL ENGINE ─────────────────────────────────────────────
 // Primary: Supabase Edge Function (send-email) via Resend API
