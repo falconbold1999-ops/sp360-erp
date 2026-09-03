@@ -2043,56 +2043,49 @@ async function loadWorkflow(){
 }
 
 async function wfApprove(wfId,entityType,entityId,currentStep){
-  // Determine next step and status change
-  const POsteps={'Dept. Approval':'finance_approval','Finance Review':'gm_approval','GM Approval':'issued'};
-  const INVsteps={'PM Verification':'Finance Approval','Finance Approval':'completed'};
-
-  if(entityType==='po'){
-    const newStatus=POsteps[currentStep];
-    const nextStep=Object.keys(POsteps).find(k=>POsteps[k]===newStatus);
-    // Update PO status
-    const {data:po}=await sb.from('purchase_orders').select('*').eq('id',entityId).single();
-    await sb.from('purchase_orders').update({status:newStatus}).eq('id',entityId);
-    if(newStatus==='issued'){
-      // Close workflow
-      await sb.from('workflow_items').update({status:'completed',approved_by:currentProfile.id,approved_date:new Date().toISOString()}).eq('id',wfId);
-    } else {
-      // Advance to next step
-      await sb.from('workflow_items').update({current_step:nextStep,status:'pending'}).eq('id',wfId);
-    }
-    await writeAudit('purchase_orders',entityId,'APPROVED',{status:po?.status},{status:newStatus},`Workflow step: ${currentStep} → ${newStatus}`);
-  } else {
-    const newStep=INVsteps[currentStep];
-    if(newStep==='completed'){
-      const {data:inv}=await sb.from('invoices').select('*').eq('id',entityId).single();
-      await sb.from('invoices').update({status:'approved'}).eq('id',entityId);
-      await sb.from('workflow_items').update({status:'completed',approved_by:currentProfile.id,approved_date:new Date().toISOString()}).eq('id',wfId);
-      await writeAudit('invoices',entityId,'APPROVED',{status:inv?.status},{status:'approved'},`Finance approval completed`);
-    } else {
-      await sb.from('workflow_items').update({current_step:newStep,status:'pending'}).eq('id',wfId);
-    }
+  const btn=event?.target;
+  if(btn){btn.disabled=true;btn.textContent='Approving…';}
+  try{
+    const {data,error}=await sb.rpc('approve_workflow_item',{
+      p_wf_id:        wfId,
+      p_entity_type:  entityType,
+      p_entity_id:    entityId,
+      p_current_step: currentStep
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    if(!data?.ok){showToast('Approval failed: '+(data?.error||'Unknown error'),'error');return;}
+    showToast(data.final?'Workflow completed ✓':'Approved — advanced to next step ✓');
+    loadWfBadge();
+    loadWorkflow();
+  }catch(e){
+    showToast('Error: '+e.message,'error');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='Approve';}
   }
-  showToast('Approved successfully');
-  loadWfBadge();
-  loadWorkflow();
 }
 
 async function wfReturn(wfId,entityType,entityId){
   const reason=prompt('Reason for return:');
-  if(!reason)return;
-  if(entityType==='po'){
-    const {data:po}=await sb.from('purchase_orders').select('status').eq('id',entityId).single();
-    await sb.from('purchase_orders').update({status:'rejected'}).eq('id',entityId);
-    await writeAudit('purchase_orders',entityId,'REJECTED',{status:po?.status},{status:'rejected'},reason);
-  } else {
-    const {data:inv}=await sb.from('invoices').select('status').eq('id',entityId).single();
-    await sb.from('invoices').update({status:'returned'}).eq('id',entityId);
-    await writeAudit('invoices',entityId,'RETURNED',{status:inv?.status},{status:'returned'},reason);
+  if(!reason||!reason.trim())return;
+  const btn=event?.target;
+  if(btn){btn.disabled=true;btn.textContent='Returning…';}
+  try{
+    const {data,error}=await sb.rpc('reject_workflow_item',{
+      p_wf_id:       wfId,
+      p_entity_type: entityType,
+      p_entity_id:   entityId,
+      p_reason:      reason.trim()
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    if(!data?.ok){showToast('Return failed: '+(data?.error||'Unknown error'),'error');return;}
+    showToast('Returned to originator','error');
+    loadWfBadge();
+    loadWorkflow();
+  }catch(e){
+    showToast('Error: '+e.message,'error');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='Return';}
   }
-  await sb.from('workflow_items').update({status:'rejected',reject_reason:reason}).eq('id',wfId);
-  showToast('Returned to originator','error');
-  loadWfBadge();
-  loadWorkflow();
 }
 
 // ── USER MANAGEMENT ──────────────────────────────────────────
