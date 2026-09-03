@@ -370,7 +370,7 @@ tr:hover td{background:#1A366010}
     <button onclick="toggleSide()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 6px;border-radius:5px">☰</button>
     <div class="logo-sq">SP</div>
     <div class="logo-txt"><div class="t1">SP360 ERP</div><div class="t2">Smart Projects 360 · Kuwait</div></div>
-    <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v1.9</span>
+    <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v2.0</span>
     <div style="display:flex;align-items:center;gap:4px;flex-shrink:0" title="Realtime connection status">
       <div id="realtime-dot" style="width:7px;height:7px;border-radius:50%;background:#94A3B8;transition:background .3s"></div>
       <span style="font-size:9px;color:var(--faint)">live</span>
@@ -1833,24 +1833,28 @@ async function saveProgress(projId, bac){
   const ev=Math.round(bac*pct/100*100)/100;
   const cpi=ac>0?Math.round(ev/ac*100)/100:1;
 
-  // SPI = EV / PV — PV from time-phased baseline (get_current_pv RPC)
-  // Falls back to stored pv if no baseline exists
-  const {data:proj}=await sb.from('projects').select('pct,ac,ev,cpi,spi,pv,bac').eq('id',projId).single();
-  let pv=Number(proj?.pv)||0;
+  // SPI = EV / PV — requires Baseline PV. If no baseline: SPI = null (N/A)
+  // Never fallback PV = EV (would always show SPI = 1.00 = misleading)
+  let pv=null;
   try{
     const {data:pvData}=await sb.rpc('get_current_pv',{p_project_id:projId});
-    if(pvData&&pvData>0) pv=pvData;
-  }catch(e){ /* fallback to stored pv */ }
-  if(pv===0) pv=Math.round(bac*pct/100*100)/100; // last resort fallback
-  const spi=pv>0?Math.round(ev/pv*100)/100:1;
+    if(pvData&&Number(pvData)>0) pv=Number(pvData);
+  }catch(e){ /* no baseline */ }
 
-  const {error}=await sb.from('projects').update({pct,ac,ev,cpi,spi,pv}).eq('id',projId);
+  const spi = pv!==null ? Math.round(ev/pv*100)/100 : null;
+
+  const {data:proj}=await sb.from('projects').select('pct,ac,ev,cpi,spi,pv,bac').eq('id',projId).single();
+  const updateData={pct,ac,ev,cpi};
+  if(pv!==null) updateData.pv=pv;
+  if(spi!==null) updateData.spi=spi;
+
+  const {error}=await sb.from('projects').update(updateData).eq('id',projId);
   if(error){showToast('Error: '+error.message,'error');return;}
   await writeAudit('projects',projId,'PROGRESS_UPDATE',
     {pct:proj?.pct,ac:proj?.ac,ev:proj?.ev,cpi:proj?.cpi,spi:proj?.spi},
-    {pct,ac,ev,cpi,spi,pv},
+    {pct,ac,ev,cpi,spi:spi??'N/A — No Baseline'},
     'Progress updated');
-  showToast('Progress saved ✓');
+  showToast(spi===null?'Progress saved ✓ (SPI: N/A — Create Baseline first)':'Progress saved ✓');
   loadProjects('progress');
 }
 
@@ -1920,7 +1924,7 @@ async function loadProc(tab='vendors'){
         <td style="color:var(--muted);font-size:11px">${p.issue_date||p.created_at?.split('T')[0]||'—'}</td>
         <td style="text-align:center">${pill(p.status)}</td>
         <td style="text-align:center;white-space:nowrap">
-          ${canSubmit?`<button class="btn btn-primary btn-sm" style="font-size:10px;padding:3px 8px" onclick="submitPO('${p.id}')">Submit ▶</button>`:''}
+          ${canSubmit?`<button class="btn btn-primary btn-sm" style="font-size:10px;padding:3px 8px" onclick="submitPO(event,'${p.id}')">Submit ▶</button>`:''}
           ${canReceive?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px" onclick="openMRVFromPO('${p.id}','${esc(p.po_no)}')">Receive ✓</button>`:''}
         </td>
       </tr>`;
@@ -1942,7 +1946,7 @@ async function loadProc(tab='vendors'){
     ${tab==='pos'?`<button class="btn btn-primary btn-sm" onclick="openCreatePOModal()">+ New PO</button>`:''}
     ${tab==='rfqs'?`<button class="btn btn-ghost btn-sm" onclick="openCreateRFQModal()">+ New RFQ</button>`:''}
     ${tab==='vendors'?`<button class="btn btn-ghost btn-sm" onclick="openCreateVendorModal()">+ Add Vendor</button>`:''}
-    ${tab==='mrvs'?`<button class="btn btn-ghost btn-sm" onclick="openCreateMRVModal()">+ New MRV</button>`:''}
+    ${tab==='mrvs'?`<span style="font-size:10px;color:var(--muted);padding:4px 8px">📦 MRVs are created from Purchase Orders (PO → Receive ✓)</span>`:''}
   </div>`:''}
   </div>
   <div class="grid4">${kpis}</div>
@@ -1957,10 +1961,7 @@ async function openCreatePOModal(){
     sb.from('projects').select('id,project_no,name').in('status',ACTIVE_STATUSES).order('project_no'),
     sb.from('vendors').select('id,name,vendor_code').eq('is_approved',true).order('name')
   ]);
-  // Get next PO sequence
-  const {data:lastPO}=await sb.from('purchase_orders').select('po_no').order('created_at',{ascending:false}).limit(1);
-  const lastSeq=lastPO?.[0]?.po_no?parseInt(lastPO[0].po_no.split('-').pop()||'0'):0;
-  const newPONo=`PO-${new Date().getFullYear()}-${String(lastSeq+1).padStart(4,'0')}`;
+  const {data:newPONo}=await sb.rpc('next_ref_no',{p_type:'po'});
 
   openModal('New Purchase Order',`
   <div class="form-row">
@@ -1993,11 +1994,11 @@ async function openCreatePOModal(){
   </div>
   <div class="modal-foot">
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    <button class="btn btn-primary" onclick="savePO()">Create PO (Draft)</button>
+    <button class="btn btn-primary" onclick="savePO(event)">Create PO (Draft)</button>
   </div>`);
 }
 
-async function savePO(){
+async function savePO(e){
   const projId=document.getElementById('po-proj').value;
   const vendId=document.getElementById('po-vendor').value;
   const desc=document.getElementById('po-desc').value.trim();
@@ -2026,38 +2027,23 @@ async function savePO(){
   finally{if(btn){btn.disabled=false;btn.textContent='Create PO (Draft)';}}
 }
 
-async function submitPO(poId){
+async function submitPO(e,poId){
   if(!confirm('Submit this PO for Dept. Approval?')) return;
-  const btn=event?.target;
+  const btn=e?.currentTarget||e?.target;
   if(btn){btn.disabled=true;btn.textContent='Submitting…';}
   try{
-    const {data:po,error:e1}=await sb.from('purchase_orders').update({status:'submitted'}).eq('id',poId).select().single();
-    if(e1){showToast('Error: '+e1.message,'error');return;}
-    // Create workflow item
-    const refNo=`WF-PO-${po.po_no}`;
-    const {error:e2}=await sb.from('workflow_items').insert({
-      ref_no:refNo, entity_type:'po', entity_id:poId,
-      entity_ref:po.po_no, current_step:'Dept. Approval',
-      status:'pending', submitted_by:currentProfile?.id,
-      submitted_date:new Date().toISOString(),
-      project_id:po.project_id
-    });
-    if(e2){
-      await sb.from('purchase_orders').update({status:'draft'}).eq('id',poId);
-      showToast('Workflow creation failed — PO reverted to draft','error');return;
-    }
-    await writeAudit('purchase_orders',poId,'SUBMITTED',{status:'draft'},{status:'submitted',workflow:refNo},'PO submitted for approval');
-    showToast(`PO submitted — Ref: ${refNo} ✓`);
+    const {data,error}=await sb.rpc('submit_purchase_order',{p_po_id:poId});
+    if(error){showToast('Error: '+error.message,'error');return;}
+    if(!data?.ok){showToast('Submit failed: '+(data?.error||'Unknown'),'error');return;}
+    showToast(`PO submitted — Ref: ${data.ref_no} ✓`);
     loadProc('pos'); loadWfBadge();
-  }catch(e){showToast('Error: '+e.message,'error');}
+  }catch(e2){showToast('Error: '+e2.message,'error');}
   finally{if(btn){btn.disabled=false;btn.textContent='Submit ▶';}}
 }
 
 async function openAwardRFQModal(rfqId,rfqNo,title,projectId,budget){
   const {data:vendors}=await sb.from('vendors').select('id,name,vendor_code').eq('is_approved',true).order('name');
-  const {data:lastPO}=await sb.from('purchase_orders').select('po_no').order('created_at',{ascending:false}).limit(1);
-  const lastSeq=lastPO?.[0]?.po_no?parseInt(lastPO[0].po_no.split('-').pop()||'0'):0;
-  const newPONo=`PO-${new Date().getFullYear()}-${String(lastSeq+1).padStart(4,'0')}`;
+  const {data:newPONo}=await sb.rpc('next_ref_no',{p_type:'po'});
 
   openModal(`Award RFQ → PO: ${rfqNo}`,`
   <div style="padding:8px 12px;background:#C9A84C18;border:1px solid #C9A84C33;border-radius:6px;font-size:11px;color:var(--muted);margin-bottom:12px">
@@ -2087,24 +2073,18 @@ async function openAwardRFQModal(rfqId,rfqNo,title,projectId,budget){
 async function awardRFQ(rfqId,rfqNo,projectId){
   const vendId=document.getElementById('award-vendor').value;
   const amount=Number(document.getElementById('award-amount').value)||0;
-  const poNo=document.getElementById('award-pono').value;
   const delivery=document.getElementById('award-delivery').value;
   if(!vendId||amount<=0){showToast('Vendor and Amount required','error');return;}
   const btn=event?.target;
   if(btn){btn.disabled=true;btn.textContent='Awarding…';}
   try{
-    // Update RFQ to awarded
-    await sb.from('rfqs').update({status:'awarded',awarded_vendor_id:vendId,awarded_amount:amount}).eq('id',rfqId);
-    // Create PO
-    const {data:po,error}=await sb.from('purchase_orders').insert({
-      po_no:poNo, project_id:projectId, vendor_id:vendId,
-      description:`Awarded from ${rfqNo}`,
-      total_value:amount, delivery_date:delivery||null,
-      rfq_id:rfqId, status:'draft', created_by:currentProfile?.id
-    }).select().single();
+    const {data,error}=await sb.rpc('award_rfq_and_create_po',{
+      p_rfq_id:rfqId, p_vendor_id:vendId,
+      p_amount:amount, p_delivery:delivery||null
+    });
     if(error){showToast('Error: '+error.message,'error');return;}
-    await writeAudit('rfqs',rfqId,'AWARDED',{status:'submitted'},{status:'awarded',po_no:poNo,vendor_id:vendId},'RFQ awarded → '+poNo);
-    showToast(`RFQ awarded — PO ${poNo} created ✓`);
+    if(!data?.ok){showToast('Award failed: '+(data?.error||'Unknown'),'error');return;}
+    showToast(`RFQ awarded — PO ${data.po_no} created ✓`);
     closeModal(); loadProc('pos');
   }catch(e){showToast('Error: '+e.message,'error');}
   finally{if(btn){btn.disabled=false;btn.textContent='Award & Create PO';}}
@@ -2112,9 +2092,7 @@ async function awardRFQ(rfqId,rfqNo,projectId){
 
 async function openMRVFromPO(poId,poNo){
   const {data:po}=await sb.from('purchase_orders').select('*,vendor:vendors(name),project:projects(project_no)').eq('id',poId).single();
-  const {data:lastMRV}=await sb.from('mrvs').select('mrv_no').order('created_at',{ascending:false}).limit(1);
-  const lastSeq=lastMRV?.[0]?.mrv_no?parseInt(lastMRV[0].mrv_no.split('-').pop()||'0'):0;
-  const newMRVNo=`MRV-${new Date().getFullYear()}-${String(lastSeq+1).padStart(4,'0')}`;
+  const {data:newMRVNo}=await sb.rpc('next_ref_no',{p_type:'mrv'});
 
   openModal(`Goods Receipt (MRV) — ${poNo}`,`
   <div style="padding:8px 12px;background:#1E3A5F18;border-radius:6px;font-size:11px;color:var(--muted);margin-bottom:12px">
@@ -2174,9 +2152,7 @@ async function saveMRV(poId,projectId){
 
 async function openCreateRFQModal(){
   const {data:projs}=await sb.from('projects').select('id,project_no,name').in('status',ACTIVE_STATUSES).order('project_no');
-  const {data:lastRFQ}=await sb.from('rfqs').select('rfq_no').order('created_at',{ascending:false}).limit(1);
-  const lastSeq=lastRFQ?.[0]?.rfq_no?parseInt(lastRFQ[0].rfq_no.split('-').pop()||'0'):0;
-  const newRFQNo=`RFQ-${new Date().getFullYear()}-${String(lastSeq+1).padStart(4,'0')}`;
+  const {data:newRFQNo}=await sb.rpc('next_ref_no',{p_type:'rfq'});
   openModal('New RFQ',`
   <div class="form-row">
     <div class="form-field"><label>RFQ No</label><input id="rfq-no" value="${newRFQNo}" readonly style="font-family:monospace;opacity:.7"/></div>
@@ -2196,11 +2172,11 @@ async function openCreateRFQModal(){
   <div class="form-field"><label>Scope of Work</label><textarea id="rfq-scope" rows="3" placeholder="Describe what vendors need to quote for…"></textarea></div>
   <div class="modal-foot">
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    <button class="btn btn-primary" onclick="saveRFQ()">Create RFQ</button>
+    <button class="btn btn-primary" onclick="saveRFQ(event)">Create RFQ</button>
   </div>`);
 }
 
-async function saveRFQ(){
+async function saveRFQ(e){
   const rfqNo=document.getElementById('rfq-no').value;
   const title=document.getElementById('rfq-title').value.trim();
   const projId=document.getElementById('rfq-proj').value;
@@ -2246,11 +2222,11 @@ async function openCreateVendorModal(){
   </div>
   <div class="modal-foot">
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    <button class="btn btn-primary" onclick="saveVendor()">Add Vendor</button>
+    <button class="btn btn-primary" onclick="saveVendor(event)">Add Vendor</button>
   </div>`);
 }
 
-async function saveVendor(){
+async function saveVendor(e){
   const name=document.getElementById('v-name').value.trim();
   const cat=document.getElementById('v-cat').value.trim();
   const code=document.getElementById('v-code').value;
@@ -2346,8 +2322,8 @@ async function loadFinance(tab='overview'){
         <td style="color:${ov?'#EF4444':'#94A3B8'};font-size:11px">${i.due_date||'—'}${ov?' ⚠️':''}</td>
         <td style="text-align:center">${pill(i.status)}</td>
         <td style="text-align:center">
-          ${canSubmit?`<button class="btn btn-primary btn-sm" style="font-size:10px;padding:3px 8px" onclick="submitInvoice('${i.id}')">Submit ▶</button>`:''}
-          ${canPaid?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px" onclick="markInvoicePaid('${i.id}')">Mark Paid</button>`:''}
+          ${canSubmit?`<button class="btn btn-primary btn-sm" style="font-size:10px;padding:3px 8px" onclick="submitInvoice(event,'${i.id}')">Submit ▶</button>`:''}
+          ${canPaid?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px" onclick="markInvoicePaid(event,'${i.id}')">Mark Paid</button>`:''}
         </td>
       </tr>`;
     }).join('')}
@@ -2401,7 +2377,7 @@ async function loadFinance(tab='overview'){
         </td>
         <td style="text-align:center">${pill(i.status)}</td>
         <td style="text-align:center">
-          ${canPaid?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 7px" onclick="markInvoicePaid('${i.id}')">Paid ✓</button>`:''}
+          ${canPaid?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 7px" onclick="markInvoicePaid(event,'${i.id}')">Paid ✓</button>`:''}
         </td>
       </tr>`;
     }).join('')}
@@ -2439,7 +2415,7 @@ async function loadFinance(tab='overview'){
         </td>
         <td style="text-align:center">${pill(i.status)}</td>
         <td style="text-align:center">
-          ${canPay?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 7px" onclick="markInvoicePaid('${i.id}')">Pay ✓</button>`:''}
+          ${canPay?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 7px" onclick="markInvoicePaid(event,'${i.id}')">Pay ✓</button>`:''}
         </td>
       </tr>`;
     }).join('')}
@@ -2531,7 +2507,7 @@ async function loadFinance(tab='overview'){
         <td style="text-align:center">${pill(i.status)}</td>
         <td style="text-align:center">
           ${i.retention_released?pill('Released','#10B981'):pill('Held','#3B82F6')}
-          ${canRelease?`<button class="btn btn-ghost btn-sm" style="font-size:9px;padding:2px 6px;margin-left:4px" onclick="releaseRetention('${i.id}','${fmtKWD(retAmt)}')">Release</button>`:''}
+          ${canRelease?`<button class="btn btn-ghost btn-sm" style="font-size:9px;padding:2px 6px;margin-left:4px" onclick="releaseRetention(event,'${i.id}','${fmtKWD(retAmt)}')">Release</button>`:''}
         </td>
       </tr>`;
     }).join('')}
@@ -2905,7 +2881,7 @@ function openNewUserModal(){
   <div id="nu-err" style="display:none;padding:6px 10px;background:#EF444411;border:1px solid #EF444433;border-radius:5px;font-size:11px;color:#EF4444;margin-bottom:8px"></div>
   <div class="modal-foot">
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    <button class="btn btn-primary" onclick="saveNewUser()">Create User</button>
+    <button class="btn btn-primary" onclick="saveNewUser(event)">Create User</button>
   </div>`);
 }
 
@@ -2916,7 +2892,7 @@ function autoInitials(){
   if(el&&!el._manuallyEdited) el.value=init;
 }
 
-async function saveNewUser(){
+async function saveNewUser(e){
   const name   =document.getElementById('nu-name').value.trim();
   const email  =document.getElementById('nu-email').value.trim();
   const role   =document.getElementById('nu-role').value;
@@ -3308,7 +3284,7 @@ async function openCreateBaselineModal(){
   <div id="bl-preview" style="padding:8px 12px;background:#10B98111;border:1px solid #10B98133;border-radius:6px;font-size:11px;color:var(--muted);display:none"></div>
   <div class="modal-foot">
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    <button class="btn btn-primary" onclick="saveBaseline()">Create Baseline</button>
+    <button class="btn btn-primary" onclick="saveBaseline(event)">Create Baseline</button>
   </div>`);
 
   // Store baselines data for onchange
@@ -3353,7 +3329,7 @@ function updateBaselineInfo(){
   }
 }
 
-async function saveBaseline(){
+async function saveBaseline(e){
   const projId=document.getElementById('bl-proj').value;
   const start=document.getElementById('bl-start').value;
   const end=document.getElementById('bl-end').value;
@@ -3972,11 +3948,7 @@ async function saveInvoice(){
   const net=gross-retAmt;
   const type=document.getElementById('f-itype').value;
   const prefix=type==='client'?'INV-C':type==='supplier'?'INV-S':'INV-SC';
-  const year=new Date().getFullYear();
-  const {data:allInvs}=await sb.from('invoices').select('invoice_no').ilike('invoice_no',`${prefix}-${year}-%`);
-  const maxInvSeq=(allInvs||[]).reduce((max,i)=>{const n=Number((i.invoice_no||'').split('-').pop()||0);return n>max?n:max;},0);
-  const seq=String(maxInvSeq+1).padStart(3,'0');
-  const invoice_no=`${prefix}-${year}-${seq}`;
+  const {data:invoice_no}=await sb.rpc('next_ref_no',{p_type:'invoice',p_prefix:prefix});
   const {data:inv,error}=await sb.from('invoices').insert({
     invoice_no,project_id:proj,invoice_type:type,
     gross_amount:gross,vat_pct:0,vat_amount:0,
@@ -3991,9 +3963,9 @@ async function saveInvoice(){
   closeModal();loadFinance();
 }
 
-async function submitInvoice(invoiceId){
+async function submitInvoice(e,invoiceId){
   if(!confirm('Submit this invoice for approval? This will start the PM Verification workflow.')) return;
-  const btn=event?.target;
+  const btn=e?.currentTarget||e?.target;
   if(btn){btn.disabled=true;btn.textContent='Submitting…';}
   try{
     const {data,error}=await sb.rpc('submit_invoice',{p_invoice_id:invoiceId});
@@ -4009,7 +3981,7 @@ async function submitInvoice(invoiceId){
   }
 }
 
-async function markInvoicePaid(invoiceId){
+async function markInvoicePaid(e,invoiceId){
   if(!confirm('Mark this invoice as PAID?')) return;
   const {data:inv}=await sb.from('invoices').select('invoice_no,status').eq('id',invoiceId).single();
   const {error}=await sb.from('invoices').update({status:'paid',paid_date:new Date().toISOString().split('T')[0]}).eq('id',invoiceId);
@@ -4019,7 +3991,7 @@ async function markInvoicePaid(invoiceId){
   loadFinance(curFinTab);
 }
 
-async function releaseRetention(invoiceId, retAmtStr){
+async function releaseRetention(e,invoiceId, retAmtStr){
   if(!confirm('Release retention of '+retAmtStr+' for this invoice?')) return;
   const {data:inv}=await sb.from('invoices').select('invoice_no,status').eq('id',invoiceId).single();
   const {error}=await sb.from('invoices').update({retention_released:true, retention_released_date:new Date().toISOString().split('T')[0]}).eq('id',invoiceId);
@@ -4883,14 +4855,25 @@ function openAboutModal(){
 }
 
 // ── SESSION RESTORE ─────────────────────────────────────────
-// SP360 ERP: always require explicit login — no auto session restore
-// Security policy: every page open must authenticate from scratch
+// Restore existing session or show login screen
 (async()=>{
   try{
-    // Clear any existing session — forces login screen every time
-    await sb.auth.signOut({ scope: 'local' }).catch(()=>{});
-  }catch(e){}
-  // Always show login screen
+    const {data:{session},error}=await sb.auth.getSession();
+    if(session&&session.user&&!error){
+      currentUser=session.user;
+      try{
+        await loadProfile();
+        enterApp();
+        return;
+      }catch(e){
+        // Profile error — stay on login
+        console.warn('Session restore: profile error');
+      }
+    }
+  }catch(e){
+    console.warn('Session check failed:',e);
+  }
+  // No valid session — show login
   document.getElementById('app').style.display='none';
   document.getElementById('auth-screen').style.display='flex';
 })();
