@@ -523,6 +523,31 @@ const SC = {
   'PMO Manager':'#C9A84C','Finance Manager':'#10B981','Procurement Lead':'#3B82F6',
   'BD Manager':'#8B5CF6','QHSE Engineer':'#EF4444'
 };
+// ── FORM VALIDATION HELPERS ─────────────────────────────────
+function validNum(id,label,min=0,max=Infinity){
+  const el=document.getElementById(id);
+  if(!el) return null;
+  const raw=el.value.trim();
+  if(raw===''||raw===null){showToast(label+' is required','error');el.focus();return null;}
+  const n=Number(raw);
+  if(isNaN(n)){showToast(label+' must be a valid number','error');el.focus();return null;}
+  if(n<min){showToast(label+' must be ≥ '+min,'error');el.focus();return null;}
+  if(n>max){showToast(label+' must be ≤ '+max,'error');el.focus();return null;}
+  return n;
+}
+function validText(id,label,minLen=1){
+  const el=document.getElementById(id);
+  if(!el) return null;
+  const v=el.value.trim();
+  if(v.length<minLen){showToast(label+' is required','error');el.focus();return null;}
+  return v;
+}
+function validSelect(id,label){
+  const el=document.getElementById(id);
+  if(!el||!el.value){showToast(label+' is required','error');if(el)el.focus();return null;}
+  return el.value;
+}
+
 const fmtK = v=>{v=Number(v||0);if(v>=1e6)return(v/1e6).toFixed(2)+'M';if(v>=1e3)return(v/1e3).toFixed(0)+'K';return v.toFixed(0)};
 const fmtKWD = v=>'KWD '+fmtK(v);
 const pill = (v,c)=>{const col=c||SC[v]||'#94A3B8';return`<span class="pill" style="color:${col};background:${col}22;border:1px solid ${col}44">${String(v||'').replace(/_/g,' ')}</span>`};
@@ -1858,12 +1883,35 @@ async function saveProgress(projId, bac){
   loadProjects('progress');
 }
 
+// Lifecycle Transition Matrix — only forward moves allowed, no skipping
+const LIFECYCLE_TRANSITIONS = {
+  'initiation':  ['planning','cancelled'],
+  'planning':    ['execution','on_hold','cancelled'],
+  'execution':   ['monitoring','on_hold','cancelled'],
+  'monitoring':  ['closeout','execution','on_hold','cancelled'],
+  'closeout':    ['completed','execution'],
+  'on_hold':     ['planning','execution','cancelled'],
+  'completed':   [],
+  'cancelled':   []
+};
+
 async function advanceProject(projId, newStatus, event){
-  if(!newStatus)return;
+  if(!newStatus) return;
+  // Validate transition
+  const {data:proj}=await sb.from('projects').select('status,name').eq('id',projId).single();
+  const currentStatus=proj?.status||'initiation';
+  const allowed=LIFECYCLE_TRANSITIONS[currentStatus]||[];
+  if(!allowed.includes(newStatus)){
+    showToast(`Invalid transition: ${PROJ_LIFECYCLE_LABELS[currentStatus]||currentStatus} → ${PROJ_LIFECYCLE_LABELS[newStatus]||newStatus}`,'error');
+    loadProjects('lifecycle'); // reset dropdown
+    return;
+  }
   const {error}=await sb.from('projects').update({status:newStatus}).eq('id',projId);
   if(error){showToast('Error: '+error.message,'error');return;}
-  await writeAudit('projects',projId,'LIFECYCLE_ADVANCE',null,{status:newStatus},'Project phase advanced');
-  showToast('Project phase updated to: '+PROJ_LIFECYCLE_LABELS[newStatus]);
+  await writeAudit('projects',projId,'LIFECYCLE_ADVANCE',
+    {status:currentStatus},{status:newStatus},
+    `Phase: ${currentStatus} → ${newStatus}`);
+  showToast(`${proj?.name?.split('—')[0]?.trim()||'Project'} → ${PROJ_LIFECYCLE_LABELS[newStatus]||newStatus} ✓`);
   loadProjects('lifecycle');
 }
 
@@ -1999,17 +2047,16 @@ async function openCreatePOModal(){
 }
 
 async function savePO(e){
-  const projId=document.getElementById('po-proj').value;
-  const vendId=document.getElementById('po-vendor').value;
-  const desc=document.getElementById('po-desc').value.trim();
-  const val=Number(document.getElementById('po-val').value)||0;
+  const projId=validSelect('po-proj','Project'); if(!projId) return;
+  const vendId=validSelect('po-vendor','Vendor'); if(!vendId) return;
+  const desc=validText('po-desc','Description'); if(!desc) return;
+  const val=validNum('po-val','Total Value',0.001); if(val===null) return;
   const poNo=document.getElementById('po-no').value.trim();
   const issueDate=document.getElementById('po-date').value;
   const delivery=document.getElementById('po-delivery').value;
   const terms=document.getElementById('po-terms').value.trim();
 
-  if(!projId||!vendId||!desc||val<=0){showToast('Project, Vendor, Description and Value required','error');return;}
-  const btn=event?.target;
+  const btn=e?.currentTarget||e?.target;
   if(btn){btn.disabled=true;btn.textContent='Creating…';}
   try{
     const {data,error}=await sb.from('purchase_orders').insert({
@@ -3870,50 +3917,71 @@ async function saveOpp(){
 function openNewProjectModal(){
   openModal('New Project',`
   <div class="form-row">
-    <div class="form-field"><label>Project Name *</label><input id="f-pname" placeholder="Project name"/></div>
+    <div class="form-field"><label>Project Name *</label><input id="f-pname" placeholder="e.g. SP360 — Security System — MOI HQ"/></div>
     <div class="form-field"><label>Client *</label><input id="f-pclient" placeholder="Client name"/></div>
   </div>
   <div class="form-row">
-    <div class="form-field"><label>Contract Value (KWD) *</label><input id="f-pvalue" type="number" placeholder="0"/></div>
-    <div class="form-field"><label>Department</label><select id="f-pdept">${['Security','AV/Broadcast','IT','Power','Civil','Wireless','Trading'].map(d=>`<option>${d}</option>`).join('')}</select></div>
+    <div class="form-field"><label>Contract Value (KWD) *</label>
+      <input id="f-pvalue" type="number" placeholder="0.000" min="0" step="0.001"
+        oninput="document.getElementById('f-pbac').value=this.value" title="Total contract amount signed with client"/>
+    </div>
+    <div class="form-field"><label>Approved Budget / BAC (KWD) *</label>
+      <input id="f-pbac" type="number" placeholder="0.000" min="0" step="0.001"
+        title="Budget At Completion — may differ from contract value (excl. contingency, management reserve)"/>
+    </div>
+  </div>
+  <div style="padding:6px 10px;background:#3B82F611;border:1px solid #3B82F633;border-radius:5px;font-size:10px;color:var(--muted);margin-bottom:8px">
+    💡 <b>BAC</b> = the budget you control for EVM. <b>Contract Value</b> = what the client pays. They may differ.
+  </div>
+  <div class="form-row">
+    <div class="form-field"><label>Department</label>
+      <select id="f-pdept">${['Security','AV/Broadcast','IT','Power','Civil','Wireless','Trading'].map(d=>`<option>${d}</option>`).join('')}</select>
+    </div>
+    <div class="form-field"><label>Priority</label>
+      <select id="f-ppriority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="critical">Critical</option></select>
+    </div>
   </div>
   <div class="form-row">
     <div class="form-field"><label>Start Date</label><input id="f-pstart" type="date"/></div>
     <div class="form-field"><label>End Date</label><input id="f-pend" type="date"/></div>
   </div>
-  <div class="form-field"><label>Priority</label><select id="f-ppriority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="critical">Critical</option></select></div>
   <div class="modal-foot">
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    <button class="btn btn-primary" onclick="saveProject()">Create Project</button>
+    <button class="btn btn-primary" onclick="saveProject(event)">Create Project</button>
   </div>`);
 }
 
-async function saveProject(){
-  const name=document.getElementById('f-pname').value.trim();
-  const client=document.getElementById('f-pclient').value.trim();
-  const val=Number(document.getElementById('f-pvalue').value)||0;
-  if(!name||!client||!val){showToast('Name, Client and Value required','error');return;}
-  const dept=document.getElementById('f-pdept').value;
-  const deptCode={Security:'SEC','AV/Broadcast':'AV',IT:'IT',Power:'PW',Civil:'CV',Wireless:'WL',Trading:'TR'}[dept]||'XX';
-  const year=new Date().getFullYear();
-  const {data:allProjs}=await sb.from('projects').select('project_no').ilike('project_no',`SP360-${deptCode}-%`);
-  const maxProjSeq=(allProjs||[]).reduce((max,p)=>{const n=Number((p.project_no||'').split('-')[2]||0);return n>max?n:max;},0);
-  const seq=String(maxProjSeq+1).padStart(3,'0');
-  const project_no=`SP360-${deptCode}-${seq}`;
-  const {data:proj,error}=await sb.from('projects').insert({
-    project_no,name,client,department:dept,
-    contract_value:val,bac:val,ac:0,ev:0,pv:0,pct:0,cpi:1,spi:1,
-    status:'planning',
-    priority:document.getElementById('f-ppriority').value,
-    start_date:document.getElementById('f-pstart').value||null,
-    end_date:document.getElementById('f-pend').value||null,
-    pm_id:currentProfile?.id,
-    created_by:currentProfile?.id
-  }).select().single();
-  if(error){showToast('Error: '+error.message,'error');return;}
-  await writeAudit('projects',proj?.id,'CREATED',null,{project_no,name,contract_value:val},'New project');
-  showToast('Project created');
-  closeModal();loadProjects();
+async function saveProject(e){
+  const name   = validText('f-pname','Project Name'); if(!name) return;
+  const client = validText('f-pclient','Client'); if(!client) return;
+  const val    = validNum('f-pvalue','Contract Value',0.001); if(val===null) return;
+  const bac    = validNum('f-pbac','Approved Budget (BAC)',0.001); if(bac===null) return;
+  const dept   = document.getElementById('f-pdept').value;
+  const start  = document.getElementById('f-pstart').value||null;
+  const end    = document.getElementById('f-pend').value||null;
+  if(start&&end&&end<start){showToast('End date must be after start date','error');return;}
+
+  const btn=e?.currentTarget||e?.target;
+  if(btn){btn.disabled=true;btn.textContent='Creating…';}
+  try{
+    // Atomic project number from DB sequence
+    const deptCode={Security:'SEC','AV/Broadcast':'AV',IT:'IT',Power:'PW',Civil:'CV',Wireless:'WL',Trading:'TR'}[dept]||'XX';
+    const {data:project_no}=await sb.rpc('next_ref_no',{p_type:'project',p_prefix:`SP360-${deptCode}`});
+
+    const {data:proj,error}=await sb.from('projects').insert({
+      project_no, name, client, department:dept,
+      contract_value:val, bac, ac:0, ev:0, pv:0, pct:0, cpi:1, spi:null,
+      status:'initiation',
+      priority:document.getElementById('f-ppriority').value,
+      start_date:start, end_date:end,
+      pm_id:currentProfile?.id, created_by:currentProfile?.id
+    }).select().single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('projects',proj?.id,'CREATED',null,{project_no,name,contract_value:val,bac},'New project created');
+    showToast(`Project ${project_no} created ✓`);
+    closeModal(); loadProjects();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Create Project';}}
 }
 
 function openNewInvoiceModal(){
@@ -3982,23 +4050,31 @@ async function submitInvoice(e,invoiceId){
 }
 
 async function markInvoicePaid(e,invoiceId){
-  if(!confirm('Mark this invoice as PAID?')) return;
-  const {data:inv}=await sb.from('invoices').select('invoice_no,status').eq('id',invoiceId).single();
-  const {error}=await sb.from('invoices').update({status:'paid',paid_date:new Date().toISOString().split('T')[0]}).eq('id',invoiceId);
-  if(error){showToast('Error: '+error.message,'error');return;}
-  await writeAudit('invoices',invoiceId,'PAID',{status:inv?.status},{status:'paid'},'Invoice marked as paid');
-  showToast('Invoice marked as paid ✓');
-  loadFinance(curFinTab);
+  if(!confirm('Mark this invoice as PAID?\n\nNote: Invoice must be APPROVED through workflow first.')) return;
+  const btn=e?.currentTarget||e?.target;
+  if(btn){btn.disabled=true;btn.textContent='Processing…';}
+  try{
+    const {data,error}=await sb.rpc('mark_invoice_paid',{p_invoice_id:invoiceId});
+    if(error){showToast('Error: '+error.message,'error');return;}
+    if(!data?.ok){showToast('Cannot mark paid: '+(data?.error||'Unknown'),'error');return;}
+    showToast(`Invoice ${data.invoice_no} marked as paid ✓`);
+    loadFinance(curFinTab);
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Mark Paid';}}
 }
 
-async function releaseRetention(e,invoiceId, retAmtStr){
-  if(!confirm('Release retention of '+retAmtStr+' for this invoice?')) return;
-  const {data:inv}=await sb.from('invoices').select('invoice_no,status').eq('id',invoiceId).single();
-  const {error}=await sb.from('invoices').update({retention_released:true, retention_released_date:new Date().toISOString().split('T')[0]}).eq('id',invoiceId);
-  if(error){showToast('Error: '+error.message,'error');return;}
-  await writeAudit('invoices',invoiceId,'RETENTION_RELEASED',{retention_released:false},{retention_released:true,amount:retAmtStr},'Retention released');
-  showToast('Retention released ✓');
-  loadFinance('retention');
+async function releaseRetention(e,invoiceId,retAmtStr){
+  if(!confirm('Release retention of '+retAmtStr+' for this invoice?\n\nNote: Invoice must be PAID first.')) return;
+  const btn=e?.currentTarget||e?.target;
+  if(btn){btn.disabled=true;btn.textContent='Releasing…';}
+  try{
+    const {data,error}=await sb.rpc('release_retention',{p_invoice_id:invoiceId});
+    if(error){showToast('Error: '+error.message,'error');return;}
+    if(!data?.ok){showToast('Cannot release: '+(data?.error||'Unknown'),'error');return;}
+    showToast(`Retention released — KWD ${data.amount} ✓`);
+    loadFinance('retention');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Release';}}
 }
 
 // ══════════════════════════════════════════════════════════════
