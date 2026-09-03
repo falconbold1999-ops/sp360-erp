@@ -370,7 +370,7 @@ tr:hover td{background:#1A366010}
     <button onclick="toggleSide()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 6px;border-radius:5px">☰</button>
     <div class="logo-sq">SP</div>
     <div class="logo-txt"><div class="t1">SP360 ERP</div><div class="t2">Smart Projects 360 · Kuwait</div></div>
-    <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v1.8</span>
+    <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v1.9</span>
     <div style="display:flex;align-items:center;gap:4px;flex-shrink:0" title="Realtime connection status">
       <div id="realtime-dot" style="width:7px;height:7px;border-radius:50%;background:#94A3B8;transition:background .3s"></div>
       <span style="font-size:9px;color:var(--faint)">live</span>
@@ -475,6 +475,54 @@ let curHRTab = 'employees';
 let curQHSETab = 'ncrs';
 let curDocTab = 'documents';
 
+// ── GLOBAL ERROR HANDLING ─────────────────────────────────────
+// Catch unhandled promise rejections (Supabase, network errors)
+window.addEventListener('unhandledrejection', e=>{
+  const msg = e.reason?.message||String(e.reason||'');
+  // Session expired — force logout
+  if(msg.includes('JWT expired')||msg.includes('Invalid JWT')||msg.includes('token is expired')){
+    showToast('Session expired — please sign in again','error');
+    setTimeout(()=>doLogout(), 1500);
+    e.preventDefault(); return;
+  }
+  // Network error
+  if(msg.includes('Failed to fetch')||msg.includes('NetworkError')){
+    showToast('Network error — check your connection','error');
+    e.preventDefault(); return;
+  }
+  console.warn('Unhandled rejection:', msg);
+});
+
+// Intercept Supabase errors globally — check for auth errors on every response
+const _origFetch = window.fetch;
+window.fetch = async function(...args){
+  const res = await _origFetch(...args);
+  // Clone to read body without consuming it
+  if(res.status === 401 && currentUser){
+    const clone = res.clone();
+    try{
+      const body = await clone.json();
+      if(body?.message?.includes('JWT')||body?.error?.includes('JWT')){
+        showToast('Session expired — signing out','error');
+        setTimeout(()=>doLogout(), 1500);
+      }
+    }catch(e){}
+  }
+  return res;
+};
+
+// ── BUTTON PROTECTION ────────────────────────────────────────
+// Prevent double-clicks on any .btn-primary or .btn-danger
+document.addEventListener('click', e=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  if(btn.dataset.protected) return; // already protected
+  if(btn.classList.contains('btn-primary')||btn.classList.contains('btn-danger')){
+    btn.dataset.protected = '1';
+    setTimeout(()=>{ delete btn.dataset.protected; }, 3000);
+  }
+}, true);
+
 // ── UTILS ────────────────────────────────────────────────────
 const SC = {
   active:'#10B981',planning:'#3B82F6',on_hold:'#F97316',completed:'#94A3B8',cancelled:'#EF4444',
@@ -506,15 +554,37 @@ function showToast(msg,type='success'){
 }
 
 async function writeAudit(entity_type,entity_id,action,old_val,new_val,notes=''){
+  if(!currentProfile?.id) return; // skip if not logged in
   try{
     await sb.from('audit_log').insert({
       entity_type,entity_id,action,
       old_values:old_val?JSON.stringify(old_val):null,
       new_values:new_val?JSON.stringify(new_val):null,
-      performed_by:currentProfile?.id,
+      performed_by:currentProfile.id,
       notes
     });
   }catch(e){console.warn('Audit write failed:',e);}
+}
+
+// ── PAGE ERROR BOUNDARY ───────────────────────────────────────
+// Wrap any page load in a safe container that shows errors clearly
+function pageError(pageId, err){
+  const el=document.getElementById(pageId);
+  if(!el) return;
+  const msg=err?.message||String(err||'Unknown error');
+  // Session expired
+  if(msg.includes('JWT')||msg.includes('not authenticated')||msg.includes('401')){
+    showToast('Session expired — please sign in again','error');
+    setTimeout(()=>doLogout(), 1500);
+    return;
+  }
+  el.innerHTML=`
+  <div style="padding:40px;text-align:center">
+    <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px">Failed to load page</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:16px;font-family:monospace;background:#0D1B2A;padding:8px 12px;border-radius:6px;display:inline-block">${esc(msg)}</div>
+    <br><button class="btn btn-ghost btn-sm" onclick="location.reload()">↺ Refresh Page</button>
+  </div>`;
 }
 
 // ── AUTH ─────────────────────────────────────────────────────
@@ -743,6 +813,7 @@ function closeModal(){document.getElementById('modal-overlay').classList.remove(
 // ── DASHBOARD ────────────────────────────────────────────────
 async function loadDashboard(){
   const el=document.getElementById('page-dashboard');
+  try{
   el.innerHTML=`<div class="loading">Loading dashboard…</div>`;
   const [projR,invR,wfR,ncrR,snapR]=await Promise.all([
     sb.from('projects').select('id,project_no,name,contract_value,bac,ac,ev,pv,pct,cpi,spi,status,department'),
@@ -1072,6 +1143,7 @@ async function loadDashboard(){
         y:{ticks:{color:'#94A3B8',font:{size:10}},grid:{display:false}}}}});
 
   },100);
+  }catch(e){ pageError('page-dashboard',e); }
 }
 
 // ── BUSINESS DEV ─────────────────────────────────────────────
@@ -1203,6 +1275,7 @@ async function loadProjects(tab){
   curProjTab=tab;
   const el=document.getElementById('page-projects');
   el.innerHTML=`<div class="loading">Loading…</div>`;
+  try{
   const {data:list}=await sb.from('projects').select('*').order('created_at',{ascending:false});
   const projs=list||[];
   const totalEV=projs.reduce((s,p)=>s+Number(p.ev),0);
@@ -1768,6 +1841,7 @@ function previewEV(projId, bac){
   const cpiEl=document.getElementById('cpi_'+projId);
   if(evEl)evEl.textContent=fmtKWD(ev);
   if(cpiEl){cpiEl.textContent=cpi;cpiEl.style.color=cpiColor(cpi);}
+  }catch(e){ pageError('page-projects',e); }
 }
 
 async function saveProgress(projId, bac){
@@ -1810,6 +1884,7 @@ async function advanceProject(projId, newStatus, event){
 async function loadProc(tab='vendors'){
   curProcTab=tab;
   const el=document.getElementById('page-procurement');
+  try{
   el.innerHTML=`<div class="loading">Loading…</div>`;
   const tabs=`<div class="tabs">
     ${['vendors','rfqs','pos','mrvs'].map((t,i)=>`<button class="tab${t===tab?' act':''}" onclick="loadProc('${t}')">${['🏢 Vendors','📋 RFQs','📦 Purchase Orders','✅ MRVs'][i]}</button>`).join('')}
@@ -1889,6 +1964,7 @@ async function loadProc(tab='vendors'){
   </div>
   <div class="grid4">${kpis}</div>
   <div class="card">${tabs}${body}</div>`;
+  }catch(e){ pageError('page-procurement',e); }
 }
 
 // ── PROCUREMENT LIFECYCLE ────────────────────────────────────
@@ -2222,6 +2298,7 @@ async function saveVendor(){
 async function loadFinance(tab='overview'){
   curFinTab=tab||'overview';
   const el=document.getElementById('page-finance');
+  try{
   el.innerHTML=`<div class="loading">Loading…</div>`;
 
   const {data:invList}=await sb.from('invoices')
@@ -2487,6 +2564,7 @@ async function loadFinance(tab='overview'){
       `<button class="btn btn-primary btn-sm" onclick="openNewInvoiceModal()">+ New Invoice</button>`:''}
   </div>
   <div class="card">${tabs}${body}</div>`;
+  }catch(e){ pageError('page-finance',e); }
 }
 // ── HR ───────────────────────────────────────────────────────
 async function loadHR(tab='employees'){
@@ -2602,6 +2680,7 @@ async function loadDocs(tab='documents'){
 // ── WORKFLOW ─────────────────────────────────────────────────
 async function loadWorkflow(){
   const el=document.getElementById('page-workflow');
+  try{
   el.innerHTML=`<div class="loading">Loading…</div>`;
   const {data:list}=await sb.from('workflow_items').select('*').order('raised_date',{ascending:true});
   const wfs=list||[];
@@ -2648,6 +2727,7 @@ async function loadWorkflow(){
       </div>
     </div>`).join('')}
   </div>`;
+  }catch(e){ pageError('page-workflow',e); }
 }
 
 async function wfApprove(wfId,entityType,entityId,currentStep){
