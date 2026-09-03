@@ -1826,16 +1826,46 @@ async function loadProc(tab='vendors'){
     const {data:list}=await sb.from('rfqs').select('*,project:projects(project_no)').order('created_at',{ascending:false});
     const L=list||[];
     kpis=kpi('Total RFQs',L.length,'#E2E8F0')+kpi('Draft',L.filter(r=>r.status==='draft').length,'#94A3B8')+kpi('Submitted',L.filter(r=>r.status==='submitted').length,'#3B82F6')+kpi('Awarded',L.filter(r=>r.status==='awarded').length,'#10B981');
-    body=`<table><thead><tr><th>No</th><th>Title</th><th>Project</th><th style="text-align:right">Budget (KWD)</th><th>Closing</th><th style="text-align:center">Status</th></tr></thead><tbody>
-    ${L.map(r=>`<tr><td style="color:var(--gold);font-size:10px">${esc(r.rfq_no)}</td><td style="font-weight:600;font-size:11px">${esc(r.title)}</td><td style="color:var(--muted);font-size:11px">${esc(r.project?.project_no||'—')}</td><td style="text-align:right">${fmtKWD(r.budget)}</td><td style="color:var(--muted);font-size:11px">${r.close_date||'—'}</td><td style="text-align:center">${pill(r.status)}</td></tr>`).join('')}
+    body=`<table><thead><tr><th>No</th><th>Title</th><th>Project</th><th style="text-align:right">Budget (KWD)</th><th>Closing</th><th style="text-align:center">Status</th><th style="text-align:center">Action</th></tr></thead><tbody>
+    ${L.map(r=>{
+      const canAward=r.status==='submitted'&&(currentProfile?.role==='PMO Manager'||currentProfile?.role==='Procurement Lead');
+      return`<tr>
+        <td style="color:var(--gold);font-size:10px">${esc(r.rfq_no)}</td>
+        <td style="font-weight:600;font-size:11px">${esc(r.title)}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(r.project?.project_no||'—')}</td>
+        <td style="text-align:right">${fmtKWD(r.budget)}</td>
+        <td style="color:var(--muted);font-size:11px">${r.close_date||'—'}</td>
+        <td style="text-align:center">${pill(r.status)}</td>
+        <td style="text-align:center">
+          ${canAward?`<button class="btn btn-primary btn-sm" style="font-size:10px;padding:3px 8px" onclick="openAwardRFQModal('${r.id}','${esc(r.rfq_no)}','${esc(r.title)}','${r.project_id||''}',${r.budget||0})">Award → PO</button>`:''}
+        </td>
+      </tr>`;
+    }).join('')}
     </tbody></table>`;
   } else if(tab==='pos'){
     const {data:list}=await sb.from('purchase_orders').select('*,project:projects(project_no),vendor:vendors(name)').order('created_at',{ascending:false});
     const L=list||[];
     const pending=L.filter(p=>p.status&&p.status.includes('approval'));
     kpis=kpi('Total POs',L.length,'#E2E8F0')+kpi('Pending Approval',pending.length,'#F97316')+kpi('Issued',L.filter(p=>p.status==='issued').length,'#10B981')+kpi('Total Value',fmtKWD(L.reduce((s,p)=>s+Number(p.total_value),0)),'#C9A84C');
-    body=`<table><thead><tr><th>No</th><th>Project</th><th>Vendor</th><th style="text-align:right">Value (KWD)</th><th>Date</th><th style="text-align:center">Status</th></tr></thead><tbody>
-    ${L.map(p=>`<tr><td style="color:var(--gold);font-size:10px">${esc(p.po_no)}</td><td style="color:var(--muted);font-size:11px">${esc(p.project?.project_no||'—')}</td><td style="font-weight:600;font-size:11px">${esc(p.vendor?.name||'—')}</td><td style="text-align:right;font-weight:700">${fmtKWD(p.total_value)}</td><td style="color:var(--muted);font-size:11px">${p.issue_date||'—'}</td><td style="text-align:center">${pill(p.status)}</td></tr>`).join('')}
+    body=`<table><thead><tr><th>No</th><th>Project</th><th>Vendor</th><th>Description</th><th style="text-align:right">Value (KWD)</th><th>Date</th><th style="text-align:center">Status</th><th style="text-align:center">Action</th></tr></thead><tbody>
+    ${L.map(p=>{
+      const canSubmit=p.status==='draft'&&(currentProfile?.role==='PMO Manager'||currentProfile?.role==='Procurement Lead');
+      const canReceive=p.status==='issued'&&(currentProfile?.role==='PMO Manager'||currentProfile?.role==='Procurement Lead');
+      // 3-way match indicator: check if MRV and invoice exist for this PO
+      return`<tr>
+        <td style="color:var(--gold);font-size:10px;white-space:nowrap">${esc(p.po_no)}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(p.project?.project_no||'—')}</td>
+        <td style="font-weight:600;font-size:11px">${esc(p.vendor?.name||'—')}</td>
+        <td style="color:var(--muted);font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.description||'—')}</td>
+        <td style="text-align:right;font-weight:700;color:var(--gold)">${fmtKWD(p.total_value)}</td>
+        <td style="color:var(--muted);font-size:11px">${p.issue_date||p.created_at?.split('T')[0]||'—'}</td>
+        <td style="text-align:center">${pill(p.status)}</td>
+        <td style="text-align:center;white-space:nowrap">
+          ${canSubmit?`<button class="btn btn-primary btn-sm" style="font-size:10px;padding:3px 8px" onclick="submitPO('${p.id}')">Submit ▶</button>`:''}
+          ${canReceive?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px" onclick="openMRVFromPO('${p.id}','${esc(p.po_no)}')">Receive ✓</button>`:''}
+        </td>
+      </tr>`;
+    }).join('')}
     </tbody></table>`;
   } else {
     const {data:list}=await sb.from('mrvs').select('*,project:projects(project_no),vendor:vendors(name)').order('received_date',{ascending:false});
@@ -1847,9 +1877,344 @@ async function loadProc(tab='vendors'){
   }
 
   el.innerHTML=`
-  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">📦</span><div><h1>Procurement</h1><div class="sub">Vendors · RFQ · Purchase Orders · MRV</div></div></div></div>
+  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">📦</span><div><h1>Procurement</h1><div class="sub">Vendors · RFQ · Purchase Orders · MRV</div></div></div>
+  ${(currentProfile?.role==='PMO Manager'||currentProfile?.role==='Procurement Lead')?`
+  <div class="page-head-right" style="display:flex;gap:8px;flex-wrap:wrap">
+    ${tab==='pos'?`<button class="btn btn-primary btn-sm" onclick="openCreatePOModal()">+ New PO</button>`:''}
+    ${tab==='rfqs'?`<button class="btn btn-ghost btn-sm" onclick="openCreateRFQModal()">+ New RFQ</button>`:''}
+    ${tab==='vendors'?`<button class="btn btn-ghost btn-sm" onclick="openCreateVendorModal()">+ Add Vendor</button>`:''}
+    ${tab==='mrvs'?`<button class="btn btn-ghost btn-sm" onclick="openCreateMRVModal()">+ New MRV</button>`:''}
+  </div>`:''}
+  </div>
   <div class="grid4">${kpis}</div>
   <div class="card">${tabs}${body}</div>`;
+}
+
+// ── PROCUREMENT LIFECYCLE ────────────────────────────────────
+
+async function openCreatePOModal(){
+  const [projR,vendR]=await Promise.all([
+    sb.from('projects').select('id,project_no,name').in('status',ACTIVE_STATUSES).order('project_no'),
+    sb.from('vendors').select('id,name,vendor_code').eq('is_approved',true).order('name')
+  ]);
+  // Get next PO sequence
+  const {data:lastPO}=await sb.from('purchase_orders').select('po_no').order('created_at',{ascending:false}).limit(1);
+  const lastSeq=lastPO?.[0]?.po_no?parseInt(lastPO[0].po_no.split('-').pop()||'0'):0;
+  const newPONo=`PO-${new Date().getFullYear()}-${String(lastSeq+1).padStart(4,'0')}`;
+
+  openModal('New Purchase Order',`
+  <div class="form-row">
+    <div class="form-field"><label>PO No</label><input id="po-no" value="${newPONo}" readonly style="font-family:monospace;opacity:.7"/></div>
+    <div class="form-field"><label>Issue Date</label><input id="po-date" type="date" value="${new Date().toISOString().split('T')[0]}"/></div>
+  </div>
+  <div class="form-row">
+    <div class="form-field"><label>Project *</label>
+      <select id="po-proj">
+        <option value="">— Select Project —</option>
+        ${(projR.data||[]).map(p=>`<option value="${p.id}">${esc(p.project_no)} — ${esc(p.name)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-field"><label>Vendor *</label>
+      <select id="po-vendor">
+        <option value="">— Select Vendor —</option>
+        ${(vendR.data||[]).map(v=>`<option value="${v.id}">${esc(v.vendor_code)} — ${esc(v.name)}</option>`).join('')}
+      </select>
+    </div>
+  </div>
+  <div class="form-field"><label>Description *</label>
+    <input id="po-desc" placeholder="e.g. Supply of structured cabling materials"/>
+  </div>
+  <div class="form-row">
+    <div class="form-field"><label>Total Value (KWD) *</label><input id="po-val" type="number" min="0" step="0.001" placeholder="0.000"/></div>
+    <div class="form-field"><label>Delivery Date</label><input id="po-delivery" type="date"/></div>
+  </div>
+  <div class="form-field"><label>Terms & Conditions</label>
+    <textarea id="po-terms" rows="2" placeholder="Payment terms, delivery conditions…"></textarea>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="savePO()">Create PO (Draft)</button>
+  </div>`);
+}
+
+async function savePO(){
+  const projId=document.getElementById('po-proj').value;
+  const vendId=document.getElementById('po-vendor').value;
+  const desc=document.getElementById('po-desc').value.trim();
+  const val=Number(document.getElementById('po-val').value)||0;
+  const poNo=document.getElementById('po-no').value.trim();
+  const issueDate=document.getElementById('po-date').value;
+  const delivery=document.getElementById('po-delivery').value;
+  const terms=document.getElementById('po-terms').value.trim();
+
+  if(!projId||!vendId||!desc||val<=0){showToast('Project, Vendor, Description and Value required','error');return;}
+  const btn=event?.target;
+  if(btn){btn.disabled=true;btn.textContent='Creating…';}
+  try{
+    const {data,error}=await sb.from('purchase_orders').insert({
+      po_no:poNo, project_id:projId, vendor_id:vendId,
+      description:desc, total_value:val,
+      issue_date:issueDate, delivery_date:delivery||null,
+      terms_conditions:terms||null,
+      status:'draft', created_by:currentProfile?.id
+    }).select().single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('purchase_orders',data.id,'CREATED',null,{po_no:poNo,total_value:val,status:'draft'},'PO created');
+    showToast(`PO ${poNo} created — click Submit to start approval ✓`);
+    closeModal(); loadProc('pos');
+  }catch(e){showToast('Error: '+e.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Create PO (Draft)';}}
+}
+
+async function submitPO(poId){
+  if(!confirm('Submit this PO for Dept. Approval?')) return;
+  const btn=event?.target;
+  if(btn){btn.disabled=true;btn.textContent='Submitting…';}
+  try{
+    const {data:po,error:e1}=await sb.from('purchase_orders').update({status:'submitted'}).eq('id',poId).select().single();
+    if(e1){showToast('Error: '+e1.message,'error');return;}
+    // Create workflow item
+    const refNo=`WF-PO-${po.po_no}`;
+    const {error:e2}=await sb.from('workflow_items').insert({
+      ref_no:refNo, entity_type:'po', entity_id:poId,
+      entity_ref:po.po_no, current_step:'Dept. Approval',
+      status:'pending', submitted_by:currentProfile?.id,
+      submitted_date:new Date().toISOString(),
+      project_id:po.project_id
+    });
+    if(e2){
+      await sb.from('purchase_orders').update({status:'draft'}).eq('id',poId);
+      showToast('Workflow creation failed — PO reverted to draft','error');return;
+    }
+    await writeAudit('purchase_orders',poId,'SUBMITTED',{status:'draft'},{status:'submitted',workflow:refNo},'PO submitted for approval');
+    showToast(`PO submitted — Ref: ${refNo} ✓`);
+    loadProc('pos'); loadWfBadge();
+  }catch(e){showToast('Error: '+e.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Submit ▶';}}
+}
+
+async function openAwardRFQModal(rfqId,rfqNo,title,projectId,budget){
+  const {data:vendors}=await sb.from('vendors').select('id,name,vendor_code').eq('is_approved',true).order('name');
+  const {data:lastPO}=await sb.from('purchase_orders').select('po_no').order('created_at',{ascending:false}).limit(1);
+  const lastSeq=lastPO?.[0]?.po_no?parseInt(lastPO[0].po_no.split('-').pop()||'0'):0;
+  const newPONo=`PO-${new Date().getFullYear()}-${String(lastSeq+1).padStart(4,'0')}`;
+
+  openModal(`Award RFQ → PO: ${rfqNo}`,`
+  <div style="padding:8px 12px;background:#C9A84C18;border:1px solid #C9A84C33;border-radius:6px;font-size:11px;color:var(--muted);margin-bottom:12px">
+    🏆 Awarding <b>${esc(rfqNo)}</b>: ${esc(title)}<br>Budget: <b>${fmtKWD(budget)}</b>
+  </div>
+  <div class="form-row">
+    <div class="form-field"><label>Awarded Vendor *</label>
+      <select id="award-vendor">
+        <option value="">— Select Vendor —</option>
+        ${(vendors||[]).map(v=>`<option value="${v.id}">${esc(v.vendor_code)} — ${esc(v.name)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-field"><label>Awarded Amount (KWD) *</label>
+      <input id="award-amount" type="number" min="0" step="0.001" value="${budget||''}"/>
+    </div>
+  </div>
+  <div class="form-field"><label>PO No</label>
+    <input id="award-pono" value="${newPONo}" readonly style="font-family:monospace;opacity:.7"/>
+  </div>
+  <div class="form-field"><label>Delivery Date</label><input id="award-delivery" type="date"/></div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="awardRFQ('${rfqId}','${rfqNo}','${projectId}')">Award & Create PO</button>
+  </div>`);
+}
+
+async function awardRFQ(rfqId,rfqNo,projectId){
+  const vendId=document.getElementById('award-vendor').value;
+  const amount=Number(document.getElementById('award-amount').value)||0;
+  const poNo=document.getElementById('award-pono').value;
+  const delivery=document.getElementById('award-delivery').value;
+  if(!vendId||amount<=0){showToast('Vendor and Amount required','error');return;}
+  const btn=event?.target;
+  if(btn){btn.disabled=true;btn.textContent='Awarding…';}
+  try{
+    // Update RFQ to awarded
+    await sb.from('rfqs').update({status:'awarded',awarded_vendor_id:vendId,awarded_amount:amount}).eq('id',rfqId);
+    // Create PO
+    const {data:po,error}=await sb.from('purchase_orders').insert({
+      po_no:poNo, project_id:projectId, vendor_id:vendId,
+      description:`Awarded from ${rfqNo}`,
+      total_value:amount, delivery_date:delivery||null,
+      rfq_id:rfqId, status:'draft', created_by:currentProfile?.id
+    }).select().single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('rfqs',rfqId,'AWARDED',{status:'submitted'},{status:'awarded',po_no:poNo,vendor_id:vendId},'RFQ awarded → '+poNo);
+    showToast(`RFQ awarded — PO ${poNo} created ✓`);
+    closeModal(); loadProc('pos');
+  }catch(e){showToast('Error: '+e.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Award & Create PO';}}
+}
+
+async function openMRVFromPO(poId,poNo){
+  const {data:po}=await sb.from('purchase_orders').select('*,vendor:vendors(name),project:projects(project_no)').eq('id',poId).single();
+  const {data:lastMRV}=await sb.from('mrvs').select('mrv_no').order('created_at',{ascending:false}).limit(1);
+  const lastSeq=lastMRV?.[0]?.mrv_no?parseInt(lastMRV[0].mrv_no.split('-').pop()||'0'):0;
+  const newMRVNo=`MRV-${new Date().getFullYear()}-${String(lastSeq+1).padStart(4,'0')}`;
+
+  openModal(`Goods Receipt (MRV) — ${poNo}`,`
+  <div style="padding:8px 12px;background:#1E3A5F18;border-radius:6px;font-size:11px;color:var(--muted);margin-bottom:12px">
+    📦 PO: <b>${esc(po?.po_no)}</b> | Vendor: <b>${esc(po?.vendor?.name||'—')}</b> | Value: <b>${fmtKWD(po?.total_value)}</b>
+  </div>
+  <div class="form-row">
+    <div class="form-field"><label>MRV No</label><input id="mrv-no" value="${newMRVNo}" readonly style="font-family:monospace;opacity:.7"/></div>
+    <div class="form-field"><label>Received Date *</label><input id="mrv-date" type="date" value="${new Date().toISOString().split('T')[0]}"/></div>
+  </div>
+  <div class="form-field"><label>Received By *</label><input id="mrv-by" placeholder="Name of person who received goods"/></div>
+  <div class="form-row">
+    <div class="form-field"><label>Condition *</label>
+      <select id="mrv-condition">
+        <option value="good">Good — All items received in full</option>
+        <option value="partial">Partial — Incomplete delivery</option>
+        <option value="damaged">Damaged — Items received damaged</option>
+        <option value="rejected">Rejected — Goods rejected</option>
+      </select>
+    </div>
+    <div class="form-field"><label>Received Value (KWD)</label><input id="mrv-val" type="number" min="0" step="0.001" value="${po?.total_value||''}"/></div>
+  </div>
+  <div class="form-field"><label>Notes</label><textarea id="mrv-notes" rows="2" placeholder="Delivery notes, discrepancies…"></textarea></div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveMRV('${poId}','${esc(po?.project_id||'')}')">Save MRV</button>
+  </div>`);
+}
+
+async function saveMRV(poId,projectId){
+  const mrvNo=document.getElementById('mrv-no').value;
+  const date=document.getElementById('mrv-date').value;
+  const by=document.getElementById('mrv-by').value.trim();
+  const cond=document.getElementById('mrv-condition').value;
+  const val=Number(document.getElementById('mrv-val').value)||0;
+  const notes=document.getElementById('mrv-notes').value.trim();
+  if(!date||!by){showToast('Date and Received By required','error');return;}
+  const btn=event?.target;
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const {data,error}=await sb.from('mrvs').insert({
+      mrv_no:mrvNo, po_id:poId, project_id:projectId,
+      received_date:date, received_by:by,
+      condition:cond, received_value:val||null,
+      notes:notes||null, created_by:currentProfile?.id
+    }).select().single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+    // Mark PO as received if condition is good/partial
+    if(cond!=='rejected'){
+      await sb.from('purchase_orders').update({status:cond==='good'?'received':'partial_receipt'}).eq('id',poId);
+    }
+    await writeAudit('mrvs',data.id,'CREATED',null,{mrv_no:mrvNo,condition:cond,po_id:poId},'MRV recorded');
+    showToast(`MRV ${mrvNo} saved ✓`);
+    closeModal(); loadProc('mrvs');
+  }catch(e){showToast('Error: '+e.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save MRV';}}
+}
+
+async function openCreateRFQModal(){
+  const {data:projs}=await sb.from('projects').select('id,project_no,name').in('status',ACTIVE_STATUSES).order('project_no');
+  const {data:lastRFQ}=await sb.from('rfqs').select('rfq_no').order('created_at',{ascending:false}).limit(1);
+  const lastSeq=lastRFQ?.[0]?.rfq_no?parseInt(lastRFQ[0].rfq_no.split('-').pop()||'0'):0;
+  const newRFQNo=`RFQ-${new Date().getFullYear()}-${String(lastSeq+1).padStart(4,'0')}`;
+  openModal('New RFQ',`
+  <div class="form-row">
+    <div class="form-field"><label>RFQ No</label><input id="rfq-no" value="${newRFQNo}" readonly style="font-family:monospace;opacity:.7"/></div>
+    <div class="form-field"><label>Closing Date *</label><input id="rfq-close" type="date"/></div>
+  </div>
+  <div class="form-field"><label>Title *</label><input id="rfq-title" placeholder="e.g. Supply of UPS Systems — Phase 2"/></div>
+  <div class="form-field"><label>Project *</label>
+    <select id="rfq-proj">
+      <option value="">— Select Project —</option>
+      ${(projs||[]).map(p=>`<option value="${p.id}">${esc(p.project_no)} — ${esc(p.name)}</option>`).join('')}
+    </select>
+  </div>
+  <div class="form-row">
+    <div class="form-field"><label>Budget (KWD)</label><input id="rfq-budget" type="number" min="0" step="0.001" placeholder="0.000"/></div>
+    <div class="form-field"><label>Category</label><input id="rfq-cat" placeholder="e.g. IT Equipment, Civil Works"/></div>
+  </div>
+  <div class="form-field"><label>Scope of Work</label><textarea id="rfq-scope" rows="3" placeholder="Describe what vendors need to quote for…"></textarea></div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveRFQ()">Create RFQ</button>
+  </div>`);
+}
+
+async function saveRFQ(){
+  const rfqNo=document.getElementById('rfq-no').value;
+  const title=document.getElementById('rfq-title').value.trim();
+  const projId=document.getElementById('rfq-proj').value;
+  const close=document.getElementById('rfq-close').value;
+  const budget=Number(document.getElementById('rfq-budget').value)||0;
+  const cat=document.getElementById('rfq-cat').value.trim();
+  const scope=document.getElementById('rfq-scope').value.trim();
+  if(!title||!projId||!close){showToast('Title, Project and Closing Date required','error');return;}
+  const btn=event?.target;
+  if(btn){btn.disabled=true;btn.textContent='Creating…';}
+  try{
+    const {data,error}=await sb.from('rfqs').insert({
+      rfq_no:rfqNo, title, project_id:projId,
+      close_date:close, budget:budget||null,
+      category:cat||null, scope_of_work:scope||null,
+      status:'submitted', created_by:currentProfile?.id
+    }).select().single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('rfqs',data.id,'CREATED',null,{rfq_no:rfqNo,title,status:'submitted'},'RFQ created');
+    showToast(`RFQ ${rfqNo} created ✓`);
+    closeModal(); loadProc('rfqs');
+  }catch(e){showToast('Error: '+e.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Create RFQ';}}
+}
+
+async function openCreateVendorModal(){
+  const {data:lastV}=await sb.from('vendors').select('vendor_code').order('created_at',{ascending:false}).limit(1);
+  const lastSeq=lastV?.[0]?.vendor_code?parseInt(lastV[0].vendor_code.replace(/\D/g,'')||'0'):0;
+  const newCode=`VEN-${String(lastSeq+1).padStart(4,'0')}`;
+  openModal('Add Vendor',`
+  <div class="form-row">
+    <div class="form-field"><label>Vendor Code</label><input id="v-code" value="${newCode}" readonly style="font-family:monospace;opacity:.7"/></div>
+    <div class="form-field"><label>Category *</label><input id="v-cat" placeholder="e.g. IT Supplier, Civil Contractor"/></div>
+  </div>
+  <div class="form-field"><label>Vendor Name *</label><input id="v-name" placeholder="Full legal name"/></div>
+  <div class="form-row">
+    <div class="form-field"><label>Contact Person</label><input id="v-contact" placeholder="Name"/></div>
+    <div class="form-field"><label>Email</label><input id="v-email" type="email" placeholder="vendor@example.com"/></div>
+  </div>
+  <div class="form-row">
+    <div class="form-field"><label>Phone</label><input id="v-phone" placeholder="+965 XXXX XXXX"/></div>
+    <div class="form-field"><label>Country</label><input id="v-country" value="Kuwait"/></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveVendor()">Add Vendor</button>
+  </div>`);
+}
+
+async function saveVendor(){
+  const name=document.getElementById('v-name').value.trim();
+  const cat=document.getElementById('v-cat').value.trim();
+  const code=document.getElementById('v-code').value;
+  const contact=document.getElementById('v-contact').value.trim();
+  const email=document.getElementById('v-email').value.trim();
+  const phone=document.getElementById('v-phone').value.trim();
+  const country=document.getElementById('v-country').value.trim();
+  if(!name||!cat){showToast('Name and Category required','error');return;}
+  const btn=event?.target;
+  if(btn){btn.disabled=true;btn.textContent='Adding…';}
+  try{
+    const {data,error}=await sb.from('vendors').insert({
+      vendor_code:code, name, category:cat,
+      contact_person:contact||null, email:email||null,
+      phone:phone||null, country:country||null,
+      is_approved:false, status:'active',
+      created_by:currentProfile?.id
+    }).select().single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('vendors',data.id,'CREATED',null,{vendor_code:code,name,category:cat},'Vendor added');
+    showToast(`Vendor ${code} added ✓`);
+    closeModal(); loadProc('vendors');
+  }catch(e){showToast('Error: '+e.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Add Vendor';}}
 }
 
 // ── FINANCE ──────────────────────────────────────────────────
