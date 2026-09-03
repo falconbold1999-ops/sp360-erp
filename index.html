@@ -919,7 +919,7 @@ async function loadDashboard(){
     <div class="card">
       <div class="sec-head"><div class="sec-title"><span>🏗</span>Project EVM Status</div></div>
       <table><thead><tr><th>Project</th><th style="text-align:center">%</th><th style="text-align:center">CPI</th><th style="text-align:center">SPI</th><th style="text-align:right">EAC</th><th style="text-align:center" title="TCPI: Performance needed to finish within BAC">TCPI</th><th style="text-align:center">RAG</th></tr></thead><tbody>
-      ${projs.filter(p=>!['completed','initiation'].includes(p.status)).map(p=>{
+      ${projs.filter(p=>isActiveProject(p)).map(p=>{
         const bac=Number(p.bac)||0, ac=Number(p.ac)||0, ev=Number(p.ev)||0;
         const cpiV=Number(p.cpi)||1;
         const eac=cpiV>0?ac+(bac-ev)/cpiV:bac;
@@ -1187,6 +1187,12 @@ async function convertToProject(oppId, opp_no, title, client, value, dept){
 // Project status lifecycle
 const PROJ_LIFECYCLE=['initiation','planning','execution','monitoring','closeout','completed'];
 const PROJ_LIFECYCLE_LABELS={'initiation':'Initiation','planning':'Planning','execution':'Execution','monitoring':'Monitoring & Control','closeout':'Closeout','completed':'Completed'};
+// ── UNIFIED STATUS MODEL ─────────────────────────────────────
+// Single source of truth for "active" projects used across all modules
+// Active = in-flight projects that appear in EVM, Dashboard, CEO Report
+const ACTIVE_STATUSES=['planning','execution','monitoring','closeout'];
+const isActiveProject=p=>ACTIVE_STATUSES.includes(p.status);
+const isCompletedProject=p=>p.status==='completed'||p.status==='cancelled';
 const PROJ_LIFECYCLE_COLORS={'initiation':'#8B5CF6','planning':'#3B82F6','execution':'#F97316','monitoring':'#06B6D4','closeout':'#C9A84C','completed':'#10B981'};
 let curProjTab='portfolio';
 let curSCurveProjId=null;
@@ -1309,7 +1315,7 @@ async function loadProjects(tab){
       💡 Update project progress: enter actual % complete, Actual Cost (AC), and Earned Value (EV) will be auto-calculated from BAC × %
     </div>
     <table><thead><tr><th>No</th><th>Project</th><th style="text-align:right">BAC</th><th style="text-align:center">% Complete</th><th style="text-align:right">AC (KWD)</th><th style="text-align:right">EV (auto)</th><th style="text-align:center">CPI</th><th style="text-align:center">Save</th></tr></thead><tbody>
-    ${projs.filter(p=>['planning','execution','monitoring','active'].includes(p.status)).map(p=>`<tr>
+    ${projs.filter(p=>isActiveProject(p)).map(p=>`<tr>
       <td style="color:var(--gold);font-size:10px">${esc(p.project_no)}</td>
       <td style="font-weight:600;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</td>
       <td style="text-align:right;font-size:11px">${fmtKWD(p.bac)}</td>
@@ -1319,7 +1325,13 @@ async function loadProjects(tab){
       <td style="text-align:center;font-weight:800;color:${cpiColor(p.cpi)}" id="cpi_${p.id}">${Number(p.cpi).toFixed(2)}</td>
       <td style="text-align:center"><button class="btn btn-primary btn-sm" onclick="saveProgress('${p.id}',${p.bac})">Save</button></td>
     </tr>`).join('')}
-    </tbody></table>`;
+    </tbody></table>
+    ${(currentProfile?.role==='PMO Manager'||currentProfile?.role==='Finance Manager')?`
+    <div style="margin-top:16px;padding:12px 16px;background:#1E3A5F18;border:1px solid #1E3A5F33;border-radius:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div style="font-size:11px;color:var(--muted)">📐 <b style="color:var(--text)">Baseline Management</b> — Create or revise project baselines with time-phased PV</div>
+      <button class="btn btn-primary btn-sm" onclick="openCreateBaselineModal()">+ Create / Revise Baseline</button>
+    </div>`:''}
+    `;
   }
 
   // ── Change Orders tab
@@ -1552,7 +1564,7 @@ async function loadProjects(tab){
       <th style="text-align:center">TCPI</th>
       <th style="text-align:center">Forecast</th>
     </tr></thead><tbody>
-    ${projs.filter(p=>p.status!=='completed'&&p.status!=='cancelled').map((p,idx)=>{
+    ${projs.filter(p=>isActiveProject(p)).map((p,idx)=>{
       const pdata=projMap[p.id]?.snaps||[];
       const bac=Number(p.bac)||0, ac=Number(p.ac)||0, ev=Number(p.ev)||0;
       const cpiV=Number(p.cpi)||1;
@@ -1709,7 +1721,7 @@ async function loadProjects(tab){
     const portTCPILabel=portTCPINum===null?'N/A':portTCPINum<=1?'Achievable':portTCPINum<=1.1?'At Risk':'Unachievable';
     return`<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:12px">
       ${kpi('Portfolio Value',fmtKWD(projs.reduce((s,p)=>s+Number(p.contract_value),0)),'#C9A84C',projs.length+' projects')}
-      ${kpi('Active Projects',projs.filter(p=>['active','execution','monitoring'].includes(p.status)).length,'#10B981',projs.filter(p=>p.status==='planning'||p.status==='initiation').length+' in planning')}
+      ${kpi('Active Projects',projs.filter(p=>isActiveProject(p)).length,'#10B981',projs.filter(p=>p.status==='planning'||p.status==='initiation').length+' in planning')}
       ${kpi('Portfolio CPI',portCPI,cpiColor(portCPI),'ΣEV/ΣAC')}
       ${kpi('Portfolio SPI',portSPI,cpiColor(portSPI),'ΣEV/ΣPV')}
       ${kpi('ETC',fmtKWD(totETC2),'#8B5CF6','Cost to complete')}
@@ -1762,16 +1774,23 @@ async function saveProgress(projId, bac){
   const ac=Number(document.getElementById('ac_'+projId).value)||0;
   const ev=Math.round(bac*pct/100*100)/100;
   const cpi=ac>0?Math.round(ev/ac*100)/100:1;
-  // SPI = EV / PV where PV = BAC × planned% (time-based proxy: use pct as planned for now)
-  // Fetch current project to get stored PV for accurate SPI
+
+  // SPI = EV / PV — PV from time-phased baseline (get_current_pv RPC)
+  // Falls back to stored pv if no baseline exists
   const {data:proj}=await sb.from('projects').select('pct,ac,ev,cpi,spi,pv,bac').eq('id',projId).single();
-  const pv=Number(proj?.pv)||Math.round(bac*pct/100*100)/100; // fallback: PV = EV if no baseline
+  let pv=Number(proj?.pv)||0;
+  try{
+    const {data:pvData}=await sb.rpc('get_current_pv',{p_project_id:projId});
+    if(pvData&&pvData>0) pv=pvData;
+  }catch(e){ /* fallback to stored pv */ }
+  if(pv===0) pv=Math.round(bac*pct/100*100)/100; // last resort fallback
   const spi=pv>0?Math.round(ev/pv*100)/100:1;
-  const {error}=await sb.from('projects').update({pct,ac,ev,cpi,spi}).eq('id',projId);
+
+  const {error}=await sb.from('projects').update({pct,ac,ev,cpi,spi,pv}).eq('id',projId);
   if(error){showToast('Error: '+error.message,'error');return;}
   await writeAudit('projects',projId,'PROGRESS_UPDATE',
     {pct:proj?.pct,ac:proj?.ac,ev:proj?.ev,cpi:proj?.cpi,spi:proj?.spi},
-    {pct,ac,ev,cpi,spi},
+    {pct,ac,ev,cpi,spi,pv},
     'Progress updated');
   showToast('Progress saved ✓');
   loadProjects('progress');
@@ -2464,7 +2483,7 @@ async function sendEmailNotification(type){
       +pending.slice(0,10).map(w=>`  • ${w.ref_no} — ${w.current_step} [${w.status.toUpperCase()}]`).join('\n')
       +`\n\nPlease log in to SP360 ERP to take action:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   } else if(type==='weekly_evm'){
-    const active=projs.filter(p=>!['completed','cancelled'].includes(p.status));
+    const active=projs.filter(p=>isActiveProject(p));
     const totEV=active.reduce((s,p)=>s+Number(p.ev||0),0);
     const totAC=active.reduce((s,p)=>s+Number(p.ac||0),0);
     const portCPI=totAC>0?(totEV/totAC).toFixed(2):'—';
@@ -2493,6 +2512,124 @@ async function sendEmailNotification(type){
 
 // ── AUDIT TRAIL ──────────────────────────────────────────────
 // ── CHANGE ORDERS ────────────────────────────────────────────
+// ── BASELINE MANAGEMENT ──────────────────────────────────────
+async function openCreateBaselineModal(){
+  const {data:projs}=await sb.from('projects')
+    .select('id,project_no,name,start_date,end_date,bac,status')
+    .in('status',ACTIVE_STATUSES)
+    .order('project_no');
+
+  // Load existing baselines
+  const {data:baselines}=await sb.from('project_baselines')
+    .select('project_id,version,version_label,bac,is_current,created_at')
+    .order('created_at',{ascending:false})
+    .limit(20);
+
+  const blByProj={};
+  (baselines||[]).forEach(b=>{
+    if(!blByProj[b.project_id]) blByProj[b.project_id]=[];
+    blByProj[b.project_id].push(b);
+  });
+
+  openModal('Baseline Management',`
+  <div style="margin-bottom:12px;padding:8px 12px;background:#1E3A5F22;border-radius:6px;font-size:11px;color:var(--muted)">
+    Create a baseline to enable time-phased PV calculation and accurate SPI reporting.
+    Monthly PV is distributed linearly across the project duration.
+  </div>
+  <div class="form-row">
+    <div class="form-field"><label>Project *</label>
+      <select id="bl-proj" onchange="updateBaselineInfo()">
+        <option value="">— Select Project —</option>
+        ${(projs||[]).map(p=>`<option value="${p.id}" data-start="${p.start_date||''}" data-end="${p.end_date||''}" data-bac="${p.bac||0}">${esc(p.project_no)} — ${esc(p.name)}</option>`).join('')}
+      </select>
+    </div>
+  </div>
+  <div id="bl-existing" style="margin-bottom:10px;font-size:10px;color:var(--muted)"></div>
+  <div class="form-row">
+    <div class="form-field"><label>Start Date *</label><input id="bl-start" type="date"/></div>
+    <div class="form-field"><label>End Date *</label><input id="bl-end" type="date"/></div>
+  </div>
+  <div class="form-field"><label>Notes</label>
+    <input id="bl-notes" placeholder="e.g. Original baseline — contract award date"/>
+  </div>
+  <div id="bl-preview" style="padding:8px 12px;background:#10B98111;border:1px solid #10B98133;border-radius:6px;font-size:11px;color:var(--muted);display:none"></div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveBaseline()">Create Baseline</button>
+  </div>`);
+
+  // Store baselines data for onchange
+  window._blByProj=blByProj;
+}
+
+function updateBaselineInfo(){
+  const sel=document.getElementById('bl-proj');
+  const opt=sel.options[sel.selectedIndex];
+  if(!opt||!opt.value) return;
+
+  const start=opt.dataset.start;
+  const end=opt.dataset.end;
+  const bac=Number(opt.dataset.bac)||0;
+  const projId=opt.value;
+
+  if(start) document.getElementById('bl-start').value=start;
+  if(end) document.getElementById('bl-end').value=end;
+
+  // Show existing baselines
+  const existing=(window._blByProj||{})[projId]||[];
+  const existEl=document.getElementById('bl-existing');
+  if(existing.length>0){
+    existEl.innerHTML=`<div style="padding:6px 10px;background:#F97316
+11;border:1px solid #F9741633;border-radius:5px">
+      ⚠️ This project already has ${existing.length} baseline(s). Creating a new one will mark the current as superseded.
+      <br>Current: <b>${esc(existing[0].version_label)}</b> — BAC: ${fmtKWD(existing[0].bac)}
+    </div>`;
+  } else {
+    existEl.innerHTML='<div style="color:#10B981;font-size:10px">✓ No existing baseline — this will be the original baseline.</div>';
+  }
+
+  // Preview months
+  const s=document.getElementById('bl-start').value;
+  const e=document.getElementById('bl-end').value;
+  if(s&&e){
+    const months=Math.max(1,Math.round((new Date(e)-new Date(s))/(1000*60*60*24*30.5)));
+    const monthly=bac/months;
+    const prev=document.getElementById('bl-preview');
+    prev.style.display='block';
+    prev.innerHTML=`📐 BAC: ${fmtKWD(bac)} over <b>${months} months</b> = ${fmtKWD(monthly)}/month (linear distribution)`;
+  }
+}
+
+async function saveBaseline(){
+  const projId=document.getElementById('bl-proj').value;
+  const start=document.getElementById('bl-start').value;
+  const end=document.getElementById('bl-end').value;
+  const notes=document.getElementById('bl-notes').value.trim();
+
+  if(!projId||!start||!end){showToast('Project, Start Date and End Date required','error');return;}
+  if(new Date(end)<=new Date(start)){showToast('End date must be after start date','error');return;}
+
+  const btn=event?.target;
+  if(btn){btn.disabled=true;btn.textContent='Creating…';}
+  try{
+    const {data,error}=await sb.rpc('create_project_baseline',{
+      p_project_id: projId,
+      p_start_date:  start,
+      p_end_date:    end,
+      p_notes:       notes||null
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    if(!data?.ok){showToast('Failed: '+(data?.error||'Unknown'),'error');return;}
+    showToast(`Baseline v${data.version} created — ${data.months} months ✓`);
+    closeModal();
+    loadProjects('baseline');
+  }catch(e){
+    showToast('Error: '+e.message,'error');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='Create Baseline';}
+  }
+}
+
 async function submitCO(coId){
   const {error}=await sb.from('change_orders').update({
     workflow_status:'submitted',
@@ -3103,33 +3240,20 @@ async function saveInvoice(){
 
 async function submitInvoice(invoiceId){
   if(!confirm('Submit this invoice for approval? This will start the PM Verification workflow.')) return;
-  // Update invoice status to submitted
-  const {data:inv,error:e1}=await sb.from('invoices').update({status:'submitted'}).eq('id',invoiceId).select().single();
-  if(e1){showToast('Error: '+e1.message,'error');return;}
-  // Create workflow item for PM Verification
-  const {data:proj}=await sb.from('projects').select('project_no,name').eq('id',inv.project_id).single();
-  const refNo=`WF-INV-${inv.invoice_no}`;
-  const {error:e2}=await sb.from('workflow_items').insert({
-    ref_no:refNo,
-    entity_type:'invoice',
-    entity_id:invoiceId,
-    entity_ref:inv.invoice_no,
-    current_step:'PM Verification',
-    status:'pending',
-    submitted_by:currentProfile?.id,
-    submitted_date:new Date().toISOString(),
-    project_id:inv.project_id
-  });
-  if(e2){
-    // Rollback invoice status if workflow creation failed
-    await sb.from('invoices').update({status:'draft'}).eq('id',invoiceId);
-    showToast('Workflow creation failed — invoice reverted to draft','error');
-    return;
+  const btn=event?.target;
+  if(btn){btn.disabled=true;btn.textContent='Submitting…';}
+  try{
+    const {data,error}=await sb.rpc('submit_invoice',{p_invoice_id:invoiceId});
+    if(error){showToast('Error: '+error.message,'error');return;}
+    if(!data?.ok){showToast('Submit failed: '+(data?.error||'Unknown error'),'error');return;}
+    showToast(`Invoice submitted — Ref: ${data.ref_no} ✓`);
+    loadFinance();
+    loadWfBadge();
+  }catch(e){
+    showToast('Error: '+e.message,'error');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='Submit ▶';}
   }
-  await writeAudit('invoices',invoiceId,'SUBMITTED',{status:'draft'},{status:'submitted'},`Invoice submitted for PM Verification`);
-  showToast(`Invoice submitted for approval — Ref: ${refNo} ✓`);
-  loadFinance();
-  loadWfBadge();
 }
 
 async function markInvoicePaid(invoiceId){
@@ -3569,7 +3693,7 @@ async function exportPortfolioExcel(){
   const hdr4=ws4.addRow(['Project No','Project Name','Phase','%','CPI','SPI',
     'EAC (KWD)','ETC (KWD)','VAC (KWD)','TCPI','Performance Forecast','RAG']);
   xlHeader(hdr4);
-  (projs||[]).filter(p=>p.status!=='completed'&&p.status!=='cancelled').forEach((p,idx)=>{
+  (projs||[]).filter(p=>isActiveProject(p)).forEach((p,idx)=>{
     const bT=Number(p.bac)||0, aT=Number(p.ac)||0, eT=Number(p.ev)||0;
     const cT=Number(p.cpi)||1;
     const eacT=cT>0?aT+(bT-eT)/cT:bT;
