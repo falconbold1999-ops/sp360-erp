@@ -470,6 +470,7 @@ const STEP_APPROVERS = {
 let currentUser = null;
 let currentProfile = null;
 let curProcTab = 'vendors';
+let curFinTab  = 'overview';
 let curHRTab = 'employees';
 let curQHSETab = 'ncrs';
 let curDocTab = 'documents';
@@ -2218,52 +2219,275 @@ async function saveVendor(){
 }
 
 // ── FINANCE ──────────────────────────────────────────────────
-async function loadFinance(){
+async function loadFinance(tab='overview'){
+  curFinTab=tab||'overview';
   const el=document.getElementById('page-finance');
   el.innerHTML=`<div class="loading">Loading…</div>`;
-  const {data:list}=await sb.from('invoices').select('*,project:projects(project_no)').order('created_at',{ascending:false});
-  const L=list||[];
-  const rev=L.filter(i=>i.invoice_type==='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
-  const cost=L.filter(i=>i.invoice_type!=='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
-  const outstanding=L.filter(i=>i.status!=='paid'&&i.status!=='cancelled').reduce((s,i)=>s+Number(i.net_amount),0);
+
+  const {data:invList}=await sb.from('invoices')
+    .select('*,project:projects(project_no,name,bac)')
+    .order('created_at',{ascending:false});
+  const ALL=invList||[];
   const today=new Date();
-  el.innerHTML=`
-  <div class="page-head">
-    <div class="page-head-left"><span style="font-size:22px">💰</span><div><h1>Finance</h1><div class="sub">Invoices · Revenue · Cost · Cash Flow</div></div></div>
-    <button class="btn btn-primary btn-sm" onclick="openNewInvoiceModal()">+ New Invoice</button>
-  </div>
-  <div class="grid4">
-    ${kpi('Revenue Collected',fmtKWD(rev),'#10B981','Client invoices paid')}
-    ${kpi('Cost Paid',fmtKWD(cost),'#EF4444','Supplier + sub paid')}
-    ${kpi('Cash Gross Profit',fmtKWD(rev-cost),rev-cost>=0?'#C9A84C':'#EF4444',rev>0?(((rev-cost)/rev*100).toFixed(1)+'% margin'):'')}
-    ${kpi('Outstanding',fmtKWD(outstanding),'#F97316','Pending collection')}
-  </div>
-    <div class="card">
-    <div class="sec-head"><div class="sec-title"><span>📄</span>Invoice Register</div></div>
-    <table><thead><tr><th>Invoice No</th><th>Project</th><th style="text-align:center">Type</th><th style="text-align:right">Gross</th><th style="text-align:center">Ret%</th><th style="text-align:right">Net (KWD)</th><th>Due Date</th><th style="text-align:center">Status</th><th style="text-align:center">Action</th></tr></thead><tbody>
-    ${L.map(i=>{
+  const curMonth=new Date().toISOString().slice(0,7);
+
+  const clientPaid   =ALL.filter(i=>i.invoice_type==='client'&&i.status==='paid');
+  const clientPend   =ALL.filter(i=>i.invoice_type==='client'&&!['paid','cancelled'].includes(i.status));
+  const supplierPaid =ALL.filter(i=>i.invoice_type!=='client'&&i.status==='paid');
+  const supplierPend =ALL.filter(i=>i.invoice_type!=='client'&&!['paid','cancelled'].includes(i.status));
+
+  const totalRevenue  =clientPaid.reduce((s,i)=>s+Number(i.net_amount),0);
+  const totalCost     =supplierPaid.reduce((s,i)=>s+Number(i.net_amount),0);
+  const arOutstanding =clientPend.reduce((s,i)=>s+Number(i.net_amount),0);
+  const apOutstanding =supplierPend.reduce((s,i)=>s+Number(i.net_amount),0);
+  const grossProfit   =totalRevenue-totalCost;
+  const margin        =totalRevenue>0?(grossProfit/totalRevenue*100):0;
+  const retentionHeld =ALL.filter(i=>i.invoice_type==='client'&&Number(i.retention_pct)>0)
+    .reduce((s,i)=>s+Number(i.gross_amount)*Number(i.retention_pct)/100,0);
+  const overdueAR=clientPend.filter(i=>i.due_date&&new Date(i.due_date)<today);
+
+  const tabs=`<div class="tabs">
+    ${['overview','ar','ap','cashflow','retention'].map((t,idx)=>
+    `<button class="tab${t===tab?' act':''}" onclick="loadFinance('${t}')">
+      ${['📊 Overview','📥 AR','📤 AP','💹 Cash Flow','🔒 Retention'][idx]}
+    </button>`).join('')}
+  </div>`;
+
+  let body='';
+
+  if(tab==='overview'){
+    body=`
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Revenue Collected',fmtKWD(totalRevenue),'#10B981','Client invoices paid')}
+      ${kpi('AR Outstanding',fmtKWD(arOutstanding),overdueAR.length>0?'#EF4444':'#F97316',overdueAR.length>0?'⚠️ '+overdueAR.length+' overdue':'Pending collection')}
+      ${kpi('Cost Paid',fmtKWD(totalCost),'#EF4444','Supplier invoices paid')}
+      ${kpi('Gross Profit',fmtKWD(grossProfit),grossProfit>=0?'#C9A84C':'#EF4444',margin.toFixed(1)+'% margin')}
+    </div>
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('AP Outstanding',fmtKWD(apOutstanding),'#8B5CF6','Supplier bills due')}
+      ${kpi('Retention Held',fmtKWD(retentionHeld),'#3B82F6','Client retention')}
+      ${kpi('Net Cash',fmtKWD(totalRevenue-totalCost-apOutstanding),totalRevenue-totalCost-apOutstanding>=0?'#10B981':'#EF4444','Collected minus paid')}
+      ${kpi('This Month',ALL.filter(i=>i.created_at?.startsWith(curMonth)).length,'#E2E8F0','Invoices created')}
+    </div>
+    <table><thead><tr>
+      <th>Invoice No</th><th>Project</th><th style="text-align:center">Type</th>
+      <th style="text-align:right">Net (KWD)</th><th>Due Date</th>
+      <th style="text-align:center">Status</th><th style="text-align:center">Action</th>
+    </tr></thead><tbody>
+    ${ALL.slice(0,20).map(i=>{
       const ov=i.due_date&&new Date(i.due_date)<today&&i.status!=='paid';
       const canSubmit=i.status==='draft';
-      const canMarkPaid=i.status==='approved'&&(currentProfile?.role==='PMO Manager'||currentProfile?.role==='Finance Manager');
+      const canPaid=i.status==='approved'&&(currentProfile?.role==='PMO Manager'||currentProfile?.role==='Finance Manager');
       return`<tr>
         <td style="color:var(--gold);font-size:10px;white-space:nowrap">${esc(i.invoice_no)}</td>
         <td style="color:var(--muted);font-size:11px">${esc(i.project?.project_no||'—')}</td>
         <td style="text-align:center">${pill(i.invoice_type,i.invoice_type==='client'?'#10B981':i.invoice_type==='supplier'?'#F97316':'#8B5CF6')}</td>
-        <td style="text-align:right;color:var(--muted)">${fmtKWD(i.gross_amount)}</td>
-        <td style="text-align:center;color:var(--muted)">${i.retention_pct}%</td>
         <td style="text-align:right;font-weight:800;color:var(--gold)">${fmtKWD(i.net_amount)}</td>
         <td style="color:${ov?'#EF4444':'#94A3B8'};font-size:11px">${i.due_date||'—'}${ov?' ⚠️':''}</td>
         <td style="text-align:center">${pill(i.status)}</td>
         <td style="text-align:center">
           ${canSubmit?`<button class="btn btn-primary btn-sm" style="font-size:10px;padding:3px 8px" onclick="submitInvoice('${i.id}')">Submit ▶</button>`:''}
-          ${canMarkPaid?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px" onclick="markInvoicePaid('${i.id}')">Mark Paid</button>`:''}
+          ${canPaid?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px" onclick="markInvoicePaid('${i.id}')">Mark Paid</button>`:''}
         </td>
       </tr>`;
     }).join('')}
-    </tbody></table>
-  </div>`;
-}
+    </tbody></table>`;
 
+  } else if(tab==='ar'){
+    const ar=ALL.filter(i=>i.invoice_type==='client');
+    const aging={current:0,d30:0,d60:0,d90:0,d90p:0};
+    ar.filter(i=>!['paid','cancelled'].includes(i.status)).forEach(i=>{
+      if(!i.due_date){aging.current+=Number(i.net_amount);return;}
+      const days=Math.floor((today-new Date(i.due_date))/(86400000));
+      if(days<=0)aging.current+=Number(i.net_amount);
+      else if(days<=30)aging.d30+=Number(i.net_amount);
+      else if(days<=60)aging.d60+=Number(i.net_amount);
+      else if(days<=90)aging.d90+=Number(i.net_amount);
+      else aging.d90p+=Number(i.net_amount);
+    });
+    body=`
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Total AR',fmtKWD(ar.reduce((s,i)=>s+Number(i.net_amount),0)),'#E2E8F0','All client invoices')}
+      ${kpi('Collected',fmtKWD(totalRevenue),'#10B981','Paid')}
+      ${kpi('Outstanding',fmtKWD(arOutstanding),overdueAR.length>0?'#EF4444':'#F97316',overdueAR.length+' overdue')}
+      ${kpi('Collection Rate',totalRevenue+arOutstanding>0?((totalRevenue/(totalRevenue+arOutstanding))*100).toFixed(1)+'%':'—','#C9A84C','')}
+    </div>
+    <div class="card" style="margin-bottom:14px;padding:14px 16px">
+      <div class="sec-title" style="margin-bottom:10px"><span>📅</span>AR Aging Analysis</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;text-align:center">
+        ${[['Current',aging.current,'#10B981'],['1–30 Days',aging.d30,'#F97316'],['31–60 Days',aging.d60,'#EF444499'],['61–90 Days',aging.d90,'#EF4444'],['90+ Days',aging.d90p,'#7F1D1D']].map(([l,v,c])=>
+        `<div style="padding:10px;background:${c}18;border:1px solid ${c}44;border-radius:8px">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:4px">${l}</div>
+          <div style="font-size:13px;font-weight:800;color:${c}">${fmtKWD(v)}</div>
+        </div>`).join('')}
+      </div>
+    </div>
+    <table><thead><tr>
+      <th>Invoice No</th><th>Project</th><th style="text-align:right">Net (KWD)</th>
+      <th>Due Date</th><th style="text-align:center">Days O/S</th>
+      <th style="text-align:center">Status</th><th style="text-align:center">Action</th>
+    </tr></thead><tbody>
+    ${ar.map(i=>{
+      const days=i.due_date&&!['paid','cancelled'].includes(i.status)?Math.floor((today-new Date(i.due_date))/86400000):null;
+      const ov=days!==null&&days>0;
+      const canPaid=i.status==='approved'&&(currentProfile?.role==='PMO Manager'||currentProfile?.role==='Finance Manager');
+      return`<tr>
+        <td style="color:var(--gold);font-size:10px">${esc(i.invoice_no)}</td>
+        <td style="font-size:11px;color:var(--muted)">${esc(i.project?.project_no||'—')}</td>
+        <td style="text-align:right;font-weight:800;color:var(--gold)">${fmtKWD(i.net_amount)}</td>
+        <td style="font-size:11px;color:${ov?'#EF4444':'var(--muted)'}">${i.due_date||'—'}</td>
+        <td style="text-align:center;font-weight:700;color:${ov?'#EF4444':days===null?'var(--faint)':'#10B981'}">
+          ${days===null?'—':days<=0?Math.abs(days)+'d left':days+'d OD'}
+        </td>
+        <td style="text-align:center">${pill(i.status)}</td>
+        <td style="text-align:center">
+          ${canPaid?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 7px" onclick="markInvoicePaid('${i.id}')">Paid ✓</button>`:''}
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+
+  } else if(tab==='ap'){
+    const ap=ALL.filter(i=>i.invoice_type!=='client');
+    const apPaid=ap.filter(i=>i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+    const apOv=supplierPend.filter(i=>i.due_date&&new Date(i.due_date)<today);
+    body=`
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Total AP',fmtKWD(ap.reduce((s,i)=>s+Number(i.net_amount),0)),'#E2E8F0','')}
+      ${kpi('Paid',fmtKWD(apPaid),'#10B981','Settled')}
+      ${kpi('Outstanding',fmtKWD(apOutstanding),apOv.length>0?'#EF4444':'#8B5CF6',apOv.length+' overdue')}
+      ${kpi('Payment Rate',apPaid+apOutstanding>0?((apPaid/(apPaid+apOutstanding))*100).toFixed(1)+'%':'—','#C9A84C','')}
+    </div>
+    <table><thead><tr>
+      <th>Invoice No</th><th>Project</th><th style="text-align:center">Type</th>
+      <th style="text-align:right">Net (KWD)</th><th>Due Date</th>
+      <th style="text-align:center">Days O/S</th><th style="text-align:center">Status</th>
+      <th style="text-align:center">Action</th>
+    </tr></thead><tbody>
+    ${ap.map(i=>{
+      const days=i.due_date&&!['paid','cancelled'].includes(i.status)?Math.floor((today-new Date(i.due_date))/86400000):null;
+      const ov=days!==null&&days>0;
+      const canPay=i.status==='approved'&&(currentProfile?.role==='PMO Manager'||currentProfile?.role==='Finance Manager');
+      return`<tr>
+        <td style="color:var(--gold);font-size:10px">${esc(i.invoice_no)}</td>
+        <td style="font-size:11px;color:var(--muted)">${esc(i.project?.project_no||'—')}</td>
+        <td style="text-align:center">${pill(i.invoice_type,i.invoice_type==='supplier'?'#F97316':'#8B5CF6')}</td>
+        <td style="text-align:right;font-weight:800;color:${ov?'#EF4444':'var(--gold)'}">${fmtKWD(i.net_amount)}</td>
+        <td style="font-size:11px;color:${ov?'#EF4444':'var(--muted)'}">${i.due_date||'—'}${ov?' ⚠️':''}</td>
+        <td style="text-align:center;font-weight:700;color:${ov?'#EF4444':days===null?'var(--faint)':'#10B981'}">
+          ${days===null?'—':days<=0?Math.abs(days)+'d left':days+'d OD'}
+        </td>
+        <td style="text-align:center">${pill(i.status)}</td>
+        <td style="text-align:center">
+          ${canPay?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 7px" onclick="markInvoicePaid('${i.id}')">Pay ✓</button>`:''}
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+
+  } else if(tab==='cashflow'){
+    const months=[];
+    for(let i=-5;i<=3;i++){
+      const d=new Date(today.getFullYear(),today.getMonth()+i,1);
+      months.push(d.toISOString().slice(0,7));
+    }
+    const cfData=months.map(m=>{
+      const isFuture=m>curMonth;
+      const inflow =ALL.filter(i=>i.invoice_type==='client'&&i.status==='paid'&&i.paid_date?.startsWith(m)).reduce((s,i)=>s+Number(i.net_amount),0);
+      const outflow=ALL.filter(i=>i.invoice_type!=='client'&&i.status==='paid'&&i.paid_date?.startsWith(m)).reduce((s,i)=>s+Number(i.net_amount),0);
+      const fcIn   =ALL.filter(i=>i.invoice_type==='client'&&!['paid','cancelled'].includes(i.status)&&i.due_date?.startsWith(m)).reduce((s,i)=>s+Number(i.net_amount),0);
+      const fcOut  =ALL.filter(i=>i.invoice_type!=='client'&&!['paid','cancelled'].includes(i.status)&&i.due_date?.startsWith(m)).reduce((s,i)=>s+Number(i.net_amount),0);
+      const fin=isFuture?fcIn:inflow, fout=isFuture?fcOut:outflow;
+      return{m,inflow:fin,outflow:fout,isFuture,net:fin-fout};
+    });
+    const maxVal=Math.max(...cfData.map(d=>Math.max(d.inflow,d.outflow)),1);
+    body=`
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('YTD Inflow',fmtKWD(ALL.filter(i=>i.invoice_type==='client'&&i.status==='paid'&&i.paid_date?.startsWith(String(today.getFullYear()))).reduce((s,i)=>s+Number(i.net_amount),0)),'#10B981','This year collected')}
+      ${kpi('YTD Outflow',fmtKWD(ALL.filter(i=>i.invoice_type!=='client'&&i.status==='paid'&&i.paid_date?.startsWith(String(today.getFullYear()))).reduce((s,i)=>s+Number(i.net_amount),0)),'#EF4444','This year paid')}
+      ${kpi('Forecast Inflow',fmtKWD(arOutstanding),'#3B82F6','Pending AR')}
+      ${kpi('Forecast Outflow',fmtKWD(apOutstanding),'#8B5CF6','Pending AP')}
+    </div>
+    <div class="card" style="padding:16px 18px;margin-bottom:14px">
+      <div class="sec-title" style="margin-bottom:14px"><span>💹</span>Monthly Cash Flow — Actual + Forecast</div>
+      <div style="display:grid;grid-template-columns:repeat(9,1fr);gap:6px;align-items:end;min-height:140px">
+        ${cfData.map(d=>{
+          const inH=Math.round((d.inflow/maxVal)*120)||2;
+          const outH=Math.round((d.outflow/maxVal)*120)||2;
+          return`<div style="text-align:center">
+            <div style="display:flex;gap:2px;align-items:flex-end;justify-content:center;height:120px">
+              <div style="width:12px;height:${inH}px;background:${d.isFuture?'#10B98166':'#10B981'};border-radius:3px 3px 0 0" title="Inflow ${fmtKWD(d.inflow)}"></div>
+              <div style="width:12px;height:${outH}px;background:${d.isFuture?'#EF444466':'#EF4444'};border-radius:3px 3px 0 0" title="Outflow ${fmtKWD(d.outflow)}"></div>
+            </div>
+            <div style="font-size:8px;color:var(--muted);margin-top:3px">${d.m.slice(5)}/${d.m.slice(2,4)}</div>
+            <div style="font-size:8px;font-weight:700;color:${d.net>=0?'#10B981':'#EF4444'}">${d.net>=0?'+':''}${Math.round(d.net/1000)}K</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:16px;margin-top:10px;font-size:10px;color:var(--muted)">
+        <span><span style="display:inline-block;width:10px;height:10px;background:#10B981;border-radius:2px;margin-right:4px"></span>Inflow (faded=forecast)</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:#EF4444;border-radius:2px;margin-right:4px"></span>Outflow</span>
+      </div>
+    </div>
+    <table><thead><tr>
+      <th>Month</th><th style="text-align:right">Inflow (KWD)</th>
+      <th style="text-align:right">Outflow (KWD)</th><th style="text-align:right">Net</th>
+      <th style="text-align:center">Type</th>
+    </tr></thead><tbody>
+    ${cfData.map(d=>`<tr>
+      <td style="font-weight:700;font-size:11px">${d.m}</td>
+      <td style="text-align:right;color:#10B981">${fmtKWD(d.inflow)}</td>
+      <td style="text-align:right;color:#EF4444">${fmtKWD(d.outflow)}</td>
+      <td style="text-align:right;font-weight:800;color:${d.net>=0?'#10B981':'#EF4444'}">${fmtKWD(d.net)}</td>
+      <td style="text-align:center">${pill(d.isFuture?'forecast':'actual',d.isFuture?'#3B82F6':'#10B981')}</td>
+    </tr>`).join('')}
+    </tbody></table>`;
+
+  } else if(tab==='retention'){
+    const retInvs=ALL.filter(i=>i.invoice_type==='client'&&Number(i.retention_pct)>0);
+    const totHeld=retInvs.filter(i=>i.status!=='cancelled').reduce((s,i)=>s+Number(i.gross_amount)*Number(i.retention_pct)/100,0);
+    const totRel =retInvs.filter(i=>i.retention_released).reduce((s,i)=>s+Number(i.gross_amount)*Number(i.retention_pct)/100,0);
+    body=`
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Retention Held',fmtKWD(totHeld),'#3B82F6','Client retention balance')}
+      ${kpi('Released',fmtKWD(totRel),'#10B981','Released to date')}
+      ${kpi('Net Retention',fmtKWD(totHeld-totRel),'#C9A84C','Still held')}
+      ${kpi('Retention Invoices',retInvs.length,'#E2E8F0','With retention')}
+    </div>
+    <table><thead><tr>
+      <th>Invoice No</th><th>Project</th><th style="text-align:right">Gross</th>
+      <th style="text-align:center">Ret%</th><th style="text-align:right">Retention Amt</th>
+      <th style="text-align:center">Status</th><th style="text-align:center">Retention</th>
+    </tr></thead><tbody>
+    ${retInvs.map(i=>{
+      const retAmt=Number(i.gross_amount)*Number(i.retention_pct)/100;
+      const canRelease=i.status==='paid'&&!i.retention_released&&(currentProfile?.role==='PMO Manager'||currentProfile?.role==='Finance Manager');
+      return`<tr>
+        <td style="color:var(--gold);font-size:10px">${esc(i.invoice_no)}</td>
+        <td style="font-size:11px;color:var(--muted)">${esc(i.project?.project_no||'—')}</td>
+        <td style="text-align:right;color:var(--muted)">${fmtKWD(i.gross_amount)}</td>
+        <td style="text-align:center;font-weight:700;color:#3B82F6">${i.retention_pct}%</td>
+        <td style="text-align:right;font-weight:800;color:#3B82F6">${fmtKWD(retAmt)}</td>
+        <td style="text-align:center">${pill(i.status)}</td>
+        <td style="text-align:center">
+          ${i.retention_released?pill('Released','#10B981'):pill('Held','#3B82F6')}
+          ${canRelease?`<button class="btn btn-ghost btn-sm" style="font-size:9px;padding:2px 6px;margin-left:4px" onclick="releaseRetention('${i.id}','${fmtKWD(retAmt)}')">Release</button>`:''}
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+  }
+
+  el.innerHTML=`
+  <div class="page-head">
+    <div class="page-head-left"><span style="font-size:22px">💰</span>
+      <div><h1>Finance</h1><div class="sub">AR · AP · Cash Flow · Retention</div></div>
+    </div>
+    ${(currentProfile?.role==='PMO Manager'||currentProfile?.role==='Finance Manager')?
+      `<button class="btn btn-primary btn-sm" onclick="openNewInvoiceModal()">+ New Invoice</button>`:''}
+  </div>
+  <div class="card">${tabs}${body}</div>`;
+}
 // ── HR ───────────────────────────────────────────────────────
 async function loadHR(tab='employees'){
   curHRTab=tab;
@@ -3628,7 +3852,17 @@ async function markInvoicePaid(invoiceId){
   if(error){showToast('Error: '+error.message,'error');return;}
   await writeAudit('invoices',invoiceId,'PAID',{status:inv?.status},{status:'paid'},'Invoice marked as paid');
   showToast('Invoice marked as paid ✓');
-  loadFinance();
+  loadFinance(curFinTab);
+}
+
+async function releaseRetention(invoiceId, retAmtStr){
+  if(!confirm('Release retention of '+retAmtStr+' for this invoice?')) return;
+  const {data:inv}=await sb.from('invoices').select('invoice_no,status').eq('id',invoiceId).single();
+  const {error}=await sb.from('invoices').update({retention_released:true, retention_released_date:new Date().toISOString().split('T')[0]}).eq('id',invoiceId);
+  if(error){showToast('Error: '+error.message,'error');return;}
+  await writeAudit('invoices',invoiceId,'RETENTION_RELEASED',{retention_released:false},{retention_released:true,amount:retAmtStr},'Retention released');
+  showToast('Retention released ✓');
+  loadFinance('retention');
 }
 
 // ══════════════════════════════════════════════════════════════
