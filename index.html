@@ -371,6 +371,10 @@ tr:hover td{background:#1A366010}
     <div class="logo-sq">SP</div>
     <div class="logo-txt"><div class="t1">SP360 ERP</div><div class="t2">Smart Projects 360 · Kuwait</div></div>
     <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v1.7</span>
+    <div style="display:flex;align-items:center;gap:4px;flex-shrink:0" title="Realtime connection status">
+      <div id="realtime-dot" style="width:7px;height:7px;border-radius:50%;background:#94A3B8;transition:background .3s"></div>
+      <span style="font-size:9px;color:var(--faint)">live</span>
+    </div>
     <div style="flex:1"></div>
     <div class="hdr-badge" id="pending-badge">⚡ 0 pending</div>
     <div style="display:flex;align-items:center;gap:9px;margin-left:12px">
@@ -566,9 +570,101 @@ function enterApp(){
   });
   navTo('dashboard',document.querySelector('.nav-btn.active'));
   loadWfBadge();
+  initRealtime();
+}
+
+// ── REALTIME ─────────────────────────────────────────────────
+let _realtimeChannel = null;
+let _realtimeDebounce = {};
+
+function initRealtime(){
+  // Clean up existing subscription
+  if(_realtimeChannel){
+    try{ sb.removeChannel(_realtimeChannel); }catch(e){}
+    _realtimeChannel = null;
+  }
+
+  _realtimeChannel = sb
+    .channel('sp360-erp-live')
+    .on('postgres_changes',
+      { event:'*', schema:'public', table:'projects' },
+      (payload) => handleRealtimeUpdate('projects', payload)
+    )
+    .on('postgres_changes',
+      { event:'*', schema:'public', table:'workflow_items' },
+      (payload) => handleRealtimeUpdate('workflow_items', payload)
+    )
+    .on('postgres_changes',
+      { event:'*', schema:'public', table:'change_orders' },
+      (payload) => handleRealtimeUpdate('change_orders', payload)
+    )
+    .on('postgres_changes',
+      { event:'*', schema:'public', table:'invoices' },
+      (payload) => handleRealtimeUpdate('invoices', payload)
+    )
+    .subscribe((status) => {
+      if(status === 'SUBSCRIBED'){
+        console.log('SP360 Realtime: connected');
+        showRealtimeBadge(true);
+      } else if(status === 'CHANNEL_ERROR' || status === 'TIMED_OUT'){
+        console.warn('SP360 Realtime:', status);
+        showRealtimeBadge(false);
+      }
+    });
+}
+
+function showRealtimeBadge(connected){
+  const badge = document.getElementById('pending-badge');
+  if(!badge) return;
+  // Show live indicator
+  const liveEl = document.getElementById('realtime-dot');
+  if(liveEl) liveEl.style.background = connected ? '#10B981' : '#EF4444';
+}
+
+function handleRealtimeUpdate(table, payload){
+  // Debounce: avoid rapid re-renders (wait 800ms after last event)
+  if(_realtimeDebounce[table]) clearTimeout(_realtimeDebounce[table]);
+  _realtimeDebounce[table] = setTimeout(()=>{
+    const activePage = document.querySelector('.page.active')?.id?.replace('page-','');
+    // Show live toast for workflow changes
+    if(table === 'workflow_items'){
+      const evt = payload.eventType;
+      const newRec = payload.new;
+      if(evt === 'INSERT' || (evt === 'UPDATE' && newRec?.status)){
+        showToast(`⚡ Workflow updated: ${newRec?.ref_no || 'item'} — ${newRec?.status || ''}`, 'success');
+      }
+      loadWfBadge(); // Always refresh badge
+    }
+    if(table === 'change_orders' && payload.eventType !== 'DELETE'){
+      const newRec = payload.new;
+      if(newRec?.workflow_status === 'submitted'){
+        showToast(`📋 New CO submitted: ${newRec.co_no || ''}`, 'success');
+      }
+    }
+    // Refresh active page if relevant
+    const pageMap = {
+      projects:     ['projects','dashboard','ceo'],
+      workflow_items:['workflow','dashboard','ceo'],
+      change_orders: ['projects','ceo'],
+      invoices:      ['finance','dashboard','ceo']
+    };
+    const refreshPages = pageMap[table] || [];
+    if(refreshPages.includes(activePage)){
+      const loaders = {
+        dashboard: loadDashboard, projects: ()=>loadProjects(curProjTab),
+        workflow: loadWorkflow, finance: loadFinance, ceo: loadCEO
+      };
+      if(loaders[activePage]) loaders[activePage]();
+    }
+  }, 800);
 }
 
 function doLogout(){
+  // Cleanup Realtime subscription
+  if(_realtimeChannel){
+    try{ sb.removeChannel(_realtimeChannel); }catch(e){}
+    _realtimeChannel = null;
+  }
   // Clear session from localStorage (no network call, instant)
   try {
     Object.keys(localStorage).forEach(k => {
@@ -2159,12 +2255,103 @@ async function toggleUserActive(userId,active,name){
   loadUsers();
 }
 
-// ── EMAIL NOTIFICATIONS ──────────────────────────────────────
-// Uses mailto: to open default email client — production-ready fallback
-// (For server-side sending, integrate Supabase Edge Functions + Resend/SendGrid)
+// ── EMAIL ENGINE ─────────────────────────────────────────────
+// Primary: Supabase Edge Function (send-email) via Resend API
+// Fallback: mailto (opens local email client)
+// Setup: Deploy edge function + set RESEND_API_KEY secret in Supabase
 
+const EMAIL_EDGE_URL = `${SUPABASE_URL}/functions/v1/send-email`;
+let _edgeFnAvailable = null; // null=unknown, true=working, false=use mailto
+
+async function sendViaEdge(to, subject, bodyText, htmlBody=''){
+  // Test edge fn availability once per session
+  if(_edgeFnAvailable === false) return false;
+  try {
+    const {data:{session}} = await sb.auth.getSession();
+    const token = session?.access_token || SUPABASE_KEY;
+    const res = await fetch(EMAIL_EDGE_URL, {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':`Bearer ${token}`,
+        'apikey': SUPABASE_KEY
+      },
+      body: JSON.stringify({
+        to: Array.isArray(to) ? to : [to],
+        subject,
+        text: bodyText,
+        html: htmlBody || buildEmailHTML(subject, bodyText),
+        from_name: 'SP360 ERP'
+      })
+    });
+    if(res.ok){ _edgeFnAvailable=true; return true; }
+    // 404 = function not deployed yet → use fallback
+    if(res.status===404){ _edgeFnAvailable=false; return false; }
+    const err=await res.json().catch(()=>({}));
+    console.warn('Edge fn email error:',err);
+    return false;
+  } catch(e){
+    _edgeFnAvailable=false;
+    return false;
+  }
+}
+
+function buildEmailHTML(subject, bodyText){
+  // Professional HTML email template — Navy & Gold
+  const lines = bodyText.split('\n');
+  const htmlLines = lines.map(l=>{
+    if(l.startsWith('  •')) return `<li style="margin:4px 0;color:#334155">${l.replace('  •','').trim()}</li>`;
+    if(l==='') return '<br>';
+    return `<p style="margin:6px 0;color:#334155;font-size:14px">${l}</p>`;
+  }).join('');
+  return `<!DOCTYPE html><html><body style="margin:0;padding:0;font-family:Calibri,Arial,sans-serif;background:#F8FAFC">
+  <div style="max-width:600px;margin:24px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08)">
+    <div style="background:#1E3A5F;padding:24px 28px;display:flex;align-items:center;gap:14px">
+      <div style="width:44px;height:44px;background:#C9A84C;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#0D1B2A;font-size:18px">SP</div>
+      <div>
+        <div style="color:#C9A84C;font-size:18px;font-weight:800">${subject}</div>
+        <div style="color:#94A3B8;font-size:11px;margin-top:2px">SP360 ERP v1.7 · Smart Projects 360 · Kuwait</div>
+      </div>
+    </div>
+    <div style="padding:24px 28px">${htmlLines}</div>
+    <div style="background:#F1F5F9;padding:14px 28px;text-align:center;font-size:11px;color:#94A3B8;border-top:1px solid #E2E8F0">
+      SP360 ERP v1.7 · Confidential — For Internal Use Only<br>
+      <a href="https://falconbold1999-ops.github.io/sp360-erp/" style="color:#C9A84C">Open SP360 ERP</a>
+    </div>
+  </div></body></html>`;
+}
+
+function fallbackMailto(to, subject, bodyText){
+  const toStr = Array.isArray(to) ? to.join(';') : to;
+  const url = `mailto:${encodeURIComponent(toStr)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
+  window.open(url,'_blank');
+}
+
+async function dispatchEmail(to, subject, bodyText, label='Email'){
+  const btn = event?.target;
+  if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+  try {
+    const sent = await sendViaEdge(to, subject, bodyText);
+    if(sent){
+      showToast(`${label} sent ✓`);
+    } else {
+      // Fallback to mailto
+      fallbackMailto(to, subject, bodyText);
+      showToast(`${label} — Email client opened`);
+    }
+  } finally {
+    if(btn){ btn.disabled=false; btn.textContent=label==='Email'?'Send Email':'Send'; }
+  }
+}
+
+// ── EMAIL UI FUNCTIONS ────────────────────────────────────────
 function openEmailUserModal(email,name){
   openModal('Send Email — '+esc(name),`
+  <div style="margin-bottom:10px;padding:8px 12px;background:${_edgeFnAvailable===false?'#EF444411':'#10B98111'};border:1px solid ${_edgeFnAvailable===false?'#EF444433':'#10B98133'};border-radius:6px;font-size:10px;color:var(--muted)">
+    ${_edgeFnAvailable===false
+      ? '📧 Edge Function not deployed — will open email client instead'
+      : '📧 Sends directly via Resend API (no email client needed)'}
+  </div>
   <div class="form-field"><label>To</label>
     <input id="em-to" value="${esc(email)}" style="font-family:monospace"/>
   </div>
@@ -2172,92 +2359,106 @@ function openEmailUserModal(email,name){
     <input id="em-subject" value="SP360 ERP — Notification"/>
   </div>
   <div class="form-field"><label>Message</label>
-    <textarea id="em-body" rows="5" placeholder="Enter your message…">Dear ${esc(name)},\n\nThis is a notification from SP360 ERP.\n\nRegards,\nSP360 PMO Team</textarea>
-  </div>
-  <div style="padding:8px 10px;background:#1E3A5F22;border-radius:6px;font-size:10px;color:var(--muted);margin-bottom:8px">
-    📧 This will open your default email client (Outlook, Gmail, etc.) with the message pre-filled.
+    <textarea id="em-body" rows="5">Dear ${esc(name)},\n\nThis is a notification from SP360 ERP.\n\nRegards,\nSP360 PMO Team</textarea>
   </div>
   <div class="modal-foot">
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    <button class="btn btn-primary" onclick="sendDirectEmail()">Open Email Client</button>
+    <button class="btn btn-primary" onclick="sendDirectEmail()">Send Email</button>
   </div>`);
 }
 
-function sendDirectEmail(){
+async function sendDirectEmail(){
   const to=document.getElementById('em-to').value.trim();
   const subject=document.getElementById('em-subject').value.trim();
   const body=document.getElementById('em-body').value.trim();
   if(!to){showToast('Recipient required','error');return;}
-  const mailtoURL=`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  window.open(mailtoURL,'_blank');
-  showToast('Email client opened ✓');
+  await dispatchEmail(to, subject, body, 'Email');
   closeModal();
 }
 
 function openEmailAllModal(){
   sb.from('user_profiles').select('email,full_name').eq('is_active',true).then(({data:users})=>{
-    const emails=(users||[]).map(u=>u.email).filter(Boolean).join(';');
+    const emailList=(users||[]).map(u=>u.email).filter(Boolean);
     openModal('Email All Active Users',`
-    <div class="form-field"><label>To (${(users||[]).length} users)</label>
-      <input id="eall-to" value="${esc(emails)}" style="font-family:monospace;font-size:10px"/>
+    <div style="margin-bottom:10px;padding:8px 12px;background:${_edgeFnAvailable===false?'#EF444411':'#10B98111'};border:1px solid ${_edgeFnAvailable===false?'#EF444433':'#10B98133'};border-radius:6px;font-size:10px;color:var(--muted)">
+      ${_edgeFnAvailable===false
+        ? `📧 Will open email client (BCC: ${emailList.length} users)`
+        : `📧 Will send to ${emailList.length} users via Resend API`}
+    </div>
+    <div class="form-field"><label>Recipients (${emailList.length} active users)</label>
+      <input id="eall-to" value="${esc(emailList.join(', '))}" style="font-family:monospace;font-size:10px" readonly/>
     </div>
     <div class="form-field"><label>Subject</label>
       <input id="eall-subject" value="SP360 ERP — Team Notification"/>
     </div>
     <div class="form-field"><label>Message</label>
-      <textarea id="eall-body" rows="6" placeholder="Team message…">Dear SP360 Team,\n\nThis is a notification from SP360 ERP v1.7.\n\nPlease log in to review your pending items.\n\nRegards,\nSP360 PMO Team</textarea>
+      <textarea id="eall-body" rows="6">Dear SP360 Team,\n\nThis is a notification from SP360 ERP v1.7.\n\nPlease log in to review your pending items.\n\nRegards,\nSP360 PMO Team</textarea>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="sendAllEmail()">Open Email Client</button>
+      <button class="btn btn-primary" onclick="sendAllEmail(${JSON.stringify(emailList)})">Send to All</button>
     </div>`);
   });
 }
 
-function sendAllEmail(){
-  const to=document.getElementById('eall-to').value.trim();
+async function sendAllEmail(emailList){
   const subject=document.getElementById('eall-subject').value.trim();
   const body=document.getElementById('eall-body').value.trim();
-  const mailtoURL=`mailto:?bcc=${encodeURIComponent(to)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  window.open(mailtoURL,'_blank');
-  showToast('Email client opened ✓');
   closeModal();
+  showToast('Sending to '+emailList.length+' users…');
+  if(_edgeFnAvailable !== false){
+    // Send individually via edge fn (Resend handles bulk)
+    const sent = await sendViaEdge(emailList, subject, body);
+    if(sent){ showToast('Sent to '+emailList.length+' users ✓'); return; }
+  }
+  // Fallback: mailto BCC
+  fallbackMailto(emailList, subject, body);
+  showToast('Email client opened with '+emailList.length+' recipients');
 }
 
 async function sendEmailNotification(type){
-  // Build context-aware email from live data
-  const {data:projs}=await sb.from('projects').select('name,cpi,spi,status');
-  const {data:wfs}=await sb.from('workflow_items').select('ref_no,current_step,status').in('status',['pending','overdue']);
-  const {data:users}=await sb.from('user_profiles').select('email,full_name,role').eq('is_active',true);
-  const recipients=(users||[]).map(u=>u.email).filter(Boolean);
+  const [projR, wfR, usersR] = await Promise.all([
+    sb.from('projects').select('name,cpi,spi,status,ev,ac'),
+    sb.from('workflow_items').select('ref_no,current_step,status').in('status',['pending','overdue']),
+    sb.from('user_profiles').select('email,full_name,role').eq('is_active',true)
+  ]);
+  const projs=projR.data||[], wfs=wfR.data||[], users=usersR.data||[];
+  const recipients=users.map(u=>u.email).filter(Boolean);
   const today=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
 
   let subject='', body='';
-
   if(type==='pending_approvals'){
-    const pending=(wfs||[]).filter(w=>w.status==='pending'||w.status==='overdue');
-    subject=`SP360 ERP — ⚡ ${pending.length} Pending Approvals — ${today}`;
+    const pending=wfs.filter(w=>w.status==='pending'||w.status==='overdue');
+    subject=`⚡ ${pending.length} Pending Approvals — SP360 ERP — ${today}`;
     body=`Dear SP360 Team,\n\nThis is an automated notification from SP360 ERP v1.7.\n\nYou have ${pending.length} item(s) awaiting approval:\n\n`
       +pending.slice(0,10).map(w=>`  • ${w.ref_no} — ${w.current_step} [${w.status.toUpperCase()}]`).join('\n')
       +`\n\nPlease log in to SP360 ERP to take action:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   } else if(type==='weekly_evm'){
-    const active=(projs||[]).filter(p=>!['completed','cancelled'].includes(p.status));
+    const active=projs.filter(p=>!['completed','cancelled'].includes(p.status));
     const totEV=active.reduce((s,p)=>s+Number(p.ev||0),0);
     const totAC=active.reduce((s,p)=>s+Number(p.ac||0),0);
     const portCPI=totAC>0?(totEV/totAC).toFixed(2):'—';
-    subject=`SP360 ERP — 📊 Weekly EVM Summary — ${today}`;
-    body=`Dear SP360 Team,\n\nWeekly EVM Summary — ${today}\n\n`
-      +`Portfolio CPI: ${portCPI}\nActive Projects: ${active.length}\n\nProject Status:\n`
+    subject=`📊 Weekly EVM Summary — SP360 ERP — ${today}`;
+    body=`Dear SP360 Team,\n\nWeekly EVM Summary — ${today}\n\nPortfolio CPI: ${portCPI}\nActive Projects: ${active.length}\n\nProject Status:\n`
       +active.slice(0,8).map(p=>`  • ${p.name?.split('—')[0].trim()} | CPI: ${Number(p.cpi||1).toFixed(2)} | SPI: ${Number(p.spi||1).toFixed(2)}`).join('\n')
-      +`\n\nFull report available at:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
+      +`\n\nFull report: https://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   } else if(type==='ceo_report'){
-    subject=`SP360 ERP — 👔 CEO Flash Report Ready — ${today}`;
-    body=`Dear Team,\n\nThe CEO Flash Report for ${today} has been updated in SP360 ERP v1.7.\n\nPlease log in to review the executive dashboard and performance metrics:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nLog in, navigate to CEO Report, and use the Export PDF button for a printable version.\n\nRegards,\nSP360 PMO Team`;
+    subject=`👔 CEO Flash Report Ready — SP360 ERP — ${today}`;
+    body=`Dear Team,\n\nThe CEO Flash Report for ${today} has been updated in SP360 ERP v1.7.\n\nLog in → CEO Report → Export PDF:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   }
 
-  const mailtoURL=`mailto:?bcc=${encodeURIComponent(recipients.join(';'))}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  window.open(mailtoURL,'_blank');
-  showToast(`${type==='pending_approvals'?'Pending Approvals':type==='weekly_evm'?'Weekly EVM':'CEO Report'} email opened ✓`);
+  if(recipients.length===0){ showToast('No active users found','error'); return; }
+
+  const label = type==='pending_approvals'?'Approvals Alert':type==='weekly_evm'?'Weekly EVM':'CEO Report';
+  showToast(`Sending ${label} to ${recipients.length} users…`);
+  const sent = await sendViaEdge(recipients, subject, body);
+  if(sent){
+    showToast(`${label} sent to ${recipients.length} users ✓`);
+    await writeAudit('email_notifications',null,'EMAIL_SENT',null,{type,recipients:recipients.length,subject},`Notification sent via Edge Function`);
+  } else {
+    fallbackMailto(recipients, subject, body);
+    showToast(`${label} — Email client opened`);
+  }
 }
 
 // ── AUDIT TRAIL ──────────────────────────────────────────────
