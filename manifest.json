@@ -1,0 +1,43 @@
+{
+  "name": "SP360 ERP — Smart Projects 360",
+  "short_name": "SP360 ERP",
+  "description": "Project Controls & ERP System for Smart Projects 360, Kuwait",
+  "start_url": "/sp360-erp/",
+  "scope": "/sp360-erp/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#1E3A5F",
+  "background_color": "#0D1B2A",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%231E3A5F'/><text x='96' y='130' font-family='Arial' font-weight='900' font-size='80' fill='%23C9A84C' text-anchor='middle'>SP</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%231E3A5F'/><text x='256' y='340' font-family='Arial' font-weight='900' font-size='200' fill='%23C9A84C' text-anchor='middle'>SP</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/sp360-erp/#dashboard",
+      "description": "Portfolio Dashboard"
+    },
+    {
+      "name": "Projects",
+      "url": "/sp360-erp/#projects",
+      "description": "Project Portfolio"
+    },
+    {
+      "name": "CEO Report",
+      "url": "/sp360-erp/#ceo",
+      "description": "CEO Flash Report"
+    }
+  ]
+}
