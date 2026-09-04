@@ -394,6 +394,7 @@ tr:hover td{background:#1A366010}
         <div style="font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:.3px" id="user-role">—</div>
       </div>
       <button class="btn-logout" onclick="doLogout()">Sign out</button>
+      <button id="pwa-install-btn" onclick="installPWA()" style="display:none;background:#C9A84C;color:#0D1B2A;border:none;border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">📱 Install</button>
     </div>
   </header>
 
@@ -782,13 +783,12 @@ async function doLogout(){
     try{ sb.removeChannel(_realtimeChannel); }catch(e){}
     _realtimeChannel = null;
   }
-  // Proper Supabase signOut — invalidates token server-side + clears session
+  // Sign out server-side
   try{ await sb.auth.signOut(); }catch(e){ console.warn('SignOut error:',e); }
+  // Reset state
   currentUser=null; currentProfile=null;
-  document.getElementById('app').style.display='none';
-  document.getElementById('auth-screen').style.display='flex';
-  document.getElementById('login-email').value='';
-  document.getElementById('login-pass').value='';
+  // Reload page for clean state — most reliable approach
+  window.location.reload();
 }
 
 async function loadWfBadge(){
@@ -845,13 +845,17 @@ async function loadDashboard(){
   const projs=projR.data||[], invs=invR.data||[], wfs=wfR.data||[];
   const ncrs=ncrR.data||[], snaps=snapR.data||[];
 
-  const totalEV=projs.reduce((s,p)=>s+Number(p.ev),0);
-  const totalAC=projs.reduce((s,p)=>s+Number(p.ac),0);
-  const totalPV=projs.reduce((s,p)=>s+Number(p.pv),0);
-  const totalBAC=projs.reduce((s,p)=>s+Number(p.bac),0);
-  const portCPI=totalAC>0?(totalEV/totalAC).toFixed(2):'1.00';
-  const portSPI=totalPV>0?(totalEV/totalPV).toFixed(2):'1.00';
+  const activeP=projs.filter(p=>isActiveProject(p));
+  const totalEV=activeP.reduce((s,p)=>s+Number(p.ev),0);
+  const totalAC=activeP.reduce((s,p)=>s+Number(p.ac),0);
+  const totalBAC=activeP.reduce((s,p)=>s+Number(p.bac),0);
   const totalVal=projs.reduce((s,p)=>s+Number(p.contract_value),0);
+  // PV only from projects with real Baseline (pv > 0 and pv != bac = not auto-assigned)
+  const withBaseline=activeP.filter(p=>Number(p.pv)>0&&Number(p.pv)!==Number(p.bac));
+  const totalPV=withBaseline.reduce((s,p)=>s+Number(p.pv),0);
+  const totalEVforSPI=withBaseline.reduce((s,p)=>s+Number(p.ev),0);
+  const portCPI=totalAC>0?(totalEV/totalAC).toFixed(2):'1.00';
+  const portSPI=totalPV>0?(totalEVforSPI/totalPV).toFixed(2):'N/A';
   const rev=invs.filter(i=>i.invoice_type==='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
   const cost=invs.filter(i=>i.invoice_type!=='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
   const outstanding=invs.filter(i=>i.status!=='paid'&&i.status!=='cancelled').reduce((s,i)=>s+Number(i.net_amount),0);
@@ -914,7 +918,7 @@ async function loadDashboard(){
   <div class="grid4">
     ${kpi('Portfolio Value',fmtKWD(totalVal),'#C9A84C',projs.length+' projects')}
     ${kpi('Portfolio CPI',portCPI,cpiColor(portCPI),'ΣEV / ΣAC')}
-    ${kpi('Portfolio SPI',portSPI,cpiColor(portSPI),'ΣEV / ΣPV')}
+    ${kpi('Portfolio SPI',portSPI,portSPI==='N/A'?'#94A3B8':cpiColor(portSPI),portSPI==='N/A'?'No Baselines yet':'ΣEV / ΣPV')}
     ${kpi('Gross Profit',fmtKWD(rev-cost),rev-cost>=0?'#C9A84C':'#EF4444',rev>0?(((rev-cost)/rev*100).toFixed(1)+'% margin'):'No revenue yet')}
   </div>
   <div class="grid4">
@@ -5359,50 +5363,43 @@ async function runHealthCheck(){
 // ── PWA SERVICE WORKER ───────────────────────────────────────
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('sw.js').then(reg=>{
-      console.log('SP360 SW registered:', reg.scope);
-    }).catch(e=>{
-      console.log('SW registration skipped (dev mode):', e.message);
+    navigator.serviceWorker.register('sw.js').catch(e=>{
+      console.log('SW skipped:', e.message);
     });
   });
 }
 
-// PWA Install prompt
+// PWA Install
 let _pwaPrompt=null;
 window.addEventListener('beforeinstallprompt', e=>{
   e.preventDefault();
   _pwaPrompt=e;
-  // Show install button if in app
-  if(document.getElementById('app').style.display!=='none'){
-    showPWAInstallBanner();
-  }
+  // Show install button in header
+  const btn=document.getElementById('pwa-install-btn');
+  if(btn) btn.style.display='block';
 });
 
-function showPWAInstallBanner(){
-  if(!_pwaPrompt) return;
-  const banner=document.createElement('div');
-  banner.id='pwa-banner';
-  banner.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1E3A5F;border:1px solid #C9A84C44;border-radius:12px;padding:12px 18px;display:flex;align-items:center;gap:12px;z-index:9999;box-shadow:0 8px 32px #00000066';
-  banner.innerHTML=`
-    <div style="font-size:22px">📱</div>
-    <div>
-      <div style="color:#C9A84C;font-weight:700;font-size:13px">Install SP360 ERP</div>
-      <div style="color:#94A3B8;font-size:11px">Add to your home screen for quick access</div>
-    </div>
-    <button onclick="installPWA()" style="background:#C9A84C;color:#0D1B2A;border:none;border-radius:7px;padding:7px 14px;font-weight:700;font-size:12px;cursor:pointer">Install</button>
-    <button onclick="document.getElementById('pwa-banner').remove()" style="background:none;border:none;color:#94A3B8;cursor:pointer;font-size:16px">✕</button>`;
-  document.body.appendChild(banner);
-  setTimeout(()=>banner.remove(), 15000);
-}
+window.addEventListener('appinstalled',()=>{
+  _pwaPrompt=null;
+  const btn=document.getElementById('pwa-install-btn');
+  if(btn) btn.style.display='none';
+  showToast('SP360 ERP installed ✓');
+});
 
 async function installPWA(){
-  if(!_pwaPrompt) return;
+  if(!_pwaPrompt){
+    // Fallback: show manual instructions
+    showToast('افتح قائمة المتصفح → Add to Home Screen','error');
+    return;
+  }
   _pwaPrompt.prompt();
   const {outcome}=await _pwaPrompt.userChoice;
-  if(outcome==='accepted') showToast('SP360 ERP installed ✓');
+  if(outcome==='accepted'){
+    showToast('SP360 ERP installed ✓');
+    const btn=document.getElementById('pwa-install-btn');
+    if(btn) btn.style.display='none';
+  }
   _pwaPrompt=null;
-  const b=document.getElementById('pwa-banner');
-  if(b) b.remove();
 }
 
 </script>
