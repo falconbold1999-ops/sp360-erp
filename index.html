@@ -370,7 +370,7 @@ tr:hover td{background:#1A366010}
     <button onclick="toggleSide()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 6px;border-radius:5px">☰</button>
     <div class="logo-sq">SP</div>
     <div class="logo-txt"><div class="t1">SP360 ERP</div><div class="t2">Smart Projects 360 · Kuwait</div></div>
-    <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v2.0</span>
+    <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v2.1</span>
     <div style="display:flex;align-items:center;gap:4px;flex-shrink:0" title="Realtime connection status">
       <div id="realtime-dot" style="width:7px;height:7px;border-radius:50%;background:#94A3B8;transition:background .3s"></div>
       <span style="font-size:9px;color:var(--faint)">live</span>
@@ -1981,9 +1981,34 @@ async function loadProc(tab='vendors'){
   if(tab==='vendors'){
     const {data:list}=await sb.from('vendors').select('*').order('vendor_code');
     const L=list||[];
-    kpis=kpi('Total Vendors',L.length,'#E2E8F0')+kpi('Approved',L.filter(v=>v.is_approved).length,'#10B981')+kpi('Pending',L.filter(v=>!v.is_approved&&v.status!=='blacklisted').length,'#F97316')+kpi('Blacklisted',L.filter(v=>v.status==='blacklisted').length,'#EF4444');
-    body=`<table><thead><tr><th>Code</th><th>Name</th><th>Category</th><th style="text-align:center">Score</th><th style="text-align:center">Approved</th><th style="text-align:center">Status</th></tr></thead><tbody>
-    ${L.map(v=>`<tr><td style="color:var(--gold);font-size:10px">${esc(v.vendor_code)}</td><td style="font-weight:600">${esc(v.name)}</td><td style="color:var(--muted);font-size:11px">${esc(v.category)}</td><td style="text-align:center;font-weight:700;color:${Number(v.perf_score||0)>=8?'#10B981':'#94A3B8'}">${v.perf_score||'N/A'}</td><td style="text-align:center">${pill(v.is_approved?'Approved':'Pending',v.is_approved?'#10B981':'#F97316')}</td><td style="text-align:center">${pill(v.status)}</td></tr>`).join('')}
+    const isPMO=currentProfile?.role==='PMO Manager'||currentProfile?.role==='Procurement Lead';
+    kpis=kpi('Total Vendors',L.length,'#E2E8F0')+kpi('Approved',L.filter(v=>v.is_approved).length,'#10B981')+kpi('Pending Approval',L.filter(v=>!v.is_approved&&v.status!=='blacklisted').length,'#F97316')+kpi('Blacklisted',L.filter(v=>v.status==='blacklisted').length,'#EF4444');
+    body=`<table><thead><tr>
+      <th>Code</th><th>Name</th><th>Category</th><th>Contact</th>
+      <th style="text-align:center">Score</th><th style="text-align:center">Status</th>
+      ${isPMO?'<th style="text-align:center">Action</th>':''}
+    </tr></thead><tbody>
+    ${L.map(v=>{
+      const canApprove=isPMO&&!v.is_approved&&v.status!=='blacklisted';
+      const canBlacklist=isPMO&&v.status!=='blacklisted';
+      const canRevoke=isPMO&&v.is_approved;
+      return`<tr>
+        <td style="color:var(--gold);font-size:10px;font-weight:700">${esc(v.vendor_code)}</td>
+        <td style="font-weight:600;font-size:11px">${esc(v.name)}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(v.category||'—')}</td>
+        <td style="color:var(--muted);font-size:10px">${esc(v.contact_person||'—')}</td>
+        <td style="text-align:center;font-weight:700;color:${Number(v.perf_score||0)>=8?'#10B981':'#94A3B8'}">${v.perf_score||'N/A'}</td>
+        <td style="text-align:center">
+          ${pill(v.is_approved?'Approved':v.status==='blacklisted'?'Blacklisted':'Pending',
+            v.is_approved?'#10B981':v.status==='blacklisted'?'#EF4444':'#F97316')}
+        </td>
+        ${isPMO?`<td style="text-align:center;white-space:nowrap;display:flex;gap:4px;justify-content:center">
+          ${canApprove?`<button class="btn btn-primary btn-sm" style="font-size:9px;padding:2px 7px" onclick="approveVendor('${v.id}',true)">✓ Approve</button>`:''}
+          ${canRevoke?`<button class="btn btn-ghost btn-sm" style="font-size:9px;padding:2px 7px" onclick="approveVendor('${v.id}',false)">Revoke</button>`:''}
+          ${canBlacklist?`<button class="btn btn-ghost btn-sm" style="font-size:9px;padding:2px 7px;color:#EF4444" onclick="blacklistVendor('${v.id}','${esc(v.name)}')">🚫</button>`:''}
+        </td>`:''}
+      </tr>`;
+    }).join('')}
     </tbody></table>`;
   } else if(tab==='rfqs'){
     const {data:list}=await sb.from('rfqs').select('*,project:projects(project_no)').order('created_at',{ascending:false});
@@ -2624,6 +2649,35 @@ async function loadFinance(tab='overview'){
   <div class="card">${tabs}${body}</div>`;
   }catch(e){ pageError('page-finance',e); }
 }
+// ── VENDOR MANAGEMENT ────────────────────────────────────────
+async function approveVendor(vendorId, approve){
+  const action=approve?'approve':'revoke approval for';
+  if(!confirm(`Are you sure you want to ${action} this vendor?`)) return;
+  const {error}=await sb.from('vendors').update({
+    is_approved:approve, updated_at:new Date().toISOString()
+  }).eq('id',vendorId);
+  if(error){showToast('Error: '+error.message,'error');return;}
+  await writeAudit('vendors',vendorId,approve?'VENDOR_APPROVED':'VENDOR_APPROVAL_REVOKED',
+    {is_approved:!approve},{is_approved:approve},
+    approve?'Vendor approved':'Vendor approval revoked');
+  showToast(approve?'Vendor approved ✓':'Vendor approval revoked');
+  loadProc('vendors');
+}
+
+async function blacklistVendor(vendorId, vendorName){
+  const reason=prompt(`Reason for blacklisting "${vendorName}":`);
+  if(!reason||!reason.trim()) return;
+  const {error}=await sb.from('vendors').update({
+    is_approved:false, status:'blacklisted', updated_at:new Date().toISOString()
+  }).eq('id',vendorId);
+  if(error){showToast('Error: '+error.message,'error');return;}
+  await writeAudit('vendors',vendorId,'VENDOR_BLACKLISTED',
+    {status:'active'},{status:'blacklisted',reason:reason.trim()},
+    'Vendor blacklisted: '+reason.trim());
+  showToast('Vendor blacklisted ✓');
+  loadProc('vendors');
+}
+
 // ── HR ───────────────────────────────────────────────────────
 async function loadHR(tab='employees'){
   curHRTab=tab;
@@ -2643,17 +2697,139 @@ async function loadHR(tab='employees'){
     ${L.map(e=>`<tr><td style="color:var(--gold);font-size:10px">${esc(e.employee_no)}</td><td style="font-weight:700">${esc(e.full_name)}</td><td style="color:var(--muted);font-size:11px">${esc(e.department)}</td><td style="color:var(--muted);font-size:11px">${esc(e.job_title)}</td><td style="color:var(--muted);font-size:11px">${e.join_date}</td><td style="text-align:center">${pill(e.status)}</td></tr>`).join('')}
     </tbody></table>`;
   } else {
-    const {data:list}=await sb.from('leave_requests').select('*,employee:employees(full_name)').order('created_at',{ascending:false});
+    const {data:list}=await sb.from('leave_requests').select('*,employee:employees(full_name,employee_no)').order('created_at',{ascending:false});
     const L=list||[];
-    kpis=kpi('Requests',L.length,'#E2E8F0')+kpi('Approved',L.filter(l=>l.status==='approved').length,'#10B981')+kpi('Pending',L.filter(l=>l.status==='pending').length,'#F97316')+kpi('Days Approved',L.filter(l=>l.status==='approved').reduce((s,l)=>s+l.days,0),'#3B82F6');
-    body=`<table><thead><tr><th>Employee</th><th>Type</th><th>Start</th><th>End</th><th style="text-align:center">Days</th><th>Reason</th><th style="text-align:center">Status</th></tr></thead><tbody>
-    ${L.map(l=>`<tr><td style="font-weight:700;font-size:11px">${esc(l.employee?.full_name||'—')}</td><td>${pill(l.leave_type)}</td><td style="color:var(--muted);font-size:11px">${l.start_date}</td><td style="color:var(--muted);font-size:11px">${l.end_date}</td><td style="text-align:center;font-weight:700">${l.days}</td><td style="color:var(--muted);font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.reason||'')}</td><td style="text-align:center">${pill(l.status)}</td></tr>`).join('')}
+    const isPMO=currentProfile?.role==='PMO Manager';
+    kpis=kpi('Requests',L.length,'#E2E8F0')+kpi('Approved',L.filter(l=>l.status==='approved').length,'#10B981')+kpi('Pending',L.filter(l=>l.status==='pending').length,'#F97316')+kpi('Days Approved',L.filter(l=>l.status==='approved').reduce((s,l)=>s+Number(l.days||0),0),'#3B82F6');
+    body=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <button class="btn btn-primary btn-sm" onclick="openNewLeaveModal()">+ New Leave Request</button>
+    </div>
+    <table><thead><tr>
+      <th>Employee</th><th>Type</th><th>Start</th><th>End</th>
+      <th style="text-align:center">Days</th><th>Reason</th>
+      <th style="text-align:center">Status</th>
+      ${isPMO?'<th style="text-align:center">Action</th>':''}
+    </tr></thead><tbody>
+    ${L.map(l=>{
+      const canAct=isPMO&&l.status==='pending';
+      return`<tr>
+        <td style="font-weight:700;font-size:11px">${esc(l.employee?.full_name||'—')}<div style="font-size:9px;color:var(--faint)">${esc(l.employee?.employee_no||'')}</div></td>
+        <td>${pill(l.leave_type,l.leave_type==='annual'?'#3B82F6':l.leave_type==='sick'?'#EF4444':'#8B5CF6')}</td>
+        <td style="color:var(--muted);font-size:11px">${l.start_date||'—'}</td>
+        <td style="color:var(--muted);font-size:11px">${l.end_date||'—'}</td>
+        <td style="text-align:center;font-weight:700;color:var(--gold)">${l.days||'—'}</td>
+        <td style="color:var(--muted);font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.reason||'')}</td>
+        <td style="text-align:center">${pill(l.status,l.status==='approved'?'#10B981':l.status==='rejected'?'#EF4444':'#F97316')}</td>
+        ${isPMO?`<td style="text-align:center;white-space:nowrap">
+          ${canAct?`
+            <button class="btn btn-primary btn-sm" style="font-size:9px;padding:2px 7px" onclick="approveLeave('${l.id}',true)">✓ Approve</button>
+            <button class="btn btn-ghost btn-sm" style="font-size:9px;padding:2px 7px;color:#EF4444" onclick="approveLeave('${l.id}',false)">✗ Reject</button>
+          `:''}
+        </td>`:''}
+      </tr>`;
+    }).join('')}
     </tbody></table>`;
   }
   el.innerHTML=`
-  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">👥</span><div><h1>Human Resources</h1><div class="sub">Employees · Leave Requests</div></div></div></div>
+  <div class="page-head">
+    <div class="page-head-left"><span style="font-size:22px">👥</span><div><h1>Human Resources</h1><div class="sub">Employees · Leave Requests</div></div></div>
+  </div>
   <div class="grid4">${kpis}</div>
   <div class="card">${tabs}${body}</div>`;
+}
+
+// ── HR LEAVE REQUESTS ────────────────────────────────────────
+async function openNewLeaveModal(){
+  const {data:emps}=await sb.from('employees').select('id,employee_no,full_name').eq('status','active').order('full_name');
+  openModal('New Leave Request',`
+  <div class="form-row">
+    <div class="form-field"><label>Employee *</label>
+      <select id="lr-emp">
+        <option value="">— Select Employee —</option>
+        ${(emps||[]).map(e=>`<option value="${e.id}">${esc(e.employee_no)} — ${esc(e.full_name)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-field"><label>Leave Type *</label>
+      <select id="lr-type">
+        <option value="annual">Annual Leave</option>
+        <option value="sick">Sick Leave</option>
+        <option value="emergency">Emergency Leave</option>
+        <option value="unpaid">Unpaid Leave</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-field"><label>Start Date *</label><input id="lr-start" type="date"/></div>
+    <div class="form-field"><label>End Date *</label><input id="lr-end" type="date" oninput="calcLeaveDays()"/></div>
+  </div>
+  <div class="form-row">
+    <div class="form-field"><label>Days</label><input id="lr-days" type="number" min="0.5" step="0.5" placeholder="Auto-calculated"/></div>
+    <div class="form-field"><label>Reason</label><input id="lr-reason" placeholder="Optional"/></div>
+  </div>
+  <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="saveLeaveRequest(event)">Submit Request</button>
+  </div>`);
+}
+
+function calcLeaveDays(){
+  const start=document.getElementById('lr-start')?.value;
+  const end=document.getElementById('lr-end')?.value;
+  if(start&&end){
+    const days=Math.max(0.5,Math.round(((new Date(end)-new Date(start))/(1000*60*60*24)+1)*2)/2);
+    const el=document.getElementById('lr-days');
+    if(el&&!el._manual) el.value=days;
+  }
+}
+
+async function saveLeaveRequest(e){
+  const empId=validSelect('lr-emp','Employee'); if(!empId) return;
+  const type=document.getElementById('lr-type').value;
+  const start=document.getElementById('lr-start').value;
+  const end=document.getElementById('lr-end').value;
+  const days=Number(document.getElementById('lr-days').value)||0;
+  const reason=document.getElementById('lr-reason').value.trim();
+  if(!start||!end){showToast('Start and End dates required','error');return;}
+  if(end<start){showToast('End date must be after start date','error');return;}
+  if(days<=0){showToast('Days must be greater than 0','error');return;}
+  const btn=e?.currentTarget||e?.target;
+  if(btn){btn.disabled=true;btn.textContent='Submitting…';}
+  try{
+    const {data,error}=await sb.from('leave_requests').insert({
+      employee_id:empId, leave_type:type,
+      start_date:start, end_date:end,
+      days, reason:reason||null,
+      status:'pending', submitted_by:currentProfile?.id
+    }).select().single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('leave_requests',data.id,'LEAVE_SUBMITTED',null,
+      {employee_id:empId,leave_type:type,days,status:'pending'},'Leave request submitted');
+    showToast('Leave request submitted for approval ✓');
+    closeModal(); loadHR('leave');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Submit Request';}}
+}
+
+async function approveLeave(leaveId, approve){
+  const action=approve?'approve':'reject';
+  const reason=approve?null:prompt('Reason for rejection:');
+  if(!approve&&(!reason||!reason.trim())) return;
+  const {data:lr}=await sb.from('leave_requests').select('status,employee_id').eq('id',leaveId).single();
+  const {error}=await sb.from('leave_requests').update({
+    status:approve?'approved':'rejected',
+    approved_by:currentProfile?.id,
+    approved_date:new Date().toISOString().split('T')[0],
+    reject_reason:reason||null,
+    updated_at:new Date().toISOString()
+  }).eq('id',leaveId);
+  if(error){showToast('Error: '+error.message,'error');return;}
+  await writeAudit('leave_requests',leaveId,approve?'LEAVE_APPROVED':'LEAVE_REJECTED',
+    {status:lr?.status},{status:approve?'approved':'rejected',reason:reason||null},
+    approve?'Leave approved':'Leave rejected: '+(reason||''));
+  showToast(approve?'Leave approved ✓':'Leave rejected');
+  loadHR('leave');
 }
 
 // ── QHSE ─────────────────────────────────────────────────────
@@ -3582,40 +3758,60 @@ async function loadCEO(){
   const today=new Date();
   const monthStr=today.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
 
-  const [projR,invR,wfR,ncrR,oppR,hrR,snapR,baseR]=await Promise.all([
+  const [projR,invR,wfR,ncrR,oppR,hrR,snapR,vendR]=await Promise.all([
     sb.from('projects').select('*'),
     sb.from('invoices').select('*'),
     sb.from('workflow_items').select('id,status,entity_type'),
     sb.from('ncrs').select('id,severity,status'),
     sb.from('opportunities').select('id,status,est_value,probability'),
-    sb.from('employees').select('id,status'),
+    sb.from('employees').select('id,status,department'),
     sb.from('project_evm_snapshots').select('project_id,snapshot_date,period_label,pv,ev,ac,spi,cpi').order('snapshot_date',{ascending:true}),
-    sb.from('v_baseline_vs_actual').select('*')
+    sb.from('vendors').select('id,is_approved,status')
   ]);
 
   const projs=projR.data||[], invs=invR.data||[], wfs=wfR.data||[];
   const ncrs=ncrR.data||[], opps=oppR.data||[], emps=hrR.data||[];
-  const snaps=snapR.data||[], bvData=baseR.data||[];
+  const snaps=snapR.data||[], vendors=vendR.data||[];
 
   // Portfolio EVM
-  const totalEV=projs.reduce((s,p)=>s+Number(p.ev),0);
-  const totalAC=projs.reduce((s,p)=>s+Number(p.ac),0);
-  const totalPV=projs.reduce((s,p)=>s+Number(p.pv),0);
-  const totalBAC=projs.reduce((s,p)=>s+Number(p.bac),0);
+  const activeProjs=projs.filter(p=>ACTIVE_STATUSES.includes(p.status));
+  const totalEV=activeProjs.reduce((s,p)=>s+Number(p.ev),0);
+  const totalAC=activeProjs.reduce((s,p)=>s+Number(p.ac),0);
+  const totalPV=activeProjs.reduce((s,p)=>s+Number(p.pv),0);
+  const totalBAC=activeProjs.reduce((s,p)=>s+Number(p.bac),0);
   const portCPI=totalAC>0?(totalEV/totalAC).toFixed(2):'1.00';
-  const portSPI=totalPV>0?(totalEV/totalPV).toFixed(2):'1.00';
-  const totalEAC=projs.reduce((p,proj)=>{
+  const portSPI=totalPV>0?(totalEV/totalPV).toFixed(2):'N/A';
+  const totalEAC=activeProjs.reduce((p,proj)=>{
     const eac=Number(proj.cpi)>0?Number(proj.ac)+(Number(proj.bac)-Number(proj.ev))/Number(proj.cpi):Number(proj.bac);
     return p+eac;
   },0);
   const totalVAC=totalBAC-totalEAC;
 
-  // Finance
+  // Finance — AR/AP/Cash Flow/Retention
   const rev=invs.filter(i=>i.invoice_type==='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
   const cost=invs.filter(i=>i.invoice_type!=='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
-  const outstanding=invs.filter(i=>i.status!=='paid'&&i.status!=='cancelled').reduce((s,i)=>s+Number(i.net_amount),0);
+  const arOutstanding=invs.filter(i=>i.invoice_type==='client'&&!['paid','cancelled'].includes(i.status)).reduce((s,i)=>s+Number(i.net_amount),0);
+  const apOutstanding=invs.filter(i=>i.invoice_type!=='client'&&!['paid','cancelled'].includes(i.status)).reduce((s,i)=>s+Number(i.net_amount),0);
+  const outstanding=arOutstanding+apOutstanding;
+  const retentionHeld=invs.filter(i=>i.invoice_type==='client'&&Number(i.retention_pct)>0&&i.status!=='cancelled').reduce((s,i)=>s+Number(i.gross_amount)*Number(i.retention_pct)/100,0);
+  const retentionReleased=invs.filter(i=>i.retention_released).reduce((s,i)=>s+Number(i.gross_amount)*Number(i.retention_pct)/100,0);
+  const overdueAR=invs.filter(i=>i.invoice_type==='client'&&!['paid','cancelled'].includes(i.status)&&i.due_date&&new Date(i.due_date)<today);
   const gp=rev-cost;
   const gpPct=rev>0?((gp/rev)*100).toFixed(1):0;
+
+  // Cash Flow — last 6 months
+  const cfMonths=[];
+  for(let i=-5;i<=0;i++){
+    const d=new Date(today.getFullYear(),today.getMonth()+i,1);
+    const m=d.toISOString().slice(0,7);
+    const inflow=invs.filter(x=>x.invoice_type==='client'&&x.status==='paid'&&x.paid_date?.startsWith(m)).reduce((s,x)=>s+Number(x.net_amount),0);
+    const outflow=invs.filter(x=>x.invoice_type!=='client'&&x.status==='paid'&&x.paid_date?.startsWith(m)).reduce((s,x)=>s+Number(x.net_amount),0);
+    cfMonths.push({m:m.slice(5)+'/'+m.slice(2,4),inflow,outflow,net:inflow-outflow});
+  }
+  const maxCF=Math.max(...cfMonths.map(c=>Math.max(c.inflow,c.outflow)),1);
+
+  // Vendor KPIs
+  const approvedVendors=vendors.filter(v=>v.is_approved).length;
 
   // RAG
   const rag=v=>v>=1?'🟢':v>=0.9?'🟡':'🔴';
@@ -3793,16 +3989,41 @@ async function loadCEO(){
   <div class="grid2" style="margin-bottom:12px">
     <div class="card">
       <div class="sec-head"><div class="sec-title"><span>💰</span>Financial Performance</div></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
         ${[
           ['Revenue Collected',fmtKWD(rev),'#10B981'],
           ['Cost Paid',fmtKWD(cost),'#EF4444'],
           ['Gross Profit',fmtKWD(gp)+' ('+gpPct+'%)',gp>=0?'#C9A84C':'#EF4444'],
-          ['Outstanding AR',fmtKWD(outstanding),'#F97316']
+          ['AR Outstanding',fmtKWD(arOutstanding),overdueAR.length>0?'#EF4444':'#F97316'],
+          ['AP Outstanding',fmtKWD(apOutstanding),'#8B5CF6'],
+          ['Retention Held',fmtKWD(retentionHeld-retentionReleased),'#3B82F6']
         ].map(([l,v,c])=>`<div style="background:${c}11;border:1px solid ${c}33;border-radius:8px;padding:10px 12px">
           <div style="color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase">${l}</div>
-          <div style="color:${c};font-size:16px;font-weight:800;margin-top:4px">${v}</div>
+          <div style="color:${c};font-size:14px;font-weight:800;margin-top:4px">${v}</div>
         </div>`).join('')}
+      </div>
+      ${overdueAR.length>0?`<div style="padding:6px 10px;background:#EF444411;border:1px solid #EF444433;border-radius:6px;font-size:10px;color:#EF4444;margin-bottom:8px">
+        ⚠️ ${overdueAR.length} overdue AR invoice(s) — ${fmtKWD(overdueAR.reduce((s,i)=>s+Number(i.net_amount),0))} at risk
+      </div>`:''}
+      <div style="margin-top:8px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px">📊 CASH FLOW — LAST 6 MONTHS</div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:4px;align-items:end;height:80px">
+          ${cfMonths.map(c=>{
+            const inH=Math.round((c.inflow/maxCF)*70)||2;
+            const outH=Math.round((c.outflow/maxCF)*70)||2;
+            return`<div style="text-align:center">
+              <div style="display:flex;gap:2px;align-items:flex-end;justify-content:center;height:70px">
+                <div style="width:10px;height:${inH}px;background:#10B981;border-radius:2px 2px 0 0" title="In: ${fmtKWD(c.inflow)}"></div>
+                <div style="width:10px;height:${outH}px;background:#EF4444;border-radius:2px 2px 0 0" title="Out: ${fmtKWD(c.outflow)}"></div>
+              </div>
+              <div style="font-size:7px;color:var(--faint)">${c.m}</div>
+              <div style="font-size:7px;font-weight:700;color:${c.net>=0?'#10B981':'#EF4444'}">${c.net>=0?'+':''}${Math.round(c.net/1000)}K</div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div style="display:flex;gap:10px;font-size:9px;color:var(--faint);margin-top:4px">
+          <span>🟢 Inflow</span><span>🔴 Outflow</span>
+        </div>
       </div>
     </div>
     <div class="card">
