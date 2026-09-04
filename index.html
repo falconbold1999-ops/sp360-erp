@@ -1017,7 +1017,7 @@ async function loadDashboard(){
           <td style="text-align:center"><span style="font-weight:700;font-size:11px">${p.pct}%</span>
           <div class="evm-bar-bg"><div class="evm-bar-fill" style="width:${Math.min(p.pct,100)}%;background:${Number(p.pct)>=75?'#10B981':Number(p.pct)>=40?'#F97316':'#EF4444'}"></div></div></td>
           <td style="text-align:center;font-weight:800;color:${cpiColor(p.cpi)}">${Number(p.cpi).toFixed(2)}</td>
-          <td style="text-align:center;font-weight:800;color:${cpiColor(p.spi)}">${Number(p.spi).toFixed(2)}</td>
+          <td style="text-align:center;font-weight:800;color:${p.spi!=null?cpiColor(p.spi):'#94A3B8'}>${p.spi!=null?Number(p.spi).toFixed(2):'N/A'}</td>
           <td style="text-align:right;font-size:11px">${fmtKWD(eac)}</td>
           <td style="text-align:center;font-weight:800;font-size:11px;color:${tcpiColor}">${tcpi}</td>
           <td style="text-align:center;font-size:16px">${rag}</td>
@@ -1348,7 +1348,7 @@ async function loadProjects(tab){
         <td style="text-align:right;color:var(--muted);font-size:11px">${fmtKWD(ev)}</td>
         <td style="text-align:right;color:var(--muted);font-size:11px">${fmtKWD(ac)}</td>
         <td style="text-align:center;font-weight:800;font-size:13px;color:${cpiColor(p.cpi)}">${Number(p.cpi).toFixed(2)}</td>
-        <td style="text-align:center;font-weight:800;font-size:13px;color:${cpiColor(p.spi)}">${Number(p.spi).toFixed(2)}</td>
+        <td style="text-align:center;font-weight:800;font-size:13px;color:${p.spi!=null?cpiColor(p.spi):'#94A3B8'}>${p.spi!=null?Number(p.spi).toFixed(2):'N/A'}</td>
         <td style="text-align:right;font-size:11px">${fmtKWD(eac)}</td>
         <td style="text-align:right;font-size:11px;color:var(--muted)">${fmtKWD(etc)}</td>
         <td style="text-align:right;font-size:11px;color:${vac>=0?'#10B981':'#EF4444'};font-weight:700">${vac>=0?'+':''}${fmtKWD(vac)}</td>
@@ -1395,19 +1395,53 @@ async function loadProjects(tab){
     // Progress Update tab
     body=`
     <div style="margin-bottom:12px;padding:10px 14px;background:#C9A84C11;border:1px solid #C9A84C33;border-radius:8px;font-size:11px;color:var(--muted)">
-      💡 Update project progress: enter actual % complete, Actual Cost (AC), and Earned Value (EV) will be auto-calculated from BAC × %
+      💡 <b style="color:var(--text)">EV Method:</b> Choose how Earned Value is measured.
+      EV = BAC × % using the selected method. &nbsp;|&nbsp;
+      <span style="color:#EF4444">SPI = N/A until a Baseline is created.</span>
     </div>
-    <table><thead><tr><th>No</th><th>Project</th><th style="text-align:right">BAC</th><th style="text-align:center">% Complete</th><th style="text-align:right">AC (KWD)</th><th style="text-align:right">EV (auto)</th><th style="text-align:center">CPI</th><th style="text-align:center">Save</th></tr></thead><tbody>
-    ${projs.filter(p=>isActiveProject(p)).map(p=>`<tr>
-      <td style="color:var(--gold);font-size:10px">${esc(p.project_no)}</td>
-      <td style="font-weight:600;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</td>
-      <td style="text-align:right;font-size:11px">${fmtKWD(p.bac)}</td>
-      <td style="text-align:center"><input type="number" id="pct_${p.id}" value="${p.pct}" min="0" max="100" style="width:60px;background:var(--n4);border:1px solid var(--bdr);border-radius:5px;padding:4px 6px;color:var(--text);font-size:12px;text-align:center" oninput="previewEV('${p.id}',${p.bac})"/>%</td>
-      <td style="text-align:right"><input type="number" id="ac_${p.id}" value="${p.ac}" min="0" style="width:90px;background:var(--n4);border:1px solid var(--bdr);border-radius:5px;padding:4px 6px;color:var(--text);font-size:12px;text-align:right" oninput="previewEV('${p.id}',${p.bac})"/></td>
-      <td style="text-align:right;font-weight:700;color:var(--gold)" id="ev_${p.id}">${fmtKWD(p.ev)}</td>
-      <td style="text-align:center;font-weight:800;color:${cpiColor(p.cpi)}" id="cpi_${p.id}">${Number(p.cpi).toFixed(2)}</td>
-      <td style="text-align:center"><button class="btn btn-primary btn-sm" onclick="saveProgress('${p.id}',${p.bac})">Save</button></td>
-    </tr>`).join('')}
+    <table><thead><tr>
+      <th>No</th><th>Project</th><th style="text-align:right">BAC</th>
+      <th style="text-align:center">EV Method</th>
+      <th style="text-align:center">% Complete</th>
+      <th style="text-align:right">AC (KWD)</th>
+      <th style="text-align:right">EV (calc)</th>
+      <th style="text-align:center">CPI</th>
+      <th style="text-align:center">SPI</th>
+      <th style="text-align:center">Save</th>
+    </tr></thead><tbody>
+    ${projs.filter(p=>isActiveProject(p)).map(p=>{
+      const evM=p.ev_method||'percent';
+      const spiVal=p.spi!=null?Number(p.spi).toFixed(2):'N/A';
+      const spiCol=p.spi!=null?cpiColor(p.spi):'#94A3B8';
+      return`<tr>
+        <td style="color:var(--gold);font-size:10px">${esc(p.project_no)}</td>
+        <td style="font-weight:600;font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</td>
+        <td style="text-align:right;font-size:11px">${fmtKWD(p.bac)}</td>
+        <td style="text-align:center">
+          <select id="evm_${p.id}" style="background:var(--n4);border:1px solid var(--bdr);border-radius:5px;padding:3px 4px;color:var(--text);font-size:10px">
+            <option value="percent"${evM==='percent'?' selected':''}>% Complete</option>
+            <option value="milestone"${evM==='milestone'?' selected':''}>Milestone</option>
+            <option value="manual"${evM==='manual'?' selected':''}>Manual EV</option>
+          </select>
+        </td>
+        <td style="text-align:center">
+          <input type="number" id="pct_${p.id}" value="${p.pct}" min="0" max="100"
+            style="width:55px;background:var(--n4);border:1px solid var(--bdr);border-radius:5px;padding:4px 5px;color:var(--text);font-size:12px;text-align:center"
+            oninput="previewEV('${p.id}',${p.bac})"/>%
+        </td>
+        <td style="text-align:right">
+          <input type="number" id="ac_${p.id}" value="${p.ac}" min="0"
+            style="width:88px;background:var(--n4);border:1px solid var(--bdr);border-radius:5px;padding:4px 5px;color:var(--text);font-size:12px;text-align:right"
+            oninput="previewEV('${p.id}',${p.bac})"/>
+        </td>
+        <td style="text-align:right;font-weight:700;color:var(--gold)" id="ev_${p.id}">${fmtKWD(p.ev)}</td>
+        <td style="text-align:center;font-weight:800;color:${cpiColor(p.cpi)}" id="cpi_${p.id}">${Number(p.cpi).toFixed(2)}</td>
+        <td style="text-align:center;font-weight:800;color:${spiCol}" id="spi_${p.id}" title="${p.spi==null?'Create a Baseline to calculate SPI':'SPI = EV / PV from Baseline'}">${spiVal}</td>
+        <td style="text-align:center">
+          <button class="btn btn-primary btn-sm" onclick="saveProgress(event,'${p.id}',${p.bac})">Save</button>
+        </td>
+      </tr>`;
+    }).join('')}
     </tbody></table>
     ${(currentProfile?.role==='PMO Manager'||currentProfile?.role==='Finance Manager')?`
     <div style="margin-top:16px;padding:12px 16px;background:#1E3A5F18;border:1px solid #1E3A5F33;border-radius:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -1689,7 +1723,7 @@ async function loadProjects(tab){
         <td style="text-align:center;font-weight:800;color:${cpiColor(p.cpi)}">${cpiNow.toFixed(3)}</td>
         <td style="text-align:center;font-size:16px">${cpiTrend}
           ${pdata.length>=2?`<div style="width:70px;height:28px;display:inline-block;vertical-align:middle;margin-left:4px"><canvas id="trend-spark-${idx}" width="70" height="28"></canvas></div>`:'<span style="color:var(--faint);font-size:9px">Need snapshots</span>'}</td>
-        <td style="text-align:center;font-weight:800;color:${cpiColor(p.spi)}">${spiNow.toFixed(3)}</td>
+        <td style="text-align:center;font-weight:800;color:${p.spi!=null?cpiColor(p.spi):'#94A3B8'}>${p.spi!=null?spiNow.toFixed(3):'N/A'}</td>
         <td style="text-align:center;font-size:16px">${spiTrend}</td>
         <td style="text-align:right;font-size:11px">${fmtKWD(eac)}</td>
         <td style="text-align:right;font-size:11px;color:var(--muted)">${fmtKWD(etc)}</td>
@@ -1775,7 +1809,7 @@ async function loadProjects(tab){
         <td style="text-align:right;font-size:11px">${fmtKWD(p.ev)}</td>
         <td style="text-align:right;font-size:11px">${fmtKWD(p.ac)}</td>
         <td style="text-align:center;font-weight:800;color:${cpiColor(p.cpi)}">${Number(p.cpi).toFixed(2)}</td>
-        <td style="text-align:center;font-weight:800;color:${cpiColor(p.spi)}">${Number(p.spi).toFixed(2)}</td>
+        <td style="text-align:center;font-weight:800;color:${p.spi!=null?cpiColor(p.spi):'#94A3B8'}>${p.spi!=null?Number(p.spi).toFixed(2):'N/A'}</td>
         <td style="text-align:right;font-size:11px">${fmtKWD(eac)}</td>
         <td style="text-align:center;font-size:16px">${rag}</td>
       </tr>`;
@@ -1852,35 +1886,53 @@ function previewEV(projId, bac){
   if(cpiEl){cpiEl.textContent=cpi;cpiEl.style.color=cpiColor(cpi);}
 }
 
-async function saveProgress(projId, bac){
-  const pct=Number(document.getElementById('pct_'+projId).value)||0;
-  const ac=Number(document.getElementById('ac_'+projId).value)||0;
-  const ev=Math.round(bac*pct/100*100)/100;
-  const cpi=ac>0?Math.round(ev/ac*100)/100:1;
-
-  // SPI = EV / PV — requires Baseline PV. If no baseline: SPI = null (N/A)
-  // Never fallback PV = EV (would always show SPI = 1.00 = misleading)
-  let pv=null;
+async function saveProgress(e, projId, bac){
+  const btn=e?.currentTarget||e?.target;
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
   try{
-    const {data:pvData}=await sb.rpc('get_current_pv',{p_project_id:projId});
-    if(pvData&&Number(pvData)>0) pv=Number(pvData);
-  }catch(e){ /* no baseline */ }
+    const pct      = Number(document.getElementById('pct_'+projId).value)||0;
+    const ac       = Number(document.getElementById('ac_'+projId).value)||0;
+    const evMethod = document.getElementById('evm_'+projId)?.value||'percent';
+    const ev       = Math.round(bac*pct/100*1000)/1000;
+    const cpi      = ac>0 ? Math.round(ev/ac*1000)/1000 : 1;
 
-  const spi = pv!==null ? Math.round(ev/pv*100)/100 : null;
+    // SPI from Baseline — null if no baseline (never fake 1.00)
+    let pv=null;
+    try{
+      const {data:pvData}=await sb.rpc('get_current_pv',{p_project_id:projId});
+      if(pvData&&Number(pvData)>0) pv=Number(pvData);
+    }catch(e2){}
+    const spi = pv!==null ? Math.round(ev/pv*1000)/1000 : null;
 
-  const {data:proj}=await sb.from('projects').select('pct,ac,ev,cpi,spi,pv,bac').eq('id',projId).single();
-  const updateData={pct,ac,ev,cpi};
-  if(pv!==null) updateData.pv=pv;
-  if(spi!==null) updateData.spi=spi;
+    const {data:proj}=await sb.from('projects').select('pct,ac,ev,cpi,spi').eq('id',projId).single();
+    const upd={pct,ac,ev,cpi,ev_method:evMethod};
+    if(pv!==null) upd.pv=pv;
+    if(spi!==null) upd.spi=spi;
 
-  const {error}=await sb.from('projects').update(updateData).eq('id',projId);
-  if(error){showToast('Error: '+error.message,'error');return;}
-  await writeAudit('projects',projId,'PROGRESS_UPDATE',
-    {pct:proj?.pct,ac:proj?.ac,ev:proj?.ev,cpi:proj?.cpi,spi:proj?.spi},
-    {pct,ac,ev,cpi,spi:spi??'N/A — No Baseline'},
-    'Progress updated');
-  showToast(spi===null?'Progress saved ✓ (SPI: N/A — Create Baseline first)':'Progress saved ✓');
-  loadProjects('progress');
+    const {error}=await sb.from('projects').update(upd).eq('id',projId);
+    if(error){showToast('Error: '+error.message,'error');return;}
+
+    await writeAudit('projects',projId,'PROGRESS_UPDATE',
+      {pct:proj?.pct,ac:proj?.ac,ev:proj?.ev,cpi:proj?.cpi,spi:proj?.spi},
+      {pct,ac,ev,cpi,spi:spi??'N/A',ev_method:evMethod},
+      'Progress updated — Method: '+evMethod);
+
+    // Live cell updates — no full page reload
+    const evEl =document.getElementById('ev_'+projId);
+    const cpiEl=document.getElementById('cpi_'+projId);
+    const spiEl=document.getElementById('spi_'+projId);
+    if(evEl)  evEl.textContent=fmtKWD(ev);
+    if(cpiEl){cpiEl.textContent=cpi.toFixed(2); cpiEl.style.color=cpiColor(cpi);}
+    if(spiEl){
+      spiEl.textContent=spi!==null?spi.toFixed(2):'N/A';
+      spiEl.style.color=spi!==null?cpiColor(spi):'#94A3B8';
+      spiEl.title=spi===null?'Create a Baseline to calculate SPI':'SPI = EV / PV from Baseline';
+    }
+    showToast(spi===null
+      ? `Saved ✓ | CPI: ${cpi.toFixed(2)} | SPI: N/A (no baseline)`
+      : `Saved ✓ | CPI: ${cpi.toFixed(2)} | SPI: ${spi.toFixed(2)}`);
+  }catch(e3){showToast('Error: '+e3.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save';}}
 }
 
 // Lifecycle Transition Matrix — only forward moves allowed, no skipping
@@ -3683,7 +3735,7 @@ async function loadCEO(){
         <td style="text-align:center">${pill(p.status)}</td>
         <td style="text-align:center;font-weight:700">${p.pct}%</td>
         <td style="text-align:center;font-weight:800;color:${cpiColor(p.cpi)}">${Number(p.cpi).toFixed(2)}</td>
-        <td style="text-align:center;font-weight:800;color:${cpiColor(p.spi)}">${Number(p.spi).toFixed(2)}</td>
+        <td style="text-align:center;font-weight:800;color:${p.spi!=null?cpiColor(p.spi):'#94A3B8'}>${p.spi!=null?Number(p.spi).toFixed(2):'N/A'}</td>
         <td style="text-align:right;font-size:11px">${fmtKWD(eac)}</td>
         <td style="text-align:right;font-size:11px;color:var(--muted)">${fmtKWD(etc)}</td>
         <td style="text-align:right;font-size:11px;color:${vac>=0?'#10B981':'#EF4444'};font-weight:700">${vac>=0?'+':''}${fmtKWD(vac)}</td>
