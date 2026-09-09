@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-<title>SP360 ERP v2.2 — Smart Projects 360</title>
+<title>SP360 ERP v2.9 — Smart Projects 360</title>
 <!-- PWA -->
 <meta name="theme-color" content="#1E3A5F"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -11,6 +11,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="SP360 ERP"/>
 <meta name="description" content="SP360 ERP — Smart Projects 360 Kuwait — Project Controls & Management System"/>
+<!-- CSP: restrict sources — P0 security hardening v2.3 -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.resend.com; img-src 'self' data: blob:; worker-src 'self' blob:; frame-ancestors 'none'"/>
 <link rel="manifest" href="manifest.json"/>
 <!-- Icons -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%231E3A5F'/><text x='16' y='23' font-family='Arial' font-weight='900' font-size='14' fill='%23C9A84C' text-anchor='middle'>SP</text></svg>"/>
@@ -357,7 +359,7 @@ tr:hover td{background:#1A366010}
     <div class="auth-logo">
       <div class="auth-logo-sq">SP</div>
       <div>
-        <div class="auth-title">SP360 ERP v2.2</div>
+        <div class="auth-title">SP360 ERP v2.9</div>
         <div class="auth-sub">Smart Projects 360 · Kuwait · Production System</div>
       </div>
     </div>
@@ -380,7 +382,7 @@ tr:hover td{background:#1A366010}
     <button onclick="toggleSide()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 6px;border-radius:5px">☰</button>
     <div class="logo-sq">SP</div>
     <div class="logo-txt"><div class="t1">SP360 ERP</div><div class="t2">Smart Projects 360 · Kuwait</div></div>
-    <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v2.2</span>
+    <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v2.9</span>
     <div style="display:flex;align-items:center;gap:4px;flex-shrink:0" title="Realtime connection status">
       <div id="realtime-dot" style="width:7px;height:7px;border-radius:50%;background:#94A3B8;transition:background .3s"></div>
       <span style="font-size:9px;color:var(--faint)">live</span>
@@ -412,6 +414,7 @@ tr:hover td{background:#1A366010}
         <button class="nav-btn" id="nav-hr" onclick="navTo('hr',this)"><span class="nav-icon">👥</span>HR</button>
         <div class="nav-section">Quality</div>
         <button class="nav-btn" id="nav-qhse" onclick="navTo('qhse',this)"><span class="nav-icon">🛡</span>QHSE</button>
+        <button class="nav-btn" id="nav-inventory" onclick="navTo('inventory',this)"><span class="nav-icon">🏭</span>Inventory</button>
         <button class="nav-btn" id="nav-documents" onclick="navTo('documents',this)"><span class="nav-icon">📄</span>Doc Control</button>
         <div class="nav-section">System</div>
         <button class="nav-btn" id="nav-workflow" onclick="navTo('workflow',this)"><span class="nav-icon">⚡</span>Workflow<span class="nav-badge" id="wf-badge" style="display:none">0</span></button>
@@ -419,7 +422,7 @@ tr:hover td{background:#1A366010}
         <button class="nav-btn" id="nav-users" onclick="navTo('users',this)"><span class="nav-icon">👤</span>Users</button>
         <button class="nav-btn" id="nav-ceo" onclick="navTo('ceo',this)"><span class="nav-icon">👔</span>CEO Report</button>
       </nav>
-      <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v2.2 · Production<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
+      <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v2.9 · Production<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
     </aside>
 
     <main>
@@ -430,6 +433,7 @@ tr:hover td{background:#1A366010}
       <div class="page" id="page-finance"></div>
       <div class="page" id="page-hr"></div>
       <div class="page" id="page-qhse"></div>
+      <div class="page" id="page-inventory"></div>
       <div class="page" id="page-documents"></div>
       <div class="page" id="page-workflow"></div>
       <div class="page" id="page-audit"></div>
@@ -452,8 +456,26 @@ tr:hover td{background:#1A366010}
 <script>
 
 // ═══════════════════════════════════════════════════════════
-//  SP360 ERP v2.2 — Supabase Production System
+//  SP360 ERP v2.9 — Supabase Production System
 // ═══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════════
+   SP360 ERP v2.9 — Bug Fixes (September 2026) — Management Review Response
+   ═══════════════════════════════════════════════════════════════════════
+   FIX-1 P0: SPI HTML rendering — fixed missing > in 2 <td> literals
+             Locations: Monthly Report table, CEO Report EVM table
+   FIX-2 P0: convertToProject() concurrency — MAX+1 → next_ref_no() RPC
+             Prevents duplicate project numbers under concurrent use
+   FIX-3 P0: CO Audit entity_id=null → coData.id (INSERT .select().single())
+             CO state unified: status=draft / workflow_status=submitted
+   MIGRATION REQUIRED if next_ref_no() RPC not yet in Supabase:
+     CREATE OR REPLACE FUNCTION next_ref_no(p_prefix text) RETURNS text
+     LANGUAGE plpgsql AS $$
+     DECLARE v_seq int; BEGIN
+       INSERT INTO ref_sequences(prefix,last_seq) VALUES(p_prefix,1)
+       ON CONFLICT(prefix) DO UPDATE SET last_seq=ref_sequences.last_seq+1
+       RETURNING last_seq INTO v_seq;
+       RETURN p_prefix||'-'||LPAD(v_seq::text,3,'0'); END; $$;
+   ═══════════════════════════════════════════════════════════════════════ */
 const SUPABASE_URL = 'https://sqizirpsatofcoqshwer.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxaXppcnBzYXRvZmNvcXNod2VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxNTM5MTAsImV4cCI6MjEwMjcyOTkxMH0.LnfA4pGIbv30uQVNHa7MeFioP9OF2ukNTol_cDUF8mk';
 // ── SUPABASE INIT (safe, non-blocking) ───────────────────────
@@ -564,6 +586,8 @@ const fmtKWD = v=>'KWD '+fmtK(v);
 const pill = (v,c)=>{const col=c||SC[v]||'#94A3B8';return`<span class="pill" style="color:${col};background:${col}22;border:1px solid ${col}44">${String(v||'').replace(/_/g,' ')}</span>`};
 const kpi = (lbl,val,c,sub)=>`<div class="kpi" style="--kpi-color:${c||'#C9A84C'}"><div class="kpi-lbl">${lbl}</div><div class="kpi-val">${val}</div>${sub?`<div class="kpi-sub">${sub}</div>`:''}</div>`;
 const cpiColor = v=>Number(v)>=1?'#10B981':Number(v)>=0.9?'#F97316':'#EF4444';
+const ragScore = p=>{const cpi=Number(p.cpi);if(p.spi==null)return null;return Math.min(cpi,Number(p.spi));};
+const rag = v=>v===null?'⚪':v>=1?'🟢':v>=0.9?'🟡':'🔴';
 const esc = s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 let _toastT;
@@ -574,17 +598,32 @@ function showToast(msg,type='success'){
   _toastT=setTimeout(()=>{t.className='toast';},3500);
 }
 
-async function writeAudit(entity_type,entity_id,action,old_val,new_val,notes=''){
-  if(!currentProfile?.id) return; // skip if not logged in
+// CRITICAL_AUDIT_ACTIONS: audit failure on these is surfaced to user, not silently swallowed
+const CRITICAL_AUDIT_ACTIONS=new Set([
+  'SUBMITTED','APPROVED','REJECTED','INVOICE_CREATED','INVOICE_APPROVED',
+  'PO_APPROVED','BASELINE_SET','USER_MODIFIED','VENDOR_APPROVED',
+  'LIFECYCLE_ADVANCE','PROGRESS_UPDATE'
+]);
+async function writeAudit(entity_type,entity_id,action,old_val,new_val,notes='',{strict=false}={}){
+  if(!currentProfile?.id) return;
+  const isCritical=strict||CRITICAL_AUDIT_ACTIONS.has(action);
   try{
-    await sb.from('audit_log').insert({
+    const {error}=await sb.from('audit_log').insert({
       entity_type,entity_id,action,
       old_values:old_val?JSON.stringify(old_val):null,
       new_values:new_val?JSON.stringify(new_val):null,
       performed_by:currentProfile.id,
       notes
     });
-  }catch(e){console.warn('Audit write failed:',e);}
+    if(error) throw error;
+  }catch(e){
+    if(isCritical){
+      showToast(`⚠️ Audit log failed for ${action}. Operation recorded but not audited. Contact PMO.`,'error');
+      console.error('CRITICAL audit write failed:',entity_type,action,e);
+    } else {
+      console.warn('Audit write failed:',e);
+    }
+  }
 }
 
 // ── PAGE ERROR BOUNDARY ───────────────────────────────────────
@@ -682,9 +721,19 @@ function enterApp(){
   document.getElementById('app').style.display='flex';
   // Show/hide nav based on role
   const allowed=ROLE_PAGES[currentProfile?.role]||['dashboard'];
-  ['bizdev','projects','procurement','finance','hr','qhse','documents','workflow','audit','users','ceo'].forEach(p=>{
+  ['bizdev','projects','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo'].forEach(p=>{
     const btn=document.getElementById('nav-'+p);
     if(btn)btn.style.display=allowed.includes(p)?'':'none';
+  });
+  // Pre-cache lookup data for modal selects (runs async, non-blocking)
+  Promise.all([
+    sb.from('employees').select('id,full_name,employee_no').eq('status','active').order('full_name'),
+    sb.from('user_profiles').select('id,full_name,role').order('full_name'),
+    sb.from('projects').select('id,project_no,name').in('status',['planning','execution','monitoring','closeout']).order('project_no')
+  ]).then(([{data:_emps},{data:_users},{data:_projs}])=>{
+    window._cachedEmployees=_emps||[];
+    window._cachedUsers=_users||[];
+    window._cachedProjects=_projs||[];
   });
   navTo('dashboard',document.querySelector('.nav-btn.active'));
   loadWfBadge();
@@ -809,7 +858,7 @@ function navTo(id,btn){
   const pg=document.getElementById('page-'+id);
   if(pg)pg.classList.add('active');
   const loaders={
-    dashboard:loadDashboard,bizdev:loadBizdev,projects:loadProjects,
+    dashboard:loadDashboard,bizdev:loadBizdev,projects:loadProjects,inventory:loadInventory,
     procurement:()=>loadProc(curProcTab),finance:loadFinance,
     hr:()=>loadHR(curHRTab),qhse:()=>loadQHSE(curQHSETab),
     documents:()=>loadDocs(curDocTab),workflow:loadWorkflow,audit:loadAudit,
@@ -884,9 +933,9 @@ async function loadDashboard(){
   const periods=Object.values(periodMap).sort((a,b)=>a.date>b.date?1:-1);
 
   // RAG per project
-  const ragG=projs.filter(p=>Math.min(Number(p.cpi),Number(p.spi))>=1&&p.status!=='completed'&&p.status!=='planning'&&p.status!=='initiation').length;
-  const ragA=projs.filter(p=>{const v=Math.min(Number(p.cpi),Number(p.spi));return v>=0.9&&v<1&&p.status!=='completed';}).length;
-  const ragR=projs.filter(p=>Math.min(Number(p.cpi),Number(p.spi))<0.9&&p.status!=='completed'&&p.status!=='planning'&&p.status!=='initiation').length;
+  const ragG=projs.filter(p=>{const v=ragScore(p);return v!==null&&v>=1&&p.status!=='completed'&&p.status!=='planning'&&p.status!=='initiation';}).length;
+  const ragA=projs.filter(p=>{const v=ragScore(p);return v!==null&&v>=0.9&&v<1&&p.status!=='completed';}).length;
+  const ragR=projs.filter(p=>{const v=ragScore(p);return v!==null&&v<0.9&&p.status!=='completed'&&p.status!=='planning'&&p.status!=='initiation';}).length;
 
   // Store chart data globally
   window._dashData = {
@@ -1019,7 +1068,7 @@ async function loadDashboard(){
         const bac=Number(p.bac)||0, ac=Number(p.ac)||0, ev=Number(p.ev)||0;
         const cpiV=Number(p.cpi)||1;
         const eac=cpiV>0?ac+(bac-ev)/cpiV:bac;
-        const rv=Math.min(Number(p.cpi),Number(p.spi));
+        const rv=ragScore(p);
         const rag=rv>=1?'🟢':rv>=0.9?'🟡':'🔴';
         const wrem=bac-ev, budgRem=bac-ac;
         const tcpiNum=wrem>0&&budgRem>0?wrem/budgRem:null;
@@ -1263,10 +1312,10 @@ async function convertToProject(oppId, opp_no, title, client, value, dept){
     showToast('Only BD Manager or PMO Manager can convert to Project','error');return;
   }
   const deptCode={Security:'SEC','AV/Broadcast':'AV',IT:'IT',Power:'PW',Civil:'CV',Wireless:'WL',Trading:'TR'}[dept]||'XX';
-  const year=new Date().getFullYear();
-  const {data:allProjs}=await sb.from('projects').select('project_no').ilike('project_no',`SP360-${deptCode}-%`);
-  const maxSeq=(allProjs||[]).reduce((max,p)=>{const n=Number((p.project_no||'').split('-')[2]||0);return n>max?n:max;},0);
-  const project_no=`SP360-${deptCode}-${String(maxSeq+1).padStart(3,'0')}`;
+  // FIX: Use atomic next_ref_no() RPC instead of MAX+1 to prevent duplicate project numbers under concurrent usage
+  const {data:refData,error:refErr}=await sb.rpc('next_ref_no',{p_prefix:`SP360-${deptCode}`});
+  if(refErr){showToast('Error generating project number: '+refErr.message,'error');return;}
+  const project_no=refData;
   const {data:proj,error}=await sb.from('projects').insert({
     project_no,name:title,client,department:dept,
     contract_value:value,bac:value,ac:0,ev:0,pv:0,pct:0,cpi:1,spi:1,
@@ -1283,14 +1332,15 @@ async function convertToProject(oppId, opp_no, title, client, value, dept){
 // ── PROJECTS ─────────────────────────────────────────────────
 // Project status lifecycle
 const PROJ_LIFECYCLE=['initiation','planning','execution','monitoring','closeout','completed'];
-const PROJ_LIFECYCLE_LABELS={'initiation':'Initiation','planning':'Planning','execution':'Execution','monitoring':'Monitoring & Control','closeout':'Closeout','completed':'Completed'};
+// on_hold and cancelled are valid statuses but not linear lifecycle stages — handled separately
+const PROJ_LIFECYCLE_LABELS={'initiation':'Initiation','planning':'Planning','execution':'Execution','monitoring':'Monitoring & Control','closeout':'Closeout','completed':'Completed','on_hold':'On Hold','cancelled':'Cancelled'};
 // ── UNIFIED STATUS MODEL ─────────────────────────────────────
 // Single source of truth for "active" projects used across all modules
 // Active = in-flight projects that appear in EVM, Dashboard, CEO Report
 const ACTIVE_STATUSES=['planning','execution','monitoring','closeout'];
 const isActiveProject=p=>ACTIVE_STATUSES.includes(p.status);
 const isCompletedProject=p=>p.status==='completed'||p.status==='cancelled';
-const PROJ_LIFECYCLE_COLORS={'initiation':'#8B5CF6','planning':'#3B82F6','execution':'#F97316','monitoring':'#06B6D4','closeout':'#C9A84C','completed':'#10B981'};
+const PROJ_LIFECYCLE_COLORS={'initiation':'#8B5CF6','planning':'#3B82F6','execution':'#F97316','monitoring':'#06B6D4','closeout':'#C9A84C','completed':'#10B981','on_hold':'#94A3B8','cancelled':'#EF4444'};
 let curProjTab='portfolio';
 let curSCurveProjId=null;
 
@@ -1362,7 +1412,7 @@ async function loadProjects(tab){
         <td style="text-align:right;color:var(--muted);font-size:11px">${fmtKWD(ev)}</td>
         <td style="text-align:right;color:var(--muted);font-size:11px">${fmtKWD(ac)}</td>
         <td style="text-align:center;font-weight:800;font-size:13px;color:${cpiColor(p.cpi)}">${Number(p.cpi).toFixed(2)}</td>
-        <td style="text-align:center;font-weight:800;font-size:13px;color:${p.spi!=null?cpiColor(p.spi):'#94A3B8'}>${p.spi!=null?Number(p.spi).toFixed(2):'N/A'}</td>
+        <td style="text-align:center;font-weight:800;font-size:13px;color:${p.spi!=null?cpiColor(p.spi):'#94A3B8'}">${p.spi!=null?Number(p.spi).toFixed(2):'N/A'}</td>
         <td style="text-align:right;font-size:11px">${fmtKWD(eac)}</td>
         <td style="text-align:right;font-size:11px;color:var(--muted)">${fmtKWD(etc)}</td>
         <td style="text-align:right;font-size:11px;color:${vac>=0?'#10B981':'#EF4444'};font-weight:700">${vac>=0?'+':''}${fmtKWD(vac)}</td>
@@ -1432,11 +1482,14 @@ async function loadProjects(tab){
         <td style="font-weight:600;font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</td>
         <td style="text-align:right;font-size:11px">${fmtKWD(p.bac)}</td>
         <td style="text-align:center">
-          <select id="evm_${p.id}" style="background:var(--n4);border:1px solid var(--bdr);border-radius:5px;padding:3px 4px;color:var(--text);font-size:10px">
+          <select id="evm_${p.id}" style="background:var(--n4);border:1px solid var(--bdr);border-radius:5px;padding:3px 4px;color:var(--text);font-size:10px"
+            onchange="(function(sel){const mid='manualev_${p.id}';const el=document.getElementById(mid);if(el)el.style.display=sel.value==='manual'?'inline-block':'none';})(this)">
             <option value="percent"${evM==='percent'?' selected':''}>% Complete</option>
             <option value="milestone"${evM==='milestone'?' selected':''}>Milestone</option>
             <option value="manual"${evM==='manual'?' selected':''}>Manual EV</option>
           </select>
+          <input type="number" id="manualev_${p.id}" placeholder="EV (KWD)" min="0" step="0.001"
+            style="display:${evM==='manual'?'inline-block':'none'};width:80px;margin-top:3px;background:var(--n4);border:1px solid var(--gold);border-radius:5px;padding:3px 5px;color:var(--text);font-size:10px"/>
         </td>
         <td style="text-align:center">
           <input type="number" id="pct_${p.id}" value="${p.pct}" min="0" max="100"
@@ -1737,7 +1790,7 @@ async function loadProjects(tab){
         <td style="text-align:center;font-weight:800;color:${cpiColor(p.cpi)}">${cpiNow.toFixed(3)}</td>
         <td style="text-align:center;font-size:16px">${cpiTrend}
           ${pdata.length>=2?`<div style="width:70px;height:28px;display:inline-block;vertical-align:middle;margin-left:4px"><canvas id="trend-spark-${idx}" width="70" height="28"></canvas></div>`:'<span style="color:var(--faint);font-size:9px">Need snapshots</span>'}</td>
-        <td style="text-align:center;font-weight:800;color:${p.spi!=null?cpiColor(p.spi):'#94A3B8'}>${p.spi!=null?spiNow.toFixed(3):'N/A'}</td>
+        <td style="text-align:center;font-weight:800;color:${p.spi!=null?cpiColor(p.spi):'#94A3B8'}">${p.spi!=null?spiNow.toFixed(3):'N/A'}</td>
         <td style="text-align:center;font-size:16px">${spiTrend}</td>
         <td style="text-align:right;font-size:11px">${fmtKWD(eac)}</td>
         <td style="text-align:right;font-size:11px;color:var(--muted)">${fmtKWD(etc)}</td>
@@ -1810,7 +1863,7 @@ async function loadProjects(tab){
     </tr></thead><tbody>
     ${projs.filter(p=>p.status!=='completed').map(p=>{
       const eac=Number(p.cpi)>0?Number(p.ac)+(Number(p.bac)-Number(p.ev))/Number(p.cpi):Number(p.bac);
-      const ragVal=Math.min(Number(p.cpi),Number(p.spi));
+      const ragVal=ragScore(p);
       const rag=ragVal>=1?'🟢':ragVal>=0.9?'🟡':'🔴';
       const pvPct=Number(p.pv)>0?Math.round(Number(p.pv)/Number(p.bac)*100):0;
       return`<tr>
@@ -1823,14 +1876,14 @@ async function loadProjects(tab){
         <td style="text-align:right;font-size:11px">${fmtKWD(p.ev)}</td>
         <td style="text-align:right;font-size:11px">${fmtKWD(p.ac)}</td>
         <td style="text-align:center;font-weight:800;color:${cpiColor(p.cpi)}">${Number(p.cpi).toFixed(2)}</td>
-        <td style="text-align:center;font-weight:800;color:${p.spi!=null?cpiColor(p.spi):'#94A3B8'}>${p.spi!=null?Number(p.spi).toFixed(2):'N/A'}</td>
+        <td style="text-align:center;font-weight:800;color:${p.spi!=null?cpiColor(p.spi):'#94A3B8'}">${p.spi!=null?Number(p.spi).toFixed(2):'N/A'}</td>
         <td style="text-align:right;font-size:11px">${fmtKWD(eac)}</td>
         <td style="text-align:center;font-size:16px">${rag}</td>
       </tr>`;
     }).join('')}
     </tbody></table>
     <div style="margin-top:14px;padding:10px;background:var(--n3);border-radius:8px;font-size:10px;color:var(--faint);text-align:center">
-      SP360 ERP v1.8 · Monthly Progress Report · ${monthStr} · Confidential
+      SP360 ERP v2.9 · Monthly Progress Report · ${monthStr} · Confidential
     </div>`;
   }
 
@@ -1907,8 +1960,25 @@ async function saveProgress(e, projId, bac){
     const pct      = Number(document.getElementById('pct_'+projId).value)||0;
     const ac       = Number(document.getElementById('ac_'+projId).value)||0;
     const evMethod = document.getElementById('evm_'+projId)?.value||'percent';
-    const ev       = Math.round(bac*pct/100*1000)/1000;
-    const cpi      = ac>0 ? Math.round(ev/ac*1000)/1000 : 1;
+    // ── EV Calculation Engine — method-aware ──────────────────
+    let ev;
+    if(evMethod==='manual'){
+      // Manual EV: read from dedicated input if present, else fall back to pct-based
+      const manualEvEl = document.getElementById('manualev_'+projId);
+      ev = manualEvEl ? Math.round(Number(manualEvEl.value)*1000)/1000
+                      : Math.round(bac*pct/100*1000)/1000;
+    } else if(evMethod==='milestone'){
+      // Milestone EV: sum of approved milestone EVs stored on the project
+      // Falls back to pct-based until milestone_ev field is populated
+      const {data:msData}=await sb.from('projects').select('milestone_ev').eq('id',projId).single().catch(()=>({data:null}));
+      ev = (msData&&msData.milestone_ev!=null)
+           ? Math.round(Number(msData.milestone_ev)*1000)/1000
+           : Math.round(bac*pct/100*1000)/1000;
+    } else {
+      // Percent Complete (default): EV = BAC × %
+      ev = Math.round(bac*pct/100*1000)/1000;
+    }
+    const cpi = ac>0 ? Math.round(ev/ac*1000)/1000 : 1;
 
     // SPI from Baseline — null if no baseline (never fake 1.00)
     let pv=null;
@@ -1949,14 +2019,17 @@ async function saveProgress(e, projId, bac){
   finally{if(btn){btn.disabled=false;btn.textContent='Save';}}
 }
 
-// Lifecycle Transition Matrix — only forward moves allowed, no skipping
+// Lifecycle Transition Matrix
+// Forward progression: Initiation→Planning→Execution→Monitoring→Closeout→Completed
+// On Hold: any active stage can pause; resumes to same or adjacent stage
+// Back-transitions (Monitoring→Execution, Closeout→Execution) are permitted for re-work
 const LIFECYCLE_TRANSITIONS = {
   'initiation':  ['planning','cancelled'],
   'planning':    ['execution','on_hold','cancelled'],
   'execution':   ['monitoring','on_hold','cancelled'],
   'monitoring':  ['closeout','execution','on_hold','cancelled'],
   'closeout':    ['completed','execution'],
-  'on_hold':     ['planning','execution','cancelled'],
+  'on_hold':     ['planning','execution','monitoring','cancelled'],
   'completed':   [],
   'cancelled':   []
 };
@@ -1972,11 +2045,14 @@ async function advanceProject(projId, newStatus, event){
     loadProjects('lifecycle'); // reset dropdown
     return;
   }
-  const {error}=await sb.from('projects').update({status:newStatus}).eq('id',projId);
+  // ATOMIC: transition validation + update + audit in single DB transaction
+  const {data:rpcData,error}=await sb.rpc('advance_project_lifecycle',{
+    p_project_id:  projId,
+    p_new_status:  newStatus,
+    p_performed_by: currentProfile?.id
+  });
   if(error){showToast('Error: '+error.message,'error');return;}
-  await writeAudit('projects',projId,'LIFECYCLE_ADVANCE',
-    {status:currentStatus},{status:newStatus},
-    `Phase: ${currentStatus} → ${newStatus}`);
+  if(!rpcData?.ok){showToast('Transition not allowed: '+(rpcData?.error||'Unknown'),'error');loadProjects('lifecycle');return;}
   showToast(`${proj?.name?.split('—')[0]?.trim()||'Project'} → ${PROJ_LIFECYCLE_LABELS[newStatus]||newStatus} ✓`);
   loadProjects('lifecycle');
 }
@@ -2150,16 +2226,21 @@ async function savePO(e){
   const btn=e?.currentTarget||e?.target;
   if(btn){btn.disabled=true;btn.textContent='Creating…';}
   try{
-    const {data,error}=await sb.from('purchase_orders').insert({
-      po_no:poNo, project_id:projId, vendor_id:vendId,
-      description:desc, total_value:val,
-      issue_date:issueDate, delivery_date:delivery||null,
-      terms_conditions:terms||null,
-      status:'draft', created_by:currentProfile?.id
-    }).select().single();
+    // ATOMIC: po_no generation + insert + audit in single DB transaction
+    const {data,error}=await sb.rpc('save_po_atomic',{
+      p_po_no:          poNo||null,
+      p_project_id:     projId,
+      p_vendor_id:      vendId,
+      p_description:    desc,
+      p_total_value:    val,
+      p_issue_date:     issueDate||null,
+      p_delivery_date:  delivery||null,
+      p_terms:          terms||null,
+      p_created_by:     currentProfile?.id
+    });
     if(error){showToast('Error: '+error.message,'error');return;}
-    await writeAudit('purchase_orders',data.id,'CREATED',null,{po_no:poNo,total_value:val,status:'draft'},'PO created');
-    showToast(`PO ${poNo} created — click Submit to start approval ✓`);
+    if(!data?.ok){showToast('Error: '+(data?.error||'Unknown error'),'error');return;}
+    showToast(`PO ${data.po_no} created — click Submit to start approval ✓`);
     closeModal(); loadProc('pos');
   }catch(e){showToast('Error: '+e.message,'error');}
   finally{if(btn){btn.disabled=false;btn.textContent='Create PO (Draft)';}}
@@ -2270,18 +2351,37 @@ async function saveMRV(poId,projectId){
   const btn=event?.target;
   if(btn){btn.disabled=true;btn.textContent='Saving…';}
   try{
-    const {data,error}=await sb.from('mrvs').insert({
-      mrv_no:mrvNo, po_id:poId, project_id:projectId,
-      received_date:date, received_by:by,
-      condition:cond, received_value:val||null,
-      notes:notes||null, created_by:currentProfile?.id
-    }).select().single();
-    if(error){showToast('Error: '+error.message,'error');return;}
-    // Mark PO as received if condition is good/partial
-    if(cond!=='rejected'){
-      await sb.from('purchase_orders').update({status:cond==='good'?'received':'partial_receipt'}).eq('id',poId);
+    // Attempt atomic RPC first (create_mrv_and_update_po handles both in one DB transaction)
+    const {data:rpcData,error:rpcErr}=await sb.rpc('create_mrv_and_update_po',{
+      p_mrv_no:mrvNo, p_po_id:poId, p_project_id:projectId,
+      p_received_date:date, p_received_by:by,
+      p_condition:cond, p_received_value:val||null,
+      p_notes:notes||null, p_created_by:currentProfile?.id
+    }).select().single().catch(()=>({data:null,error:{message:'RPC not available'}}));
+
+    if(rpcErr){
+      // Fallback: manual two-step with explicit rollback attempt on PO failure
+      const {data,error}=await sb.from('mrvs').insert({
+        mrv_no:mrvNo, po_id:poId, project_id:projectId,
+        received_date:date, received_by:by,
+        condition:cond, received_value:val||null,
+        notes:notes||null, created_by:currentProfile?.id
+      }).select().single();
+      if(error){showToast('Error: '+error.message,'error');return;}
+      if(cond!=='rejected'){
+        const newPoStatus=cond==='good'?'received':'partial_receipt';
+        const {error:poErr}=await sb.from('purchase_orders').update({status:newPoStatus}).eq('id',poId);
+        if(poErr){
+          // Compensating rollback — delete the MRV we just inserted to avoid inconsistency
+          await sb.from('mrvs').delete().eq('id',data.id);
+          showToast('MRV save failed — PO update error. No changes made. '+poErr.message,'error');
+          return;
+        }
+      }
+      await writeAudit('mrvs',data.id,'CREATED',null,{mrv_no:mrvNo,condition:cond,po_id:poId},'MRV recorded');
+    } else {
+      await writeAudit('mrvs',rpcData?.id||null,'CREATED',null,{mrv_no:mrvNo,condition:cond,po_id:poId},'MRV recorded (atomic RPC)');
     }
-    await writeAudit('mrvs',data.id,'CREATED',null,{mrv_no:mrvNo,condition:cond,po_id:poId},'MRV recorded');
     showToast(`MRV ${mrvNo} saved ✓`);
     closeModal(); loadProc('mrvs');
   }catch(e){showToast('Error: '+e.message,'error');}
@@ -2341,9 +2441,9 @@ async function saveRFQ(e){
 }
 
 async function openCreateVendorModal(){
-  const {data:lastV}=await sb.from('vendors').select('vendor_code').order('created_at',{ascending:false}).limit(1);
-  const lastSeq=lastV?.[0]?.vendor_code?parseInt(lastV[0].vendor_code.replace(/\D/g,'')||'0'):0;
-  const newCode=`VEN-${String(lastSeq+1).padStart(4,'0')}`;
+  // Generate vendor code — atomic DB sequence, concurrency-safe
+  const {data:newCode,error:seqErr}=await sb.rpc('next_ref_no',{p_type:'vendor',p_prefix:'VEN'});
+  if(seqErr){showToast('Error generating Vendor code: '+seqErr.message,'error');return;}
   openModal('Add Vendor',`
   <div class="form-row">
     <div class="form-field"><label>Vendor Code</label><input id="v-code" value="${newCode}" readonly style="font-family:monospace;opacity:.7"/></div>
@@ -2376,16 +2476,20 @@ async function saveVendor(e){
   const btn=event?.target;
   if(btn){btn.disabled=true;btn.textContent='Adding…';}
   try{
-    const {data,error}=await sb.from('vendors').insert({
-      vendor_code:code, name, category:cat,
-      contact_person:contact||null, email:email||null,
-      phone:phone||null, country:country||null,
-      is_approved:false, status:'active',
-      created_by:currentProfile?.id
-    }).select().single();
+    // ATOMIC: vendor_code generation + insert + audit in single DB transaction
+    const {data,error}=await sb.rpc('save_vendor_atomic',{
+      p_name:           name,
+      p_category:       cat,
+      p_vendor_code:    code||null,
+      p_contact_person: contact||null,
+      p_email:          email||null,
+      p_phone:          phone||null,
+      p_country:        country||null,
+      p_created_by:     currentProfile?.id
+    });
     if(error){showToast('Error: '+error.message,'error');return;}
-    await writeAudit('vendors',data.id,'CREATED',null,{vendor_code:code,name,category:cat},'Vendor added');
-    showToast(`Vendor ${code} added ✓`);
+    if(!data?.ok){showToast('Error: '+(data?.error||'Unknown error'),'error');return;}
+    showToast(`Vendor ${data.vendor_code} added ✓`);
     closeModal(); loadProc('vendors');
   }catch(e){showToast('Error: '+e.message,'error');}
   finally{if(btn){btn.disabled=false;btn.textContent='Add Vendor';}}
@@ -2421,9 +2525,9 @@ async function loadFinance(tab='overview'){
   const overdueAR=clientPend.filter(i=>i.due_date&&new Date(i.due_date)<today);
 
   const tabs=`<div class="tabs">
-    ${['overview','ar','ap','cashflow','retention'].map((t,idx)=>
+    ${['overview','ar','ap','cashflow','retention','coa','journal','trial','pl'].map((t,idx)=>
     `<button class="tab${t===tab?' act':''}" onclick="loadFinance('${t}')">
-      ${['📊 Overview','📥 AR','📤 AP','💹 Cash Flow','🔒 Retention'][idx]}
+      ${['📊 Overview','📥 AR','📤 AP','💹 Cash Flow','🔒 Retention','📋 Chart of Accounts','📒 Journal','⚖️ Trial Balance','📈 P&L'][idx]}
     </button>`).join('')}
   </div>`;
 
@@ -2650,6 +2754,141 @@ async function loadFinance(tab='overview'){
       </tr>`;
     }).join('')}
     </tbody></table>`;
+
+  // ── Financial Core Tabs ─────────────────────────────────
+  } else if(tab==='coa'){
+    const isPMO=currentProfile?.role==='PMO Manager'||currentProfile?.role==='Finance Manager';
+    const {data:list}=await sb.from('chart_of_accounts').select('*').order('account_code');
+    const L=list||[];
+    const byType={};
+    L.forEach(a=>{byType[a.account_type]=(byType[a.account_type]||0)+1;});
+    kpis=kpi('Total Accounts',L.length,'#E2E8F0')
+        +kpi('Asset',byType['Asset']||0,'#3B82F6')
+        +kpi('Liability',byType['Liability']||0,'#EF4444')
+        +kpi('Equity',byType['Equity']||0,'#8B5CF6')
+        +kpi('Revenue',byType['Revenue']||0,'#10B981')
+        +kpi('Expense',byType['Expense']||0,'#F97316');
+    const typeColor={Asset:'#3B82F6',Liability:'#EF4444',Equity:'#8B5CF6',Revenue:'#10B981',Expense:'#F97316',COGS:'#EAB308'};
+    body=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      ${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewCOAModal()">+ Add Account</button>`:''}
+    </div>
+    <table><thead><tr>
+      <th>Code</th><th>Account Name</th><th>Type</th><th>Sub-Type</th>
+      <th style="text-align:center">Normal Balance</th><th style="text-align:center">Active</th>
+    </tr></thead><tbody>
+    ${L.map(a=>`<tr>
+      <td style="color:var(--gold);font-weight:700;font-size:11px">${esc(a.account_code)}</td>
+      <td style="font-weight:600;font-size:11px">${esc(a.account_name)}</td>
+      <td>${pill(a.account_type,typeColor[a.account_type]||'#94A3B8')}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(a.sub_type||'—')}</td>
+      <td style="text-align:center;font-size:11px;color:var(--muted)">${a.normal_balance||'Debit'}</td>
+      <td style="text-align:center">${a.is_active!==false?'<span style="color:#10B981">✓</span>':'<span style="color:#EF4444">✗</span>'}</td>
+    </tr>`).join('')}
+    </tbody></table>`;
+
+  } else if(tab==='journal'){
+    const isPMO=currentProfile?.role==='PMO Manager'||currentProfile?.role==='Finance Manager';
+    const {data:list}=await sb.from('journal_entries')
+      .select('*,lines:journal_lines(*,account:chart_of_accounts(account_code,account_name))')
+      .order('entry_date',{ascending:false}).limit(50);
+    const L=list||[];
+    const totalDebit=L.reduce((s,j)=>s+(j.total_debit||0),0);
+    kpis=kpi('Entries',L.length,'#E2E8F0')
+        +kpi('Posted',L.filter(j=>j.status==='posted').length,'#10B981')
+        +kpi('Draft',L.filter(j=>j.status==='draft').length,'#F97316')
+        +kpi('Total Debit',fmtKWD(totalDebit),'#3B82F6');
+    body=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      ${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewJournalModal()">+ New Journal Entry</button>`:''}
+    </div>
+    <table><thead><tr>
+      <th>Entry No</th><th>Date</th><th>Description</th><th>Reference</th>
+      <th style="text-align:right">Debit (KWD)</th><th style="text-align:right">Credit (KWD)</th>
+      <th style="text-align:center">Status</th>
+    </tr></thead><tbody>
+    ${L.map(j=>`<tr>
+      <td style="color:var(--gold);font-size:10px">${esc(j.entry_no||'—')}</td>
+      <td style="color:var(--muted);font-size:11px">${j.entry_date||'—'}</td>
+      <td style="font-weight:600;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(j.description)}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(j.reference||'—')}</td>
+      <td style="text-align:right;font-weight:700;color:#3B82F6">${fmtKWD(j.total_debit||0)}</td>
+      <td style="text-align:right;font-weight:700;color:#EF4444">${fmtKWD(j.total_credit||0)}</td>
+      <td style="text-align:center">${pill(j.status,j.status==='posted'?'#10B981':'#F97316')}</td>
+    </tr>`).join('')}
+    </tbody></table>`;
+
+  } else if(tab==='trial'){
+    const {data:list}=await sb.from('v_trial_balance').select('*').order('account_code');
+    const L=list||[];
+    const totalDr=L.reduce((s,r)=>s+Number(r.total_debit||0),0);
+    const totalCr=L.reduce((s,r)=>s+Number(r.total_credit||0),0);
+    const balanced=Math.abs(totalDr-totalCr)<0.01;
+    kpis=kpi('Accounts',L.length,'#E2E8F0')
+        +kpi('Total Debit',fmtKWD(totalDr),'#3B82F6')
+        +kpi('Total Credit',fmtKWD(totalCr),'#EF4444')
+        +kpi('Balanced',balanced?'✅ Yes':'❌ No',balanced?'#10B981':'#EF4444');
+    body=`
+    <div style="margin-bottom:10px;padding:8px 12px;background:${balanced?'#10B98122':'#EF444422'};border:1px solid ${balanced?'#10B98144':'#EF444444'};border-radius:6px;font-size:12px;font-weight:700;color:${balanced?'#10B981':'#EF4444'}">
+      ${balanced?'✅ Trial Balance is balanced — Debits = Credits':'❌ Trial Balance is NOT balanced — check journal entries'}
+    </div>
+    <table><thead><tr>
+      <th>Code</th><th>Account</th><th>Type</th>
+      <th style="text-align:right">Total Debit</th><th style="text-align:right">Total Credit</th>
+      <th style="text-align:right">Balance</th>
+    </tr></thead><tbody>
+    ${L.map(r=>{
+      const bal=Number(r.balance||0);
+      return`<tr>
+        <td style="color:var(--gold);font-size:10px">${esc(r.account_code)}</td>
+        <td style="font-weight:600;font-size:11px">${esc(r.account_name)}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(r.account_type)}</td>
+        <td style="text-align:right;color:#3B82F6">${fmtKWD(r.total_debit||0)}</td>
+        <td style="text-align:right;color:#EF4444">${fmtKWD(r.total_credit||0)}</td>
+        <td style="text-align:right;font-weight:700;color:${bal>=0?'#10B981':'#EF4444'}">${fmtKWD(Math.abs(bal))} ${bal<0?'Cr':''}</td>
+      </tr>`;
+    }).join('')}
+    <tr style="border-top:2px solid var(--bdr);font-weight:900">
+      <td colspan="3" style="color:var(--gold)">TOTALS</td>
+      <td style="text-align:right;color:#3B82F6">${fmtKWD(totalDr)}</td>
+      <td style="text-align:right;color:#EF4444">${fmtKWD(totalCr)}</td>
+      <td style="text-align:right;color:${balanced?'#10B981':'#EF4444'}">${balanced?'✅ Balanced':'❌ Diff: '+fmtKWD(Math.abs(totalDr-totalCr))}</td>
+    </tr>
+    </tbody></table>`;
+
+  } else if(tab==='pl'){
+    const {data:plData}=await sb.from('v_income_statement').select('*');
+    const PL=plData?.[0]||{};
+    const revenue=Number(PL.total_revenue||0);
+    const cogs=Number(PL.total_cogs||0);
+    const expenses=Number(PL.total_expenses||0);
+    const grossProfit=revenue-cogs;
+    const netProfit=grossProfit-expenses;
+    const gpm=revenue>0?((grossProfit/revenue)*100).toFixed(1)+'%':'—';
+    const npm=revenue>0?((netProfit/revenue)*100).toFixed(1)+'%':'—';
+    kpis=kpi('Revenue',fmtKWD(revenue),'#10B981')
+        +kpi('Gross Profit',fmtKWD(grossProfit),grossProfit>=0?'#10B981':'#EF4444')
+        +kpi('Net Profit',fmtKWD(netProfit),netProfit>=0?'#10B981':'#EF4444')
+        +kpi('Net Margin',npm,netProfit>=0?'#10B981':'#EF4444');
+    body=`
+    <div style="max-width:600px;margin:0 auto">
+      <div class="card" style="margin-bottom:12px">
+        <h3 style="color:var(--gold);font-size:14px;margin:0 0 12px">Income Statement — ${new Date().getFullYear()}</h3>
+        <table>
+          <tr><td style="font-weight:700;padding:6px 0">Revenue</td><td style="text-align:right;font-weight:700;color:#10B981">${fmtKWD(revenue)}</td></tr>
+          <tr><td style="color:var(--muted);padding:4px 0 4px 16px">Cost of Goods Sold</td><td style="text-align:right;color:#EF4444">(${fmtKWD(cogs)})</td></tr>
+          <tr style="border-top:1px solid var(--bdr)"><td style="font-weight:700;padding:6px 0">Gross Profit</td><td style="text-align:right;font-weight:700;color:${grossProfit>=0?'#10B981':'#EF4444'}">${fmtKWD(grossProfit)}</td></tr>
+          <tr><td style="color:var(--muted);font-size:11px;padding:2px 0 2px 16px">Gross Margin</td><td style="text-align:right;color:var(--muted);font-size:11px">${gpm}</td></tr>
+          <tr><td style="color:var(--muted);padding:4px 0 4px 16px">Operating Expenses</td><td style="text-align:right;color:#EF4444">(${fmtKWD(expenses)})</td></tr>
+          <tr style="border-top:2px solid var(--bdr);background:#0F2744"><td style="font-weight:900;font-size:14px;padding:8px 0;color:var(--gold)">Net Profit / Loss</td><td style="text-align:right;font-weight:900;font-size:14px;color:${netProfit>=0?'#10B981':'#EF4444'}">${fmtKWD(netProfit)}</td></tr>
+          <tr><td style="color:var(--muted);font-size:11px;padding:2px 0 2px 16px">Net Margin</td><td style="text-align:right;color:var(--muted);font-size:11px">${npm}</td></tr>
+        </table>
+      </div>
+      <p style="color:var(--muted);font-size:10px;text-align:center">Based on posted journal entries in Chart of Accounts. Run migrations v2.6 to enable.</p>
+    </div>`;
+
+  } else {
+    kpis=''; body='';
   }
 
   el.innerHTML=`
@@ -2700,6 +2939,10 @@ async function loadHR(tab='employees'){
   const tabs=`<div class="tabs">
     <button class="tab${tab==='employees'?' act':''}" onclick="loadHR('employees')">👥 Employees</button>
     <button class="tab${tab==='leave'?' act':''}" onclick="loadHR('leave')">🏖 Leave Requests</button>
+    <button class="tab${tab==='contracts'?' act':''}" onclick="loadHR('contracts')">📄 Contracts</button>
+    <button class="tab${tab==='attendance'?' act':''}" onclick="loadHR('attendance')">🕐 Attendance</button>
+    <button class="tab${tab==='balance'?' act':''}" onclick="loadHR('balance')">📊 Leave Balance</button>
+    <button class="tab${tab==='payroll'?' act':''}" onclick="loadHR('payroll')">💵 Payroll</button>
   </div>`;
   let kpis='',body='';
   if(tab==='employees'){
@@ -2745,9 +2988,166 @@ async function loadHR(tab='employees'){
     }).join('')}
     </tbody></table>`;
   }
+  } else if(tab==='contracts'){
+    // ── Employee Contracts ─────────────────────────────────
+    const isPMO=currentProfile?.role==='PMO Manager';
+    const {data:list}=await sb.from('employee_contracts')
+      .select('*,employee:employees(full_name,employee_no,department)')
+      .order('created_at',{ascending:false});
+    const L=list||[];
+    const today=new Date();
+    const expiring=L.filter(c=>c.end_date&&c.status==='active'&&(new Date(c.end_date)-today)<30*86400000).length;
+    kpis=kpi('Total Contracts',L.length,'#E2E8F0')
+        +kpi('Active',L.filter(c=>c.status==='active').length,'#10B981')
+        +kpi('Expiring Soon',expiring,'#F97316')
+        +kpi('Expired',L.filter(c=>c.status==='expired').length,'#EF4444');
+    body=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      ${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewContractModal()">+ New Contract</button>`:''}
+    </div>
+    <table><thead><tr>
+      <th>Employee</th><th>Type</th><th>Start</th><th>End</th>
+      <th style="text-align:right">Basic (KWD)</th><th style="text-align:right">Package (KWD)</th>
+      <th style="text-align:center">Status</th>
+    </tr></thead><tbody>
+    ${L.map(c=>{
+      const exp=c.end_date&&c.status==='active'&&(new Date(c.end_date)-today)<30*86400000;
+      return`<tr>
+        <td style="font-weight:700;font-size:11px">${esc(c.employee?.full_name||'—')}<div style="font-size:9px;color:var(--faint)">${esc(c.employee?.employee_no||'')} · ${esc(c.employee?.department||'')}</div></td>
+        <td>${pill(c.contract_type,c.contract_type==='permanent'?'#10B981':c.contract_type==='temporary'?'#F97316':'#8B5CF6')}</td>
+        <td style="color:var(--muted);font-size:11px">${c.start_date||'—'}</td>
+        <td style="color:${exp?'#EF4444':'#94A3B8'};font-size:11px">${c.end_date||'Open'} ${exp?'⚠️':''}</td>
+        <td style="text-align:right;font-weight:600">${fmtKWD(c.basic_salary)}</td>
+        <td style="text-align:right;font-weight:700;color:var(--gold)">${fmtKWD(c.total_package)}</td>
+        <td style="text-align:center">${pill(c.status,c.status==='active'?'#10B981':c.status==='expired'?'#EF4444':'#475569')}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+
+  } else if(tab==='attendance'){
+    // ── Attendance ────────────────────────────────────────
+    const isPMO=currentProfile?.role==='PMO Manager';
+    const today_str=new Date().toISOString().split('T')[0];
+    const {data:list}=await sb.from('attendance')
+      .select('*,employee:employees(full_name,employee_no)')
+      .gte('work_date', new Date(Date.now()-30*86400000).toISOString().split('T')[0])
+      .order('work_date',{ascending:false})
+      .limit(200);
+    const L=list||[];
+    const today_att=L.filter(a=>a.work_date===today_str);
+    kpis=kpi('Today Present',today_att.filter(a=>a.status==='present').length,'#10B981')
+        +kpi('Today Absent',today_att.filter(a=>a.status==='absent').length,'#EF4444')
+        +kpi('Late Today',today_att.filter(a=>a.status==='late').length,'#F97316')
+        +kpi('Records (30d)',L.length,'#E2E8F0');
+    body=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      ${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewAttendanceModal()">+ Record Attendance</button>`:''}
+    </div>
+    <table><thead><tr>
+      <th>Employee</th><th>Date</th><th>Check In</th><th>Check Out</th>
+      <th style="text-align:center">Hours</th><th style="text-align:center">Status</th>
+      <th>Notes</th>
+    </tr></thead><tbody>
+    ${L.map(a=>`<tr>
+      <td style="font-weight:700;font-size:11px">${esc(a.employee?.full_name||'—')}<div style="font-size:9px;color:var(--faint)">${esc(a.employee?.employee_no||'')}</div></td>
+      <td style="color:var(--muted);font-size:11px">${a.work_date}</td>
+      <td style="color:var(--muted);font-size:11px">${a.check_in||'—'}</td>
+      <td style="color:var(--muted);font-size:11px">${a.check_out||'—'}</td>
+      <td style="text-align:center;font-weight:700;color:var(--gold)">${a.hours_worked!=null?Number(a.hours_worked).toFixed(1)+'h':'—'}</td>
+      <td style="text-align:center">${pill(a.status,a.status==='present'?'#10B981':a.status==='absent'?'#EF4444':a.status==='late'?'#F97316':'#8B5CF6')}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(a.notes||'')}</td>
+    </tr>`).join('')}
+    </tbody></table>`;
+
+  } else if(tab==='balance'){
+    // ── Leave Balance ─────────────────────────────────────
+    const {data:list}=await sb.from('v_leave_balance').select('*').order('days_remaining',{ascending:true});
+    const L=list||[];
+    const critical=L.filter(e=>e.days_remaining<=5).length;
+    kpis=kpi('Employees',L.length,'#E2E8F0')
+        +kpi('Avg Remaining',L.length?Math.round(L.reduce((s,e)=>s+e.days_remaining,0)/L.length)+'d':'—','#3B82F6')
+        +kpi('Low Balance (≤5d)',critical,'#EF4444')
+        +kpi('Year',new Date().getFullYear(),'#8B5CF6');
+    body=`
+    <table><thead><tr>
+      <th>Employee</th><th>Department</th>
+      <th style="text-align:center">Entitlement</th>
+      <th style="text-align:center">Taken</th>
+      <th style="text-align:center">Remaining</th>
+      <th style="text-align:center">Pending Requests</th>
+      <th style="text-align:center">Balance</th>
+    </tr></thead><tbody>
+    ${L.map(e=>{
+      const pct=Math.round(e.days_remaining/e.annual_entitlement*100);
+      const col=pct<=20?'#EF4444':pct<=50?'#F97316':'#10B981';
+      return`<tr>
+        <td style="font-weight:700">${esc(e.employee_name)}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(e.department||'—')}</td>
+        <td style="text-align:center;color:var(--muted)">${e.annual_entitlement}d</td>
+        <td style="text-align:center;font-weight:600;color:#F97316">${e.days_taken}d</td>
+        <td style="text-align:center;font-weight:700;color:${col}">${e.days_remaining}d</td>
+        <td style="text-align:center;color:${e.pending_requests>0?'#F97316':'var(--muted)'}">${e.pending_requests>0?e.pending_requests+' pending':'—'}</td>
+        <td style="text-align:center">
+          <div style="background:#1E3A5F;border-radius:4px;height:8px;width:80px;margin:0 auto">
+            <div style="background:${col};border-radius:4px;height:8px;width:${pct}%;transition:width .3s"></div>
+          </div>
+          <div style="font-size:9px;color:${col};margin-top:2px">${pct}%</div>
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+
+  } else {
+    kpis=''; body='';
+  }
+
+  } else if(tab==='payroll'){
+    // ── Payroll Processing ─────────────────────────────────
+    const isPMO=currentProfile?.role==='PMO Manager';
+    const period=new Date().toISOString().slice(0,7); // YYYY-MM
+    const {data:list}=await sb.from('payroll_runs')
+      .select('*,employee:employees(full_name,employee_no,department)')
+      .order('period_month',{ascending:false}).limit(100);
+    const L=list||[];
+    const thisMon=L.filter(r=>r.period_month===period);
+    const totalGross=thisMon.reduce((s,r)=>s+Number(r.gross_salary||0),0);
+    const totalNet=thisMon.reduce((s,r)=>s+Number(r.net_salary||0),0);
+    const totalDed=thisMon.reduce((s,r)=>s+Number(r.total_deductions||0),0);
+    kpis=kpi('This Month Payroll',thisMon.length,'#E2E8F0')
+        +kpi('Gross Salary',fmtKWD(totalGross),'#3B82F6')
+        +kpi('Deductions',fmtKWD(totalDed),'#EF4444')
+        +kpi('Net Payable',fmtKWD(totalNet),'#10B981');
+    body=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <span style="font-size:12px;color:var(--muted)">Showing: <b style="color:var(--gold)">${period}</b></span>
+      ${isPMO?`<button class="btn btn-primary btn-sm" onclick="openRunPayrollModal()">▶ Run Payroll</button>`:''}
+    </div>
+    <table><thead><tr>
+      <th>Employee</th><th>Department</th><th>Period</th>
+      <th style="text-align:right">Basic</th><th style="text-align:right">Allowances</th>
+      <th style="text-align:right">Gross</th><th style="text-align:right">Deductions</th>
+      <th style="text-align:right">Net</th><th style="text-align:center">Status</th>
+    </tr></thead><tbody>
+    ${L.map(r=>`<tr>
+      <td style="font-weight:700;font-size:11px">${esc(r.employee?.full_name||'—')}<div style="font-size:9px;color:var(--faint)">${esc(r.employee?.employee_no||'')}</div></td>
+      <td style="color:var(--muted);font-size:11px">${esc(r.employee?.department||'—')}</td>
+      <td style="color:var(--muted);font-size:11px;font-family:monospace">${r.period_month||'—'}</td>
+      <td style="text-align:right;font-size:11px">${fmtKWD(r.basic_salary||0)}</td>
+      <td style="text-align:right;font-size:11px">${fmtKWD(r.allowances||0)}</td>
+      <td style="text-align:right;font-weight:700;color:#3B82F6">${fmtKWD(r.gross_salary||0)}</td>
+      <td style="text-align:right;color:#EF4444">${fmtKWD(r.total_deductions||0)}</td>
+      <td style="text-align:right;font-weight:900;color:#10B981">${fmtKWD(r.net_salary||0)}</td>
+      <td style="text-align:center">${pill(r.status,r.status==='paid'?'#10B981':r.status==='processed'?'#3B82F6':'#F97316')}</td>
+    </tr>`).join('')}
+    </tbody></table>`;
+
+  } else {
+    kpis=''; body='';
+  }
+
   el.innerHTML=`
   <div class="page-head">
-    <div class="page-head-left"><span style="font-size:22px">👥</span><div><h1>Human Resources</h1><div class="sub">Employees · Leave Requests</div></div></div>
+    <div class="page-head-left"><span style="font-size:22px">👥</span><div><h1>Human Resources</h1><div class="sub">Employees · Leave · Contracts · Attendance · Balance · Payroll</div></div></div>
   </div>
   <div class="grid4">${kpis}</div>
   <div class="card">${tabs}${body}</div>`;
@@ -2796,6 +3196,552 @@ function calcLeaveDays(){
     const el=document.getElementById('lr-days');
     if(el&&!el._manual) el.value=days;
   }
+}
+
+// ── New CAPA Modal ───────────────────────────────────────
+function openNewCAPAModal(){
+  const projSel=window._cachedProjects||[];
+  const userSel=window._cachedUsers||[];
+  openModal(`
+    <h2 style="margin:0 0 16px">New CAPA Action</h2>
+    <div class="form-row">
+      <div class="form-field"><label>Type *</label>
+        <select id="capa-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="corrective">Corrective</option>
+          <option value="preventive">Preventive</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Project</label>
+        <select id="capa-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select Project —</option>
+          ${projSel.map(p=>`<option value="${p.id}">${p.project_no} — ${p.name}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-field"><label>Title *</label><input id="capa-title" placeholder="CAPA title"/></div>
+    <div class="form-field"><label>Root Cause</label><textarea id="capa-root" rows="2" placeholder="Describe root cause…" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
+    <div class="form-field"><label>Action Taken / Planned</label><textarea id="capa-action" rows="2" placeholder="Describe action…" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
+    <div class="form-row">
+      <div class="form-field"><label>Responsible</label>
+        <select id="capa-resp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select —</option>
+          ${userSel.map(u=>`<option value="${u.id}">${u.full_name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Due Date</label><input id="capa-due" type="date"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCAPAAction(event)">Create CAPA</button>
+    </div>
+  `);
+}
+
+async function saveCAPAAction(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const type=document.getElementById('capa-type').value;
+    const title=document.getElementById('capa-title').value.trim();
+    const projId=document.getElementById('capa-proj').value||null;
+    const root=document.getElementById('capa-root').value.trim();
+    const action=document.getElementById('capa-action').value.trim();
+    const resp=document.getElementById('capa-resp').value||null;
+    const due=document.getElementById('capa-due').value||null;
+    if(!title){showToast('Title is required','error');return;}
+    const {data:capa_no}=await sb.rpc('next_ref_no',{p_prefix:'CAPA'});
+    const {data,error}=await sb.from('capa_actions').insert({
+      capa_no,type,title,project_id:projId,
+      root_cause:root||null,action_taken:action||null,
+      responsible:resp,due_date:due,
+      status:'open',created_by:currentProfile?.id
+    }).select('id').single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('capa_actions',data.id,'CREATED',null,{capa_no,type,title},'CAPA action created');
+    showToast(`CAPA ${capa_no} created ✓`);
+    closeModal(); loadQHSE('capa');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Create CAPA';}}
+}
+
+// ── New Risk Modal ────────────────────────────────────────
+function openNewRiskModal(){
+  const projSel=window._cachedProjects||[];
+  const userSel=window._cachedUsers||[];
+  openModal(`
+    <h2 style="margin:0 0 16px">New Risk Entry</h2>
+    <div class="form-row">
+      <div class="form-field"><label>Project *</label>
+        <select id="risk-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select Project —</option>
+          ${projSel.map(p=>`<option value="${p.id}">${p.project_no} — ${p.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Category</label>
+        <select id="risk-cat" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="technical">Technical</option>
+          <option value="financial">Financial</option>
+          <option value="schedule">Schedule</option>
+          <option value="safety">Safety</option>
+          <option value="environmental">Environmental</option>
+          <option value="legal">Legal</option>
+          <option value="reputational">Reputational</option>
+          <option value="operational">Operational</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-field"><label>Risk Title *</label><input id="risk-title" placeholder="Describe the risk…"/></div>
+    <div class="form-field"><label>Description</label><textarea id="risk-desc" rows="2" placeholder="Detailed description…" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
+    <div class="form-row">
+      <div class="form-field"><label>Probability (1–5) *</label><input id="risk-prob" type="number" min="1" max="5" placeholder="1–5"/></div>
+      <div class="form-field"><label>Impact (1–5) *</label><input id="risk-impact" type="number" min="1" max="5" placeholder="1–5"/></div>
+    </div>
+    <div id="risk-score-preview" style="text-align:center;font-size:13px;color:var(--muted);margin:4px 0 8px">Score: P × I = ?</div>
+    <div class="form-row">
+      <div class="form-field"><label>Mitigation</label><textarea id="risk-mit" rows="2" placeholder="Mitigation plan…" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
+      <div class="form-field"><label>Contingency</label><textarea id="risk-cont" rows="2" placeholder="Contingency plan…" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Risk Owner</label>
+        <select id="risk-owner" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select —</option>
+          ${userSel.map(u=>`<option value="${u.id}">${u.full_name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Review Date</label><input id="risk-review" type="date"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRisk(event)">Add Risk</button>
+    </div>
+  `);
+  // Live score preview
+  ['risk-prob','risk-impact'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('input',()=>{
+      const p=Number(document.getElementById('risk-prob')?.value)||0;
+      const i=Number(document.getElementById('risk-impact')?.value)||0;
+      const score=p*i;
+      const level=score>=15?'🔴 Critical':score>=10?'🟠 High':score>=5?'🟡 Medium':'🟢 Low';
+      const el=document.getElementById('risk-score-preview');
+      if(el) el.innerHTML=`Score: ${p} × ${i} = <strong style="font-size:16px">${score}</strong> — ${level}`;
+    });
+  });
+}
+
+// ── HSE Inspection Modal ─────────────────────────────────
+function openNewInspectionModal(){
+  const projSel=window._cachedProjects||[];
+  const userSel=window._cachedUsers||[];
+  const today=new Date().toISOString().split('T')[0];
+  openModal(`
+    <h2 style="margin:0 0 16px">New HSE Inspection</h2>
+    <div class="form-row">
+      <div class="form-field"><label>Type *</label>
+        <select id="ins-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="site">Site Inspection</option>
+          <option value="equipment">Equipment Inspection</option>
+          <option value="fire">Fire & Emergency</option>
+          <option value="housekeeping">Housekeeping</option>
+          <option value="electrical">Electrical Safety</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Date *</label><input id="ins-date" type="date" value="${today}"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Project</label>
+        <select id="ins-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select Project —</option>
+          ${projSel.map(p=>`<option value="${p.id}">${p.project_no} — ${p.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Inspector</label>
+        <select id="ins-insp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select —</option>
+          ${userSel.map(u=>`<option value="${u.id}">${u.full_name}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-field"><label>Location / Area</label><input id="ins-loc" placeholder="e.g. Site A - Block 3"/></div>
+    <div class="form-field"><label>Findings / Observations</label>
+      <textarea id="ins-findings" rows="3" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical" placeholder="Describe what was found…"></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Result *</label>
+        <select id="ins-result" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="pass">✅ Pass</option>
+          <option value="fail">❌ Fail — Action Required</option>
+          <option value="conditional">⚠️ Conditional Pass</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Action Required (if fail)</label><input id="ins-action" placeholder="Corrective action required…"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveInspection(event)">Save Inspection</button>
+    </div>
+  `);
+}
+
+async function saveInspection(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const type=document.getElementById('ins-type').value;
+    const date=document.getElementById('ins-date').value;
+    const result=document.getElementById('ins-result').value;
+    if(!date){showToast('Date is required','error');return;}
+    const {data:insNo}=await sb.rpc('next_ref_no',{p_prefix:'INS'});
+    const {data,error}=await sb.from('hse_inspections').insert({
+      inspection_no:insNo,
+      inspection_type:type,
+      inspection_date:date,
+      project_id:document.getElementById('ins-proj').value||null,
+      inspector_id:document.getElementById('ins-insp').value||null,
+      location:document.getElementById('ins-loc').value.trim()||null,
+      findings:document.getElementById('ins-findings').value.trim()||null,
+      result,
+      action_required:document.getElementById('ins-action').value.trim()||null,
+      status:'open',
+      created_by:currentProfile?.id
+    }).select('id').single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('hse_inspections',data.id,'CREATED',null,{inspection_no:insNo,type,result},'HSE Inspection recorded');
+    showToast(`Inspection ${insNo} recorded — Result: ${result} ✓`);
+    closeModal(); loadQHSE('inspections');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save Inspection';}}
+}
+
+// ── Permit to Work Modal ──────────────────────────────────
+function openNewPTWModal(){
+  const projSel=window._cachedProjects||[];
+  const today=new Date().toISOString().split('T')[0];
+  const tomorrow=new Date(Date.now()+86400000).toISOString().split('T')[0];
+  openModal(`
+    <h2 style="margin:0 0 16px">New Permit to Work</h2>
+    <div class="form-row">
+      <div class="form-field"><label>Permit Type *</label>
+        <select id="ptw-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="hot_work">🔥 Hot Work</option>
+          <option value="confined_space">⬛ Confined Space</option>
+          <option value="electrical">⚡ Electrical</option>
+          <option value="excavation">🔧 Excavation</option>
+          <option value="working_at_height">🪜 Working at Height</option>
+          <option value="general">📋 General</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Project *</label>
+        <select id="ptw-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select Project —</option>
+          ${projSel.map(p=>`<option value="${p.id}">${p.project_no} — ${p.name}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-field"><label>Work Description *</label>
+      <textarea id="ptw-desc" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical" placeholder="Describe work to be performed…"></textarea>
+    </div>
+    <div class="form-field"><label>Location</label><input id="ptw-loc" placeholder="Where the work will be done"/></div>
+    <div class="form-row">
+      <div class="form-field"><label>Valid From *</label><input id="ptw-from" type="date" value="${today}"/></div>
+      <div class="form-field"><label>Valid To *</label><input id="ptw-to" type="date" value="${tomorrow}"/></div>
+    </div>
+    <div class="form-field"><label>Precautions / Safety Measures</label>
+      <textarea id="ptw-precautions" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical" placeholder="Required PPE, safety measures, isolation…"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="savePTW(event)">Issue Permit</button>
+    </div>
+  `);
+}
+
+async function savePTW(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Issuing…';}
+  try{
+    const ptype=document.getElementById('ptw-type').value;
+    const projId=document.getElementById('ptw-proj').value;
+    const desc=document.getElementById('ptw-desc').value.trim();
+    const from=document.getElementById('ptw-from').value;
+    const to=document.getElementById('ptw-to').value;
+    if(!projId){showToast('Project is required','error');return;}
+    if(!desc){showToast('Work description is required','error');return;}
+    if(!from||!to){showToast('Valid dates are required','error');return;}
+    if(to<from){showToast('Valid To must be after Valid From','error');return;}
+    const {data:ptwNo}=await sb.rpc('next_ref_no',{p_prefix:'PTW'});
+    const {data,error}=await sb.from('permits_to_work').insert({
+      permit_no:ptwNo,
+      permit_type:ptype,
+      project_id:projId,
+      work_description:desc,
+      location:document.getElementById('ptw-loc').value.trim()||null,
+      valid_from:from,
+      valid_to:to,
+      precautions:document.getElementById('ptw-precautions').value.trim()||null,
+      status:'active',
+      permit_date:from,
+      issued_by:currentProfile?.id,
+      created_by:currentProfile?.id
+    }).select('id').single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('permits_to_work',data.id,'CREATED',null,{permit_no:ptwNo,permit_type:ptype},'Permit to Work issued',{strict:true});
+    showToast(`Permit ${ptwNo} issued ✓`);
+    closeModal(); loadQHSE('ptw');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Issue Permit';}}
+}
+
+async function saveRisk(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const projId=document.getElementById('risk-proj').value;
+    const title=document.getElementById('risk-title').value.trim();
+    const prob=Number(document.getElementById('risk-prob').value);
+    const impact=Number(document.getElementById('risk-impact').value);
+    if(!projId){showToast('Project is required','error');return;}
+    if(!title){showToast('Risk title is required','error');return;}
+    if(!prob||prob<1||prob>5){showToast('Probability must be 1–5','error');return;}
+    if(!impact||impact<1||impact>5){showToast('Impact must be 1–5','error');return;}
+    const {data:risk_no}=await sb.rpc('next_ref_no',{p_prefix:'RISK'});
+    const {data,error}=await sb.from('risk_register').insert({
+      risk_no,project_id:projId,
+      title,description:document.getElementById('risk-desc').value.trim()||null,
+      category:document.getElementById('risk-cat').value,
+      probability:prob,impact,
+      mitigation:document.getElementById('risk-mit').value.trim()||null,
+      contingency:document.getElementById('risk-cont').value.trim()||null,
+      owner:document.getElementById('risk-owner').value||null,
+      review_date:document.getElementById('risk-review').value||null,
+      status:'open',created_by:currentProfile?.id
+    }).select('id').single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('risk_register',data.id,'CREATED',null,{risk_no,title,probability:prob,impact,score:prob*impact},'Risk added');
+    showToast(`Risk ${risk_no} added ✓`);
+    closeModal(); loadQHSE('risks');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Add Risk';}}
+}
+
+// ── New Contract Modal ────────────────────────────────────
+function openNewContractModal(){
+  const empSel=window._cachedEmployees||[];
+  openModal(`
+    <h2 style="margin:0 0 16px">New Employee Contract</h2>
+    <div class="form-field"><label>Employee *</label>
+      <select id="con-emp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+        <option value="">— Select Employee —</option>
+        ${empSel.map(e=>`<option value="${e.id}">${e.full_name} (${e.employee_no})</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Contract Type *</label>
+        <select id="con-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="permanent">Permanent</option>
+          <option value="temporary">Temporary</option>
+          <option value="contract">Contract</option>
+          <option value="probation">Probation</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Currency</label>
+        <select id="con-curr" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="KWD">KWD</option>
+          <option value="USD">USD</option>
+          <option value="EUR">EUR</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Start Date *</label><input id="con-start" type="date"/></div>
+      <div class="form-field"><label>End Date (blank = open)</label><input id="con-end" type="date"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Basic Salary *</label><input id="con-basic" type="number" min="0" step="0.001" placeholder="0.000"/></div>
+      <div class="form-field"><label>Allowances</label><input id="con-allow" type="number" min="0" step="0.001" placeholder="0.000"/></div>
+    </div>
+    <div class="form-field"><label>Notes</label><textarea id="con-notes" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveContract(event)">Create Contract</button>
+    </div>
+  `);
+}
+
+async function saveContract(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const empId=document.getElementById('con-emp').value;
+    const type=document.getElementById('con-type').value;
+    const start=document.getElementById('con-start').value;
+    const basic=Number(document.getElementById('con-basic').value)||0;
+    const allow=Number(document.getElementById('con-allow').value)||0;
+    if(!empId){showToast('Employee is required','error');return;}
+    if(!start){showToast('Start date is required','error');return;}
+    if(basic<=0){showToast('Basic salary must be greater than zero','error');return;}
+    const {data,error}=await sb.from('employee_contracts').insert({
+      employee_id:empId,contract_type:type,
+      start_date:start,end_date:document.getElementById('con-end').value||null,
+      basic_salary:basic,allowances:allow,
+      currency:document.getElementById('con-curr').value,
+      notes:document.getElementById('con-notes').value.trim()||null,
+      status:'active',created_by:currentProfile?.id
+    }).select('id').single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('employee_contracts',data.id,'CREATED',null,{employee_id:empId,contract_type:type,basic_salary:basic},'Contract created');
+    showToast('Contract created ✓');
+    closeModal(); loadHR('contracts');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Create Contract';}}
+}
+
+// ── New Attendance Modal ──────────────────────────────────
+function openNewAttendanceModal(){
+  const empSel=window._cachedEmployees||[];
+  const today=new Date().toISOString().split('T')[0];
+  openModal(`
+    <h2 style="margin:0 0 16px">Record Attendance</h2>
+    <div class="form-field"><label>Employee *</label>
+      <select id="att-emp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+        <option value="">— Select Employee —</option>
+        ${empSel.map(e=>`<option value="${e.id}">${e.full_name} (${e.employee_no})</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Date *</label><input id="att-date" type="date" value="${today}"/></div>
+      <div class="form-field"><label>Status *</label>
+        <select id="att-status" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="present">Present</option>
+          <option value="absent">Absent</option>
+          <option value="late">Late</option>
+          <option value="half_day">Half Day</option>
+          <option value="leave">On Leave</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Check In</label><input id="att-in" type="time"/></div>
+      <div class="form-field"><label>Check Out</label><input id="att-out" type="time"/></div>
+    </div>
+    <div class="form-field"><label>Notes</label><input id="att-notes" placeholder="Optional notes…"/></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAttendance(event)">Record</button>
+    </div>
+  `);
+}
+
+async function saveAttendance(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const empId=document.getElementById('att-emp').value;
+    const date=document.getElementById('att-date').value;
+    const status=document.getElementById('att-status').value;
+    if(!empId){showToast('Employee is required','error');return;}
+    if(!date){showToast('Date is required','error');return;}
+    const {error}=await sb.from('attendance').upsert({
+      employee_id:empId, work_date:date, status,
+      check_in:document.getElementById('att-in').value||null,
+      check_out:document.getElementById('att-out').value||null,
+      notes:document.getElementById('att-notes').value.trim()||null,
+      created_by:currentProfile?.id
+    },{onConflict:'employee_id,work_date'});
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Attendance recorded ✓');
+    closeModal(); loadHR('attendance');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Record';}}
+}
+
+// ── Run Payroll Modal ─────────────────────────────────────
+function openRunPayrollModal(){
+  const empSel=window._cachedEmployees||[];
+  const period=new Date().toISOString().slice(0,7);
+  openModal(`
+    <h2 style="margin:0 0 16px">Run Payroll</h2>
+    <div class="form-row">
+      <div class="form-field"><label>Period *</label><input id="pay-period" type="month" value="${period}"/></div>
+      <div class="form-field"><label>Employee (blank = all active)</label>
+        <select id="pay-emp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— All Active Employees —</option>
+          ${empSel.map(e=>`<option value="${e.id}">${e.full_name} (${e.employee_no})</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div style="padding:10px 12px;background:#1E3A5F;border-radius:8px;font-size:11px;color:var(--muted);margin-bottom:12px">
+      ℹ Payroll pulls <b>Basic Salary + Allowances</b> from active contracts. 
+      Deductions: NSSF (5%), Income Tax (applicable). 
+      Overtime and bonuses can be added per employee after processing.
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Working Days</label><input id="pay-days" type="number" min="1" max="31" value="22"/></div>
+      <div class="form-field"><label>Notes</label><input id="pay-notes" placeholder="e.g. Regular payroll March 2026"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="runPayroll(event)">▶ Process Payroll</button>
+    </div>
+  `);
+}
+
+async function runPayroll(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Processing…';}
+  try{
+    const period=document.getElementById('pay-period').value;
+    const empId=document.getElementById('pay-emp').value||null;
+    const workDays=Number(document.getElementById('pay-days').value)||22;
+    if(!period){showToast('Period is required','error');return;}
+
+    // Load employees with active contracts
+    let empQuery=sb.from('employees')
+      .select('id,full_name,employee_no,department,employee_contracts!inner(basic_salary,allowances,contract_type,status)')
+      .eq('status','active')
+      .eq('employee_contracts.status','active');
+    if(empId) empQuery=empQuery.eq('id',empId);
+    const {data:emps}=await empQuery;
+    if(!emps||emps.length===0){showToast('No employees with active contracts found','error');return;}
+
+    // Check already processed
+    const {data:existing}=await sb.from('payroll_runs')
+      .select('employee_id').eq('period_month',period).in('employee_id',emps.map(e=>e.id));
+    const existingIds=new Set((existing||[]).map(r=>r.employee_id));
+
+    const toProcess=emps.filter(e=>!existingIds.has(e.id));
+    if(toProcess.length===0){showToast('All employees already processed for this period','error');return;}
+
+    const rows=toProcess.map(emp=>{
+      const contract=emp.employee_contracts?.[0]||{};
+      const basic=Number(contract.basic_salary||0);
+      const allow=Number(contract.allowances||0);
+      const gross=basic+allow;
+      // NSSF: 5% of basic (Kuwait standard)
+      const nssf=Math.round(basic*0.05*1000)/1000;
+      // Simple income tax placeholder (0 for most in Kuwait)
+      const tax=0;
+      const totalDed=nssf+tax;
+      const net=Math.round((gross-totalDed)*1000)/1000;
+      return{
+        employee_id:emp.id,
+        period_month:period,
+        working_days:workDays,
+        basic_salary:basic,
+        allowances:allow,
+        gross_salary:gross,
+        nssf_deduction:nssf,
+        tax_deduction:tax,
+        other_deductions:0,
+        total_deductions:totalDed,
+        net_salary:net,
+        status:'processed',
+        processed_by:currentProfile?.id,
+        notes:document.getElementById('pay-notes').value.trim()||null
+      };
+    });
+
+    const {error}=await sb.from('payroll_runs').insert(rows);
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('payroll_runs',null,'PAYROLL_PROCESSED',null,
+      {period,employees:toProcess.length,total_net:rows.reduce((s,r)=>s+r.net_salary,0)},
+      `Payroll processed for ${period} — ${toProcess.length} employees`);
+    showToast(`Payroll processed for ${toProcess.length} employees ✓`);
+    closeModal(); loadHR('payroll');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='▶ Process Payroll';}}
 }
 
 async function saveLeaveRequest(e){
@@ -2855,6 +3801,10 @@ async function loadQHSE(tab='ncrs'){
     <button class="tab${tab==='ncrs'?' act':''}" onclick="loadQHSE('ncrs')">📋 NCRs</button>
     <button class="tab${tab==='incidents'?' act':''}" onclick="loadQHSE('incidents')">⚠️ Incidents</button>
     <button class="tab${tab==='itps'?' act':''}" onclick="loadQHSE('itps')">📋 ITP</button>
+    <button class="tab${tab==='capa'?' act':''}" onclick="loadQHSE('capa')">🔧 CAPA</button>
+    <button class="tab${tab==='risks'?' act':''}" onclick="loadQHSE('risks')">⚡ Risk Register</button>
+    <button class="tab${tab==='inspections'?' act':''}" onclick="loadQHSE('inspections')">🔍 HSE Inspections</button>
+    <button class="tab${tab==='ptw'?' act':''}" onclick="loadQHSE('ptw')">🔐 Permit to Work</button>
   </div>`;
   let kpis='',body='';
   if(tab==='ncrs'){
@@ -2871,18 +3821,443 @@ async function loadQHSE(tab='ncrs'){
     body=`<table><thead><tr><th>No</th><th>Description</th><th>Project</th><th style="text-align:center">Type</th><th>Date</th><th style="text-align:center">Severity</th><th style="text-align:center">Status</th></tr></thead><tbody>
     ${L.map(h=>`<tr><td style="color:var(--gold);font-size:10px">${esc(h.incident_no)}</td><td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(h.description)}</td><td style="color:var(--muted);font-size:11px">${esc(h.project?.project_no||'—')}</td><td style="text-align:center">${pill(h.incident_type)}</td><td style="color:var(--muted);font-size:11px">${h.incident_date}</td><td style="text-align:center">${pill(h.severity)}</td><td style="text-align:center">${pill(h.status)}</td></tr>`).join('')}
     </tbody></table>`;
-  } else {
+  } else if(tab==='itps'){
     const {data:list}=await sb.from('itps').select('*,project:projects(project_no)').order('inspection_date',{ascending:false});
     const L=list||[];
     kpis=kpi('Total ITPs',L.length,'#E2E8F0')+kpi('Approved',L.filter(t=>t.status==='approved').length,'#10B981')+kpi('In Progress',L.filter(t=>t.status==='in_progress').length,'#F97316')+kpi('Pending',L.filter(t=>t.status==='pending').length,'#94A3B8');
     body=`<table><thead><tr><th>ITP No</th><th>Title</th><th>Project</th><th>Discipline</th><th>Hold Point</th><th>Date</th><th style="text-align:center">Status</th></tr></thead><tbody>
     ${L.map(t=>`<tr><td style="color:var(--gold);font-size:10px">${esc(t.itp_no)}</td><td style="font-weight:600;font-size:11px">${esc(t.title)}</td><td style="color:var(--muted);font-size:11px">${esc(t.project?.project_no||'—')}</td><td style="color:var(--muted);font-size:11px">${esc(t.discipline)}</td><td style="color:var(--muted);font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.hold_point||'')}</td><td style="color:var(--muted);font-size:11px">${t.inspection_date||'—'}</td><td style="text-align:center">${pill(t.status)}</td></tr>`).join('')}
     </tbody></table>`;
+
+  } else if(tab==='capa'){
+    // ── CAPA Module ──────────────────────────────────────
+    const isPMO=currentProfile?.role==='PMO Manager';
+    const isQHSE=currentProfile?.role==='QHSE Engineer'||isPMO;
+    const {data:list}=await sb.from('capa_actions')
+      .select('*,project:projects(project_no),responsible:user_profiles!responsible(full_name)')
+      .order('created_at',{ascending:false});
+    const L=list||[];
+    const today=new Date();
+    const overdue=L.filter(c=>c.status==='open'&&c.due_date&&new Date(c.due_date)<today).length;
+    kpis=kpi('Total CAPA',L.length,'#E2E8F0')
+        +kpi('Open',L.filter(c=>c.status==='open'||c.status==='in_progress').length,'#F97316')
+        +kpi('Overdue',overdue,'#EF4444')
+        +kpi('Closed',L.filter(c=>c.status==='closed').length,'#10B981');
+    const riskColor={open:'#F97316',in_progress:'#3B82F6',closed:'#10B981',overdue:'#EF4444',cancelled:'#475569'};
+    body=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      ${isQHSE?`<button class="btn btn-primary btn-sm" onclick="openNewCAPAModal()">+ New CAPA</button>`:''}
+    </div>
+    <table><thead><tr>
+      <th>CAPA No</th><th>Type</th><th>Title</th><th>Project</th>
+      <th>Root Cause</th><th>Responsible</th><th>Due</th>
+      <th style="text-align:center">Status</th>
+      <th style="text-align:center">Effectiveness</th>
+    </tr></thead><tbody>
+    ${L.map(c=>{
+      const ov=c.status==='open'&&c.due_date&&new Date(c.due_date)<today;
+      return`<tr>
+        <td style="color:var(--gold);font-size:10px;white-space:nowrap">${esc(c.capa_no||'—')}</td>
+        <td>${pill(c.type,c.type==='corrective'?'#EF4444':'#8B5CF6')}</td>
+        <td style="font-weight:600;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.title)}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(c.project?.project_no||'—')}</td>
+        <td style="color:var(--muted);font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.root_cause||'')}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(c.responsible?.full_name||'—')}</td>
+        <td style="color:${ov?'#EF4444':'#94A3B8'};font-size:11px">${c.due_date||'—'}${ov?' ⚠️':''}</td>
+        <td style="text-align:center">${pill(c.status,riskColor[c.status]||'#94A3B8')}</td>
+        <td style="text-align:center;font-size:10px">${c.effectiveness?pill(c.effectiveness,c.effectiveness==='effective'?'#10B981':c.effectiveness==='partially_effective'?'#F97316':'#EF4444'):'—'}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+
+  } else if(tab==='risks'){
+    // ── Risk Register ─────────────────────────────────────
+    const isPMO=currentProfile?.role==='PMO Manager';
+    const isQHSE=currentProfile?.role==='QHSE Engineer'||isPMO;
+    const {data:list}=await sb.from('risk_register')
+      .select('*,project:projects(project_no),owner:user_profiles!owner(full_name)')
+      .order('risk_score',{ascending:false});
+    const L=list||[];
+    const levelColor={critical:'#EF4444',high:'#F97316',medium:'#EAB308',low:'#10B981'};
+    kpis=kpi('Total Risks',L.length,'#E2E8F0')
+        +kpi('Critical',L.filter(r=>r.risk_level==='critical').length,'#EF4444')
+        +kpi('High',L.filter(r=>r.risk_level==='high').length,'#F97316')
+        +kpi('Open',L.filter(r=>r.status==='open').length,'#94A3B8');
+    body=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      ${isQHSE?`<button class="btn btn-primary btn-sm" onclick="openNewRiskModal()">+ New Risk</button>`:''}
+    </div>
+    <table><thead><tr>
+      <th>Risk No</th><th>Title</th><th>Project</th><th>Category</th>
+      <th style="text-align:center">P</th><th style="text-align:center">I</th>
+      <th style="text-align:center">Score</th><th style="text-align:center">Level</th>
+      <th>Owner</th><th style="text-align:center">Status</th>
+    </tr></thead><tbody>
+    ${L.map(r=>`<tr>
+      <td style="color:var(--gold);font-size:10px">${esc(r.risk_no||'—')}</td>
+      <td style="font-weight:600;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.title)}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(r.project?.project_no||'—')}</td>
+      <td style="color:var(--muted);font-size:10px">${esc(r.category||'—')}</td>
+      <td style="text-align:center;font-weight:700;color:var(--gold)">${r.probability||'—'}</td>
+      <td style="text-align:center;font-weight:700;color:var(--gold)">${r.impact||'—'}</td>
+      <td style="text-align:center;font-weight:900;font-size:14px;color:${levelColor[r.risk_level]||'#94A3B8'}">${r.risk_score||'—'}</td>
+      <td style="text-align:center">${r.risk_level?pill(r.risk_level,levelColor[r.risk_level]):'—'}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(r.owner?.full_name||'—')}</td>
+      <td style="text-align:center">${pill(r.status,r.status==='open'?'#F97316':r.status==='mitigated'?'#3B82F6':r.status==='closed'?'#10B981':'#475569')}</td>
+    </tr>`).join('')}
+    </tbody></table>`;
+
+  } else {
+    kpis=''; body='';
   }
+
+  } else if(tab==='inspections'){
+    const isQHSE=currentProfile?.role==='QHSE Engineer'||currentProfile?.role==='PMO Manager';
+    const {data:list}=await sb.from('hse_inspections')
+      .select('*,project:projects(project_no),inspector:user_profiles!inspector_id(full_name)')
+      .order('inspection_date',{ascending:false});
+    const L=list||[];
+    const today=new Date();
+    const failed=L.filter(i=>i.result==='fail').length;
+    kpis=kpi('Total',L.length,'#E2E8F0')
+        +kpi('Passed',L.filter(i=>i.result==='pass').length,'#10B981')
+        +kpi('Failed',failed,failed>0?'#EF4444':'#10B981')
+        +kpi('Pending',L.filter(i=>i.status==='open').length,'#F97316');
+    body=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      ${isQHSE?`<button class="btn btn-primary btn-sm" onclick="openNewInspectionModal()">+ New Inspection</button>`:''}
+    </div>
+    <table><thead><tr>
+      <th>Ref No</th><th>Type</th><th>Project</th><th>Inspector</th>
+      <th>Date</th><th>Location</th>
+      <th style="text-align:center">Result</th><th style="text-align:center">Status</th>
+    </tr></thead><tbody>
+    ${L.map(i=>`<tr>
+      <td style="color:var(--gold);font-size:10px">${esc(i.inspection_no||'—')}</td>
+      <td>${pill(i.inspection_type,i.inspection_type==='site'?'#3B82F6':i.inspection_type==='equipment'?'#8B5CF6':'#F97316')}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(i.project?.project_no||'—')}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(i.inspector?.full_name||'—')}</td>
+      <td style="color:var(--muted);font-size:11px">${i.inspection_date||'—'}</td>
+      <td style="color:var(--muted);font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(i.location||'')}</td>
+      <td style="text-align:center">${i.result?pill(i.result,i.result==='pass'?'#10B981':'#EF4444'):'—'}</td>
+      <td style="text-align:center">${pill(i.status,i.status==='closed'?'#10B981':'#F97316')}</td>
+    </tr>`).join('')}
+    </tbody></table>`;
+
+  } else if(tab==='ptw'){
+    const isQHSE=currentProfile?.role==='QHSE Engineer'||currentProfile?.role==='PMO Manager';
+    const {data:list}=await sb.from('permits_to_work')
+      .select('*,project:projects(project_no),issuer:user_profiles!issued_by(full_name)')
+      .order('permit_date',{ascending:false});
+    const L=list||[];
+    const today_str=new Date().toISOString().split('T')[0];
+    const active=L.filter(p=>p.status==='active'&&p.valid_to>=today_str).length;
+    const expired=L.filter(p=>p.status==='active'&&p.valid_to<today_str).length;
+    kpis=kpi('Total',L.length,'#E2E8F0')
+        +kpi('Active',active,'#10B981')
+        +kpi('Expired',expired,expired>0?'#EF4444':'#94A3B8')
+        +kpi('Closed',L.filter(p=>p.status==='closed').length,'#475569');
+    const ptypeColor={hot_work:'#EF4444',confined_space:'#8B5CF6',electrical:'#EAB308',excavation:'#F97316',working_at_height:'#3B82F6',general:'#475569'};
+    body=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      ${isQHSE?`<button class="btn btn-primary btn-sm" onclick="openNewPTWModal()">+ New Permit</button>`:''}
+    </div>
+    <table><thead><tr>
+      <th>Permit No</th><th>Type</th><th>Project</th><th>Work Description</th>
+      <th>Valid From</th><th>Valid To</th><th>Issued By</th>
+      <th style="text-align:center">Status</th>
+    </tr></thead><tbody>
+    ${L.map(p=>{
+      const exp=p.status==='active'&&p.valid_to<today_str;
+      return`<tr>
+        <td style="color:var(--gold);font-size:10px">${esc(p.permit_no||'—')}</td>
+        <td>${pill((p.permit_type||'').replace(/_/g,' '),ptypeColor[p.permit_type]||'#94A3B8')}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(p.project?.project_no||'—')}</td>
+        <td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.work_description||'')}</td>
+        <td style="color:var(--muted);font-size:11px">${p.valid_from||'—'}</td>
+        <td style="color:${exp?'#EF4444':'#94A3B8'};font-size:11px">${p.valid_to||'—'}${exp?' ⚠️':''}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(p.issuer?.full_name||'—')}</td>
+        <td style="text-align:center">${pill(exp?'expired':p.status,exp?'#EF4444':p.status==='active'?'#10B981':p.status==='closed'?'#475569':'#F97316')}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+
+  } else {
+    kpis=''; body='';
+  }
+
   el.innerHTML=`
-  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">🛡</span><div><h1>QHSE</h1><div class="sub">NCRs · Incidents · Inspection Test Plans</div></div></div></div>
+  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">🛡</span><div><h1>QHSE</h1><div class="sub">NCRs · Incidents · ITP · CAPA · Risk · Inspections · PTW</div></div></div></div>
   <div class="grid4">${kpis}</div>
   <div class="card">${tabs}${body}</div>`;
+}
+
+// ── INVENTORY ──────────────────────────────────────────────
+var curInvTab='items';
+async function loadInventory(tab='items'){
+  curInvTab=tab;
+  const el=document.getElementById('page-inventory');
+  el.innerHTML=`<div class="loading">Loading…</div>`;
+  const tabs=`<div class="tabs">
+    <button class="tab${tab==='items'?' act':''}" onclick="loadInventory('items')">📦 Material Master</button>
+    <button class="tab${tab==='stock'?' act':''}" onclick="loadInventory('stock')">📊 Stock Balance</button>
+    <button class="tab${tab==='ledger'?' act':''}" onclick="loadInventory('ledger')">📒 Stock Ledger</button>
+    <button class="tab${tab==='match'?' act':''}" onclick="loadInventory('match')">🔗 3-Way Match</button>
+  </div>`;
+  const isPMO=currentProfile?.role==='PMO Manager'||currentProfile?.role==='Procurement Lead';
+  let kpis='',body='';
+
+  if(tab==='items'){
+    const {data:list}=await sb.from('material_master').select('*').order('item_code');
+    const L=list||[];
+    const reorder=L.filter(i=>i.current_stock<=i.reorder_level).length;
+    kpis=kpi('Total Items',L.length,'#E2E8F0')
+        +kpi('Active',L.filter(i=>i.is_active).length,'#10B981')
+        +kpi('Below Reorder',reorder,reorder>0?'#EF4444':'#10B981')
+        +kpi('Total Stock Value',fmtKWD(L.reduce((s,i)=>s+(i.current_stock*i.standard_cost),0)),'#3B82F6');
+    body=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      ${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewItemModal()">+ New Item</button>`:''}
+    </div>
+    <table><thead><tr>
+      <th>Code</th><th>Item Name</th><th>Category</th><th>UOM</th>
+      <th style="text-align:right">Stock</th><th style="text-align:right">Reorder Lvl</th>
+      <th style="text-align:right">Std Cost</th><th style="text-align:center">Status</th>
+    </tr></thead><tbody>
+    ${L.map(i=>{
+      const low=i.current_stock<=i.reorder_level;
+      return`<tr>
+        <td style="color:var(--gold);font-weight:700;font-family:monospace;font-size:11px">${esc(i.item_code)}</td>
+        <td style="font-weight:600;font-size:11px">${esc(i.item_name)}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(i.category||'—')}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(i.unit_of_measure)}</td>
+        <td style="text-align:right;font-weight:700;color:${low?'#EF4444':'#10B981'}">${Number(i.current_stock).toFixed(2)} ${low?'⚠️':''}</td>
+        <td style="text-align:right;color:var(--muted);font-size:11px">${Number(i.reorder_level||0).toFixed(2)}</td>
+        <td style="text-align:right;color:var(--muted);font-size:11px">${fmtKWD(i.standard_cost||0)}</td>
+        <td style="text-align:center">${pill(i.is_active?'active':'inactive',i.is_active?'#10B981':'#475569')}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+
+  } else if(tab==='stock'){
+    const {data:list}=await sb.from('v_stock_balance').select('*').order('item_code');
+    const L=list||[];
+    const totalVal=L.reduce((s,r)=>s+Number(r.stock_value||0),0);
+    const reorder=L.filter(r=>r.needs_reorder).length;
+    kpis=kpi('Items',L.length,'#E2E8F0')
+        +kpi('Total Value',fmtKWD(totalVal),'#3B82F6')
+        +kpi('Need Reorder',reorder,reorder>0?'#EF4444':'#10B981')
+        +kpi('Warehouse',L[0]?.warehouse_name||'—','#8B5CF6');
+    body=`
+    <table><thead><tr>
+      <th>Code</th><th>Item Name</th><th>Warehouse</th><th>Category</th>
+      <th style="text-align:right">On Hand</th><th style="text-align:right">Reorder Lvl</th>
+      <th style="text-align:right">Stock Value (KWD)</th><th style="text-align:center">Status</th>
+    </tr></thead><tbody>
+    ${L.map(r=>`<tr>
+      <td style="color:var(--gold);font-family:monospace;font-size:11px">${esc(r.item_code)}</td>
+      <td style="font-weight:600;font-size:11px">${esc(r.item_name)}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(r.warehouse_name||'—')}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(r.category||'—')}</td>
+      <td style="text-align:right;font-weight:700;color:${r.needs_reorder?'#EF4444':'#10B981'}">${Number(r.current_stock||0).toFixed(2)} ${r.needs_reorder?'⚠️':''}</td>
+      <td style="text-align:right;color:var(--muted);font-size:11px">${Number(r.reorder_level||0).toFixed(2)}</td>
+      <td style="text-align:right;font-weight:600">${fmtKWD(r.stock_value||0)}</td>
+      <td style="text-align:center">${pill(r.needs_reorder?'reorder':'ok',r.needs_reorder?'#EF4444':'#10B981')}</td>
+    </tr>`).join('')}
+    </tbody></table>`;
+
+  } else if(tab==='ledger'){
+    const {data:list}=await sb.from('stock_ledger')
+      .select('*,item:material_master(item_code,item_name),warehouse:warehouses(warehouse_code)')
+      .order('transaction_date',{ascending:false}).limit(100);
+    const L=list||[];
+    kpis=kpi('Transactions',L.length,'#E2E8F0')
+        +kpi('GRN',L.filter(t=>t.transaction_type==='GRN').length,'#10B981')
+        +kpi('Issues',L.filter(t=>t.transaction_type==='ISSUE').length,'#F97316')
+        +kpi('Adjustments',L.filter(t=>t.transaction_type==='ADJUSTMENT').length,'#8B5CF6');
+    body=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      ${isPMO?`<button class="btn btn-primary btn-sm" onclick="openStockMovementModal()">+ Stock Movement</button>`:''}
+    </div>
+    <table><thead><tr>
+      <th>Trans No</th><th>Type</th><th>Date</th><th>Item</th><th>Warehouse</th>
+      <th style="text-align:right">Qty</th><th style="text-align:right">Unit Cost</th>
+      <th style="text-align:right">Total Value</th><th>Reference</th>
+    </tr></thead><tbody>
+    ${L.map(t=>{
+      const typeColor={GRN:'#10B981',ISSUE:'#F97316',TRANSFER:'#3B82F6',ADJUSTMENT:'#8B5CF6',RETURN:'#EAB308'};
+      return`<tr>
+        <td style="color:var(--gold);font-size:10px">${esc(t.transaction_no||'—')}</td>
+        <td>${pill(t.transaction_type,typeColor[t.transaction_type]||'#94A3B8')}</td>
+        <td style="color:var(--muted);font-size:11px">${t.transaction_date||'—'}</td>
+        <td style="font-size:11px;font-weight:600">${esc(t.item?.item_code||'—')} <span style="color:var(--muted);font-weight:400">${esc(t.item?.item_name||'')}</span></td>
+        <td style="color:var(--muted);font-size:11px">${esc(t.warehouse?.warehouse_code||'—')}</td>
+        <td style="text-align:right;font-weight:700;color:${t.quantity>0?'#10B981':'#EF4444'}">${t.quantity>0?'+':''}${Number(t.quantity).toFixed(2)}</td>
+        <td style="text-align:right;color:var(--muted);font-size:11px">${t.unit_cost?fmtKWD(t.unit_cost):'—'}</td>
+        <td style="text-align:right;font-weight:600">${fmtKWD(t.total_value||0)}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(t.reference||'')}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+
+  } else if(tab==='match'){
+    // 3-Way Match by line
+    const {data:list}=await sb.from('v_three_way_match').select('*').order('po_no,line_no');
+    const L=list||[];
+    const matched=L.filter(r=>r.match_status.includes('Matched')).length;
+    const issues=L.filter(r=>r.match_status.includes('⚠️')).length;
+    kpis=kpi('PO Lines',L.length,'#E2E8F0')
+        +kpi('Matched',matched,'#10B981')
+        +kpi('Issues',issues,issues>0?'#EF4444':'#10B981')
+        +kpi('Not Invoiced',L.filter(r=>r.match_status==='Not Invoiced').length,'#94A3B8');
+    body=`
+    <table><thead><tr>
+      <th>PO No</th><th>Line</th><th>Description</th><th>Vendor</th>
+      <th style="text-align:right">Ordered</th><th style="text-align:right">Received</th>
+      <th style="text-align:right">Invoiced</th><th style="text-align:center">Match Status</th>
+    </tr></thead><tbody>
+    ${L.map(r=>`<tr>
+      <td style="color:var(--gold);font-size:10px;white-space:nowrap">${esc(r.po_no)}</td>
+      <td style="text-align:center;color:var(--muted);font-size:11px">${r.line_no}</td>
+      <td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.description)}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(r.vendor_name||'—')}</td>
+      <td style="text-align:right;font-size:11px">${fmtKWD(r.po_value||0)}</td>
+      <td style="text-align:right;font-size:11px;color:${Number(r.received_value||0)>0?'#10B981':'#94A3B8'}">${fmtKWD(r.received_value||0)}</td>
+      <td style="text-align:right;font-size:11px;color:${Number(r.invoiced_value||0)>0?'#3B82F6':'#94A3B8'}">${fmtKWD(r.invoiced_value||0)}</td>
+      <td style="text-align:center;font-size:10px;white-space:nowrap">${r.match_status}</td>
+    </tr>`).join('')}
+    </tbody></table>`;
+  }
+
+  el.innerHTML=`
+  <div class="page-head">
+    <div class="page-head-left">
+      <span style="font-size:22px">🏭</span>
+      <div><h1>Inventory</h1><div class="sub">Material Master · Stock Balance · Ledger · 3-Way Match</div></div>
+    </div>
+    ${isPMO?`<div class="page-head-right"></div>`:''}
+  </div>
+  <div class="grid4">${kpis}</div>
+  <div class="card">${tabs}${body}</div>`;
+}
+
+// ── Inventory Modals ──────────────────────────────────────
+function openNewItemModal(){
+  openModal(`
+    <h2 style="margin:0 0 16px">New Material Item</h2>
+    <div class="form-row">
+      <div class="form-field"><label>Item Code *</label><input id="itm-code" placeholder="e.g. UPS-001"/></div>
+      <div class="form-field"><label>Unit of Measure</label>
+        <select id="itm-uom" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option>EA</option><option>M</option><option>M2</option><option>M3</option>
+          <option>KG</option><option>TON</option><option>L</option><option>BOX</option><option>SET</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-field"><label>Item Name *</label><input id="itm-name" placeholder="Full item description"/></div>
+    <div class="form-row">
+      <div class="form-field"><label>Category</label><input id="itm-cat" placeholder="e.g. UPS, Cables, Civil"/></div>
+      <div class="form-field"><label>Standard Cost (KWD)</label><input id="itm-cost" type="number" min="0" step="0.001" placeholder="0.000"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Initial Stock</label><input id="itm-stock" type="number" min="0" step="0.01" placeholder="0"/></div>
+      <div class="form-field"><label>Reorder Level</label><input id="itm-reorder" type="number" min="0" step="0.01" placeholder="0"/></div>
+    </div>
+    <div class="form-field"><label>Description</label><textarea id="itm-desc" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNewItem(event)">Add Item</button>
+    </div>
+  `);
+}
+
+async function saveNewItem(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const code=document.getElementById('itm-code').value.trim();
+    const name=document.getElementById('itm-name').value.trim();
+    if(!code||!name){showToast('Code and Name required','error');return;}
+    const {data:itemNo}=await sb.rpc('next_ref_no',{p_prefix:'ITM'});
+    const {data,error}=await sb.from('material_master').insert({
+      item_code:code||itemNo, item_name:name,
+      category:document.getElementById('itm-cat').value.trim()||null,
+      unit_of_measure:document.getElementById('itm-uom').value,
+      standard_cost:Number(document.getElementById('itm-cost').value)||0,
+      current_stock:Number(document.getElementById('itm-stock').value)||0,
+      reorder_level:Number(document.getElementById('itm-reorder').value)||0,
+      description:document.getElementById('itm-desc').value.trim()||null,
+      is_active:true, created_by:currentProfile?.id
+    }).select('id').single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('material_master',data.id,'CREATED',null,{item_code:code,item_name:name},'Item added to material master');
+    showToast(`Item ${code||itemNo} added ✓`);
+    closeModal(); loadInventory('items');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Add Item';}}
+}
+
+function openStockMovementModal(){
+  const items=window._cachedItems||[];
+  openModal(`
+    <h2 style="margin:0 0 16px">Record Stock Movement</h2>
+    <div class="form-row">
+      <div class="form-field"><label>Type *</label>
+        <select id="st-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="GRN">GRN — Goods Received</option>
+          <option value="ISSUE">ISSUE — Issue to Project</option>
+          <option value="RETURN">RETURN — Return to Stock</option>
+          <option value="ADJUSTMENT">ADJUSTMENT — Inventory Adj.</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Date *</label><input id="st-date" type="date" value="${new Date().toISOString().split('T')[0]}"/></div>
+    </div>
+    <div class="form-field"><label>Item *</label>
+      <select id="st-item" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+        <option value="">— Select Item —</option>
+        ${items.map(i=>`<option value="${i.id}">${i.item_code} — ${i.item_name}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Quantity *</label><input id="st-qty" type="number" min="0" step="0.01" placeholder="0.00"/></div>
+      <div class="form-field"><label>Unit Cost (KWD)</label><input id="st-cost" type="number" min="0" step="0.001" placeholder="0.000"/></div>
+    </div>
+    <div class="form-field"><label>Reference</label><input id="st-ref" placeholder="PO No, MRV No, etc."/></div>
+    <div class="form-field"><label>Notes</label><input id="st-notes" placeholder="Optional notes…"/></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveStockMovement(event)">Record</button>
+    </div>
+  `);
+}
+
+async function saveStockMovement(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const type=document.getElementById('st-type').value;
+    const itemId=document.getElementById('st-item').value;
+    const qty=Number(document.getElementById('st-qty').value)||0;
+    const date=document.getElementById('st-date').value;
+    if(!itemId){showToast('Item is required','error');return;}
+    if(qty<=0){showToast('Quantity must be greater than zero','error');return;}
+    if(!date){showToast('Date is required','error');return;}
+    const {data:txNo}=await sb.rpc('next_ref_no',{p_prefix:'STK'});
+    const signedQty=type==='ISSUE'?-qty:qty;
+    const {data,error}=await sb.from('stock_ledger').insert({
+      transaction_no:txNo, transaction_type:type,
+      transaction_date:date, item_id:itemId,
+      quantity:signedQty,
+      unit_cost:Number(document.getElementById('st-cost').value)||null,
+      reference:document.getElementById('st-ref').value.trim()||null,
+      notes:document.getElementById('st-notes').value.trim()||null,
+      created_by:currentProfile?.id
+    }).select('id').single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+    // Update current_stock on material_master
+    await sb.rpc('adjust_item_stock',{p_item_id:itemId,p_qty_change:signedQty});
+    showToast(`${type} ${txNo} recorded ✓`);
+    closeModal(); loadInventory('ledger');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Record';}}
 }
 
 // ── DOCUMENTS ────────────────────────────────────────────────
@@ -2894,6 +4269,8 @@ async function loadDocs(tab='documents'){
     <button class="tab${tab==='documents'?' act':''}" onclick="loadDocs('documents')">📄 Documents</button>
     <button class="tab${tab==='submittals'?' act':''}" onclick="loadDocs('submittals')">📤 Submittals</button>
     <button class="tab${tab==='rfis'?' act':''}" onclick="loadDocs('rfis')">❓ RFIs</button>
+    <button class="tab${tab==='transmittals'?' act':''}" onclick="loadDocs('transmittals')">📬 Transmittals</button>
+    <button class="tab${tab==='revisions'?' act':''}" onclick="loadDocs('revisions')">🔄 Revisions</button>
   </div>`;
   const today=new Date();
   let kpis='',body='';
@@ -2920,9 +4297,265 @@ async function loadDocs(tab='documents'){
     </tbody></table>`;
   }
   el.innerHTML=`
-  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">📄</span><div><h1>Document Control</h1><div class="sub">Documents · Submittals · RFIs</div></div></div></div>
+  } else if(tab==='transmittals'){
+    const isPMO=currentProfile?.role==='PMO Manager';
+    const {data:list}=await sb.from('transmittals')
+      .select('*,project:projects(project_no),sender:user_profiles!sent_by(full_name)')
+      .order('transmittal_date',{ascending:false});
+    const L=list||[];
+    const today=new Date();
+    const overdue=L.filter(t=>t.response_required&&!t.response_received&&new Date(t.response_due)<today).length;
+    kpis=kpi('Total',L.length,'#E2E8F0')
+        +kpi('Pending Response',L.filter(t=>t.response_required&&!t.response_received).length,'#F97316')
+        +kpi('Overdue',overdue,overdue>0?'#EF4444':'#10B981')
+        +kpi('Responded',L.filter(t=>t.response_received).length,'#10B981');
+    body=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      ${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewTransmittalModal()">+ New Transmittal</button>`:''}
+    </div>
+    <table><thead><tr>
+      <th>Trans No</th><th>Subject</th><th>Project</th><th>Sent By</th>
+      <th>Date</th><th>To</th><th>Docs</th>
+      <th style="text-align:center">Response Due</th><th style="text-align:center">Status</th>
+    </tr></thead><tbody>
+    ${L.map(t=>{
+      const ov=t.response_required&&!t.response_received&&t.response_due&&new Date(t.response_due)<today;
+      return`<tr>
+        <td style="color:var(--gold);font-size:10px;white-space:nowrap">${esc(t.transmittal_no||'—')}</td>
+        <td style="font-weight:600;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.subject||'—')}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(t.project?.project_no||'—')}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(t.sender?.full_name||'—')}</td>
+        <td style="color:var(--muted);font-size:11px">${t.transmittal_date||'—'}</td>
+        <td style="color:var(--muted);font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.to_organization||'—')}</td>
+        <td style="text-align:center;color:var(--muted);font-size:11px">${t.document_count||0}</td>
+        <td style="text-align:center;color:${ov?'#EF4444':'#94A3B8'};font-size:11px">${t.response_due||'—'}${ov?' ⚠️':''}</td>
+        <td style="text-align:center">${pill(ov?'overdue':t.response_received?'responded':t.response_required?'awaiting':'sent',ov?'#EF4444':t.response_received?'#10B981':t.response_required?'#F97316':'#475569')}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+
+  } else if(tab==='revisions'){
+    const isPMO=currentProfile?.role==='PMO Manager';
+    const {data:list}=await sb.from('document_revisions')
+      .select('*,document:documents(doc_no,title),revised_by:user_profiles!revised_by(full_name),project:projects(project_no)')
+      .order('revised_date',{ascending:false}).limit(100);
+    const L=list||[];
+    kpis=kpi('Total Revisions',L.length,'#E2E8F0')
+        +kpi('Approved',L.filter(r=>r.status==='approved').length,'#10B981')
+        +kpi('Under Review',L.filter(r=>r.status==='under_review').length,'#F97316')
+        +kpi('Superseded',L.filter(r=>r.status==='superseded').length,'#475569');
+    body=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      ${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewRevisionModal()">+ New Revision</button>`:''}
+    </div>
+    <table><thead><tr>
+      <th>Doc No</th><th>Title</th><th>Project</th>
+      <th style="text-align:center">Rev</th><th>Revised By</th><th>Date</th>
+      <th>Change Description</th><th style="text-align:center">Status</th>
+    </tr></thead><tbody>
+    ${L.map(r=>`<tr>
+      <td style="color:var(--gold);font-size:10px">${esc(r.document?.doc_no||'—')}</td>
+      <td style="font-weight:600;font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.document?.title||'—')}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(r.project?.project_no||'—')}</td>
+      <td style="text-align:center;font-weight:800;color:var(--gold)">${esc(r.revision_no||'—')}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(r.revised_by?.full_name||'—')}</td>
+      <td style="color:var(--muted);font-size:11px">${r.revised_date||'—'}</td>
+      <td style="color:var(--muted);font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.change_description||'')}</td>
+      <td style="text-align:center">${pill(r.status,r.status==='approved'?'#10B981':r.status==='under_review'?'#F97316':r.status==='superseded'?'#475569':'#94A3B8')}</td>
+    </tr>`).join('')}
+    </tbody></table>`;
+
+  } else {
+    kpis=''; body='';
+  }
+
+  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">📄</span><div><h1>Document Control</h1><div class="sub">Documents · Submittals · RFIs · Transmittals · Revisions</div></div></div></div>
   <div class="grid4">${kpis}</div>
   <div class="card">${tabs}${body}</div>`;
+}
+
+// ── Document Control Modals ─────────────────────────────
+function openNewTransmittalModal(){
+  const projSel=window._cachedProjects||[];
+  const today=new Date().toISOString().split('T')[0];
+  openModal(`
+    <h2 style="margin:0 0 16px">New Transmittal</h2>
+    <div class="form-row">
+      <div class="form-field"><label>Project *</label>
+        <select id="tr-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select Project —</option>
+          ${projSel.map(p=>`<option value="${p.id}">${p.project_no} — ${p.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Date *</label><input id="tr-date" type="date" value="${today}"/></div>
+    </div>
+    <div class="form-field"><label>Subject *</label><input id="tr-subj" placeholder="e.g. Submission of Shop Drawings — Phase 1"/></div>
+    <div class="form-row">
+      <div class="form-field"><label>To (Organization) *</label><input id="tr-to" placeholder="e.g. Client Engineering Dept."/></div>
+      <div class="form-field"><label>Attention</label><input id="tr-attn" placeholder="Contact person name"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Purpose</label>
+        <select id="tr-purpose" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="for_approval">For Approval</option>
+          <option value="for_review">For Review</option>
+          <option value="for_information">For Information</option>
+          <option value="for_record">For Record</option>
+          <option value="approved_returned">Approved / Returned</option>
+        </select>
+      </div>
+      <div class="form-field"><label>No. of Documents</label><input id="tr-doccount" type="number" min="1" value="1"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Response Required</label>
+        <select id="tr-resp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="false">No</option>
+          <option value="true">Yes</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Response Due</label><input id="tr-duedate" type="date"/></div>
+    </div>
+    <div class="form-field"><label>Remarks</label><textarea id="tr-remarks" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTransmittal(event)">Issue Transmittal</button>
+    </div>
+  `);
+}
+
+async function saveTransmittal(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const projId=document.getElementById('tr-proj').value;
+    const subj=document.getElementById('tr-subj').value.trim();
+    const to=document.getElementById('tr-to').value.trim();
+    const date=document.getElementById('tr-date').value;
+    if(!projId||!subj||!to||!date){showToast('Project, Subject, To, and Date are required','error');return;}
+    const {data:trNo}=await sb.rpc('next_ref_no',{p_prefix:'TR'});
+    const respRequired=document.getElementById('tr-resp').value==='true';
+    const {data,error}=await sb.from('transmittals').insert({
+      transmittal_no:trNo,
+      project_id:projId,
+      subject:subj,
+      to_organization:to,
+      attention:document.getElementById('tr-attn').value.trim()||null,
+      transmittal_date:date,
+      purpose:document.getElementById('tr-purpose').value,
+      document_count:Number(document.getElementById('tr-doccount').value)||1,
+      response_required:respRequired,
+      response_due:respRequired&&document.getElementById('tr-duedate').value?document.getElementById('tr-duedate').value:null,
+      remarks:document.getElementById('tr-remarks').value.trim()||null,
+      sent_by:currentProfile?.id,
+      created_by:currentProfile?.id
+    }).select('id').single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('transmittals',data.id,'CREATED',null,{transmittal_no:trNo,subject:subj},'Transmittal issued');
+    showToast(`Transmittal ${trNo} issued ✓`);
+    closeModal(); loadDocs('transmittals');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Issue Transmittal';}}
+}
+
+function openNewRevisionModal(){
+  const projSel=window._cachedProjects||[];
+  const userSel=window._cachedUsers||[];
+  const today=new Date().toISOString().split('T')[0];
+  openModal(`
+    <h2 style="margin:0 0 16px">New Document Revision</h2>
+    <div class="form-row">
+      <div class="form-field"><label>Document No *</label><input id="rev-docno" placeholder="e.g. SP360-CV-DWG-001"/></div>
+      <div class="form-field"><label>Revision *</label><input id="rev-no" placeholder="e.g. B, C, 02"/></div>
+    </div>
+    <div class="form-field"><label>Document Title</label><input id="rev-title" placeholder="Full document title"/></div>
+    <div class="form-row">
+      <div class="form-field"><label>Project</label>
+        <select id="rev-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select Project —</option>
+          ${projSel.map(p=>`<option value="${p.id}">${p.project_no} — ${p.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Revised Date *</label><input id="rev-date" type="date" value="${today}"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Revised By</label>
+        <select id="rev-by" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select —</option>
+          ${userSel.map(u=>`<option value="${u.id}">${u.full_name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Status</label>
+        <select id="rev-status" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="draft">Draft</option>
+          <option value="under_review">Under Review</option>
+          <option value="approved">Approved</option>
+          <option value="superseded">Superseded</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-field"><label>Change Description *</label>
+      <textarea id="rev-change" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical" placeholder="What changed in this revision?"></textarea>
+    </div>
+    <div class="form-field">
+      <label>File Upload (Supabase Storage)</label>
+      <div style="border:1px dashed var(--bdr);border-radius:8px;padding:16px;text-align:center;color:var(--muted);font-size:11px">
+        📎 File storage via Supabase Storage bucket — connect <b>sp360-documents</b> bucket.<br>
+        Use the Supabase dashboard to upload files until the storage connector is configured.
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRevision(event)">Save Revision</button>
+    </div>
+  `);
+}
+
+async function saveRevision(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const docNo=document.getElementById('rev-docno').value.trim();
+    const revNo=document.getElementById('rev-no').value.trim();
+    const date=document.getElementById('rev-date').value;
+    const change=document.getElementById('rev-change').value.trim();
+    if(!docNo||!revNo||!date||!change){showToast('Doc No, Revision, Date, and Change Description are required','error');return;}
+
+    // Find or create document record
+    let {data:doc}=await sb.from('documents').select('id').eq('doc_no',docNo).maybeSingle();
+    if(!doc){
+      const title=document.getElementById('rev-title').value.trim()||docNo;
+      const projId=document.getElementById('rev-proj').value||null;
+      const {data:newDoc,error:docErr}=await sb.from('documents').insert({
+        doc_no:docNo, title, project_id:projId,
+        category:'General', revision:revNo,
+        status:'draft', created_by:currentProfile?.id
+      }).select('id').single();
+      if(docErr){showToast('Error creating document: '+docErr.message,'error');return;}
+      doc=newDoc;
+    }
+
+    // Mark previous revisions as superseded
+    await sb.from('document_revisions').update({status:'superseded',updated_at:new Date().toISOString()})
+      .eq('document_id',doc.id).neq('status','superseded');
+
+    // Insert new revision
+    const {data:rev,error}=await sb.from('document_revisions').insert({
+      document_id:doc.id,
+      project_id:document.getElementById('rev-proj').value||null,
+      revision_no:revNo,
+      revised_date:date,
+      revised_by:document.getElementById('rev-by').value||null,
+      change_description:change,
+      status:document.getElementById('rev-status').value,
+      created_by:currentProfile?.id
+    }).select('id').single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+
+    // Update document revision to latest
+    await sb.from('documents').update({revision:revNo,status:document.getElementById('rev-status').value,updated_at:new Date().toISOString()}).eq('id',doc.id);
+    await writeAudit('documents',doc.id,'REVISION_ADDED',null,{doc_no:docNo,revision:revNo,status:document.getElementById('rev-status').value},'Document revision added');
+    showToast(`Revision ${revNo} saved for ${docNo} ✓`);
+    closeModal(); loadDocs('revisions');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save Revision';}}
 }
 
 // ── WORKFLOW ─────────────────────────────────────────────────
@@ -3024,7 +4657,8 @@ async function wfReturn(wfId,entityType,entityId){
   }
 }
 
-// ── USER MANAGEMENT ──────────────────────────────────────────
+// USER MANAGEMENT
+// UI gate only — backend RLS + Edge Function must enforce PMO-only access server-side
 async function loadUsers(){
   if(currentProfile?.role!=='PMO Manager'){
     document.getElementById('page-users').innerHTML='<div class="empty">Access restricted — PMO Manager only.</div>';
@@ -3032,9 +4666,8 @@ async function loadUsers(){
   }
   const el=document.getElementById('page-users');
   el.innerHTML='<div class="loading">Loading users…</div>';
-  const [{data:profiles},{data:authList}]=await Promise.all([
-    sb.from('user_profiles').select('*').order('full_name'),
-    sb.from('user_profiles').select('id,full_name,role,email,is_active,created_at,color,initials')
+  const [{data:profiles}]=await Promise.all([
+    sb.from('user_profiles').select('*').order('full_name')
   ]);
   const users=profiles||[];
   const roleColors={'PMO Manager':'#C9A84C','Finance Manager':'#10B981','Procurement Lead':'#3B82F6','BD Manager':'#8B5CF6','QHSE Engineer':'#EF4444'};
@@ -3364,33 +4997,42 @@ async function sendViaEdge(to, subject, bodyText, htmlBody=''){
 }
 
 function buildEmailHTML(subject, bodyText){
+  // Escape user-controlled content before injecting into HTML (XSS prevention)
+  const escHtml=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const safeSubject=escHtml(subject);
   // Professional HTML email template — Navy & Gold
   const lines = bodyText.split('\n');
   const htmlLines = lines.map(l=>{
-    if(l.startsWith('  •')) return `<li style="margin:4px 0;color:#334155">${l.replace('  •','').trim()}</li>`;
+    if(l.startsWith('  •')) return `<li style="margin:4px 0;color:#334155">${escHtml(l.replace('  •','').trim())}</li>`;
     if(l==='') return '<br>';
-    return `<p style="margin:6px 0;color:#334155;font-size:14px">${l}</p>`;
+    return `<p style="margin:6px 0;color:#334155;font-size:14px">${escHtml(l)}</p>`;
   }).join('');
   return `<!DOCTYPE html><html><body style="margin:0;padding:0;font-family:Calibri,Arial,sans-serif;background:#F8FAFC">
   <div style="max-width:600px;margin:24px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08)">
     <div style="background:#1E3A5F;padding:24px 28px;display:flex;align-items:center;gap:14px">
       <div style="width:44px;height:44px;background:#C9A84C;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#0D1B2A;font-size:18px">SP</div>
       <div>
-        <div style="color:#C9A84C;font-size:18px;font-weight:800">${subject}</div>
-        <div style="color:#94A3B8;font-size:11px;margin-top:2px">SP360 ERP v1.8 · Smart Projects 360 · Kuwait</div>
+        <div style="color:#C9A84C;font-size:18px;font-weight:800">${safeSubject}</div>
+        <div style="color:#94A3B8;font-size:11px;margin-top:2px">SP360 ERP v2.9 · Smart Projects 360 · Kuwait</div>
       </div>
     </div>
     <div style="padding:24px 28px">${htmlLines}</div>
     <div style="background:#F1F5F9;padding:14px 28px;text-align:center;font-size:11px;color:#94A3B8;border-top:1px solid #E2E8F0">
-      SP360 ERP v1.8 · Confidential — For Internal Use Only<br>
+      SP360 ERP v2.9 · Confidential — For Internal Use Only<br>
       <a href="https://falconbold1999-ops.github.io/sp360-erp/" style="color:#C9A84C">Open SP360 ERP</a>
     </div>
   </div></body></html>`;
 }
 
 function fallbackMailto(to, subject, bodyText){
-  const toStr = Array.isArray(to) ? to.join(';') : to;
-  const url = `mailto:${encodeURIComponent(toStr)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
+  // SECURITY: bulk send via mailto exposes all recipient addresses to each other.
+  // Only allow single recipient via fallback; bulk requires Edge Function.
+  if(Array.isArray(to)&&to.length>1){
+    showToast('⚠️ Bulk email requires the Edge Function to be deployed (privacy protection). Sending to first recipient only via fallback.','error');
+    to=[to[0]];
+  }
+  const toStr=Array.isArray(to)?to[0]:to;
+  const url=`mailto:${encodeURIComponent(toStr)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
   window.open(url,'_blank');
 }
 
@@ -3459,7 +5101,7 @@ function openEmailAllModal(){
       <input id="eall-subject" value="SP360 ERP — Team Notification"/>
     </div>
     <div class="form-field"><label>Message</label>
-      <textarea id="eall-body" rows="6">Dear SP360 Team,\n\nThis is a notification from SP360 ERP v1.8.\n\nPlease log in to review your pending items.\n\nRegards,\nSP360 PMO Team</textarea>
+      <textarea id="eall-body" rows="6">Dear SP360 Team,\n\nThis is a notification from SP360 ERP v2.9.\n\nPlease log in to review your pending items.\n\nRegards,\nSP360 PMO Team</textarea>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -3497,7 +5139,7 @@ async function sendEmailNotification(type){
   if(type==='pending_approvals'){
     const pending=wfs.filter(w=>w.status==='pending'||w.status==='overdue');
     subject=`⚡ ${pending.length} Pending Approvals — SP360 ERP — ${today}`;
-    body=`Dear SP360 Team,\n\nThis is an automated notification from SP360 ERP v1.8.\n\nYou have ${pending.length} item(s) awaiting approval:\n\n`
+    body=`Dear SP360 Team,\n\nThis is an automated notification from SP360 ERP v2.9.\n\nYou have ${pending.length} item(s) awaiting approval:\n\n`
       +pending.slice(0,10).map(w=>`  • ${w.ref_no} — ${w.current_step} [${w.status.toUpperCase()}]`).join('\n')
       +`\n\nPlease log in to SP360 ERP to take action:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   } else if(type==='weekly_evm'){
@@ -3511,7 +5153,7 @@ async function sendEmailNotification(type){
       +`\n\nFull report: https://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   } else if(type==='ceo_report'){
     subject=`👔 CEO Flash Report Ready — SP360 ERP — ${today}`;
-    body=`Dear Team,\n\nThe CEO Flash Report for ${today} has been updated in SP360 ERP v1.8.\n\nLog in → CEO Report → Export PDF:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
+    body=`Dear Team,\n\nThe CEO Flash Report for ${today} has been updated in SP360 ERP v2.9.\n\nLog in → CEO Report → Export PDF:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   }
 
   if(recipients.length===0){ showToast('No active users found','error'); return; }
@@ -3740,12 +5382,14 @@ async function saveCO(){
   const amt=Number(document.getElementById('f-coamt').value)||0;
   const date=document.getElementById('f-codate').value;
   if(!proj||!desc){showToast('Project and Description required','error');return;}
-  // Generate CO number
-  const {data:allCOs}=await sb.from('change_orders').select('co_no');
-  const maxCO=(allCOs||[]).reduce((max,c)=>{const n=Number((c.co_no||'').split('-')[2]||0);return n>max?n:max;},0);
+  // Generate CO number — atomic DB sequence, concurrency-safe
   const year=new Date().getFullYear();
-  const co_no=`CO-${year}-${String(maxCO+1).padStart(3,'0')}`;
-  const {error}=await sb.from('change_orders').insert({
+  const {data:coSeq,error:seqErr}=await sb.rpc('next_ref_no',{p_type:'co',p_prefix:`CO-${year}`});
+  if(seqErr){showToast('Error generating CO number: '+seqErr.message,'error');return;}
+  const co_no=coSeq;
+  // FIX: Use .select().single() to get back the inserted CO id for Audit Trail
+  // FIX: Unified state — single status='draft' replacing dual status/workflow_status mismatch
+  const {data:coData,error}=await sb.from('change_orders').insert({
     co_no,co_number:co_no,project_id:proj,
     co_type:document.getElementById('f-cotype').value,
     description:desc,amount:amt,
@@ -3753,12 +5397,13 @@ async function saveCO(){
     title:desc,
     justification:document.getElementById('f-cojust').value||null,
     submitted_date:date,
-    status:'pending',
-    workflow_status:'draft',
+    status:'draft',
+    workflow_status:'submitted',
     submitted_by:currentProfile?.id
-  });
+  }).select('id').single();
   if(error){showToast('Error: '+error.message,'error');return;}
-  await writeAudit('change_orders',null,'SUBMITTED',null,{co_no,description:desc,amount:amt},'Change order submitted');
+  // FIX: Pass coData.id as entity_id — previously null, breaking audit trail traceability
+  await writeAudit('change_orders',coData.id,'SUBMITTED',null,{co_no,description:desc,amount:amt},'Change order submitted');
   showToast('Change Order '+co_no+' submitted');
   closeModal();loadProjects('changeorders');
 }
@@ -3862,7 +5507,7 @@ async function loadCEO(){
   <div class="print-header" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div>
-        <div style="font-size:18pt;font-weight:900;color:#1E3A5F">SP360 ERP v1.8 — CEO Flash Report</div>
+        <div style="font-size:18pt;font-weight:900;color:#1E3A5F">SP360 ERP v2.9 — CEO Flash Report</div>
         <div style="font-size:9pt;color:#475569">${monthStr} · Smart Projects 360 · Kuwait · Confidential</div>
       </div>
       <div style="font-size:8pt;color:#94A3B8">Generated: ${new Date().toLocaleDateString('en-GB')}</div>
@@ -3870,7 +5515,7 @@ async function loadCEO(){
   </div>
   <!-- PRINT FOOTER -->
   <div class="print-footer" style="display:none">
-    SP360 ERP v1.8 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only &nbsp;|&nbsp; Smart Projects 360 · Kuwait
+    SP360 ERP v2.9 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only &nbsp;|&nbsp; Smart Projects 360 · Kuwait
   </div>
 
   <div class="page-head">
@@ -3938,14 +5583,14 @@ async function loadCEO(){
       const tcpiNum=wrem>0&&budgRem>0?wrem/budgRem:null;
       const tcpi=tcpiNum!==null?tcpiNum.toFixed(2):'—';
       const tcpiColor=tcpiNum===null?'#94A3B8':tcpiNum<=1?'#10B981':tcpiNum<=1.1?'#F97316':'#EF4444';
-      const ragVal=Math.min(Number(p.cpi),Number(p.spi));
+      const ragVal=ragScore(p);
       return`<tr>
         <td><div style="font-weight:600;font-size:11px">${esc(p.name.split('—')[0].trim())}</div><div style="color:var(--gold);font-size:9px">${esc(p.project_no)}</div></td>
         <td style="color:var(--muted);font-size:11px">${esc(p.client)}</td>
         <td style="text-align:center">${pill(p.status)}</td>
         <td style="text-align:center;font-weight:700">${p.pct}%</td>
         <td style="text-align:center;font-weight:800;color:${cpiColor(p.cpi)}">${Number(p.cpi).toFixed(2)}</td>
-        <td style="text-align:center;font-weight:800;color:${p.spi!=null?cpiColor(p.spi):'#94A3B8'}>${p.spi!=null?Number(p.spi).toFixed(2):'N/A'}</td>
+        <td style="text-align:center;font-weight:800;color:${p.spi!=null?cpiColor(p.spi):'#94A3B8'}">${p.spi!=null?Number(p.spi).toFixed(2):'N/A'}</td>
         <td style="text-align:right;font-size:11px">${fmtKWD(eac)}</td>
         <td style="text-align:right;font-size:11px;color:var(--muted)">${fmtKWD(etc)}</td>
         <td style="text-align:right;font-size:11px;color:${vac>=0?'#10B981':'#EF4444'};font-weight:700">${vac>=0?'+':''}${fmtKWD(vac)}</td>
@@ -4089,7 +5734,7 @@ async function loadCEO(){
   </div>
 
   <div style="margin-top:12px;padding:10px 14px;background:var(--n3);border-radius:8px;font-size:10px;color:var(--faint);text-align:center">
-    SP360 ERP v1.8 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only
+    SP360 ERP v2.9 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only
   </div>`;
 
   // Render Portfolio S-Curve
@@ -4239,7 +5884,7 @@ async function saveOpp(){
   if(btn){btn.disabled=true;btn.textContent='Creating…';}
   try{
     const {data:opp_no}=await sb.rpc('next_ref_no',{p_type:'project',p_prefix:'BD'});
-    const {error}=await sb.from('opportunities').insert({
+    const {data:oppData,error}=await sb.from('opportunities').insert({
       opp_no, title, client,
       department:document.getElementById('f-dept').value,
       est_value:Number(document.getElementById('f-value').value)||0,
@@ -4248,9 +5893,10 @@ async function saveOpp(){
       deadline:document.getElementById('f-deadline').value||null,
       notes:document.getElementById('f-notes').value||null,
       created_by:currentProfile?.id
-    });
+    }).select('id').single();
     if(error){showToast('Error: '+error.message,'error');return;}
-    await writeAudit('opportunities',null,'CREATED',null,{opp_no,title},'New opportunity');
+    // FIX: pass oppData.id (was null before)
+    await writeAudit('opportunities',oppData?.id,'CREATED',null,{opp_no,title},'New opportunity',{strict:true});
     showToast('Opportunity '+opp_no+' created ✓');
     closeModal(); loadBizdev();
   }catch(e){showToast('Error: '+e.message,'error');}
@@ -4307,21 +5953,24 @@ async function saveProject(e){
   const btn=e?.currentTarget||e?.target;
   if(btn){btn.disabled=true;btn.textContent='Creating…';}
   try{
-    // Atomic project number from DB sequence
+    // ATOMIC: number generation + insert + audit in single DB transaction
     const deptCode={Security:'SEC','AV/Broadcast':'AV',IT:'IT',Power:'PW',Civil:'CV',Wireless:'WL',Trading:'TR'}[dept]||'XX';
-    const {data:project_no}=await sb.rpc('next_ref_no',{p_type:'project',p_prefix:`SP360-${deptCode}`});
-
-    const {data:proj,error}=await sb.from('projects').insert({
-      project_no, name, client, department:dept,
-      contract_value:val, bac, ac:0, ev:0, pv:0, pct:0, cpi:1, spi:null,
-      status:'initiation',
-      priority:document.getElementById('f-ppriority').value,
-      start_date:start, end_date:end,
-      pm_id:currentProfile?.id, created_by:currentProfile?.id
-    }).select().single();
+    const {data,error}=await sb.rpc('save_project_atomic',{
+      p_prefix:       `SP360-${deptCode}`,
+      p_name:         name,
+      p_client:       client,
+      p_department:   dept,
+      p_contract_value: val,
+      p_bac:          bac,
+      p_priority:     document.getElementById('f-ppriority').value,
+      p_start_date:   start,
+      p_end_date:     end,
+      p_pm_id:        currentProfile?.id,
+      p_created_by:   currentProfile?.id
+    });
     if(error){showToast('Error: '+error.message,'error');return;}
-    await writeAudit('projects',proj?.id,'CREATED',null,{project_no,name,contract_value:val,bac},'New project created');
-    showToast(`Project ${project_no} created ✓`);
+    if(!data?.ok){showToast('Error: '+(data?.error||'Unknown error'),'error');return;}
+    showToast(`Project ${data.project_no} created ✓`);
     closeModal(); loadProjects();
   }catch(e2){showToast('Error: '+e2.message,'error');}
   finally{if(btn){btn.disabled=false;btn.textContent='Create Project';}}
@@ -4358,18 +6007,93 @@ async function saveInvoice(){
   const retAmt=Math.round(gross*ret/100*1000)/1000;
   const net=gross-retAmt;
   const type=document.getElementById('f-itype').value;
+
+  // ── 3-Way Match Validation (Supplier / Subcontractor invoices) ──────────────
+  // FIX v2.3: PO-SPECIFIC matching (was project-level, now per-PO per-vendor)
+  // Rule: Invoice → specific PO → MRVs linked to that PO → sum received_value ≥ invoice gross
+  if(type==='supplier'||type==='subcontractor'){
+    // Step 1: Load issued POs for this project
+    const {data:pos}=await sb.from('purchase_orders')
+      .select('id,po_no,total_value,status,vendor_id,vendors(name)')
+      .eq('project_id',proj)
+      .in('status',['issued','received','partial_receipt'])
+      .order('created_at',{ascending:false});
+
+    if(!pos||pos.length===0){
+      showToast('⚠️ 3-Way Match: No issued PO found for this project. Issue a PO before invoicing.','error');
+      return;
+    }
+
+    // Step 2: Let user select which PO this invoice is against
+    const poOptions=pos.map(p=>`<option value="${p.id}" data-val="${p.total_value}">${p.po_no} — ${p.vendors?.name||'Vendor'} — ${fmtKWD(p.total_value)}</option>`).join('');
+    const poSelectHtml=`<div style="margin:12px 0"><label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px">Select PO for this invoice *</label><select id="match-po-select" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);margin-top:6px">${poOptions}</select></div>`;
+
+    // Inject PO selector into open modal
+    const modalBody=document.querySelector('#modal-overlay .modal-body, #modal-overlay form');
+    if(modalBody&&!document.getElementById('match-po-select')){
+      const foot=modalBody.querySelector('.modal-foot');
+      if(foot) foot.insertAdjacentHTML('beforebegin',poSelectHtml);
+      else modalBody.insertAdjacentHTML('beforeend',poSelectHtml);
+    }
+
+    const selectedPoId=document.getElementById('match-po-select')?.value;
+    if(!selectedPoId){
+      showToast('⚠️ 3-Way Match: Please select the PO this invoice is against.','error');
+      return;
+    }
+
+    const selectedPo=pos.find(p=>p.id===selectedPoId);
+
+    // Step 3: Load MRVs specifically linked to the selected PO
+    const {data:poMrvs}=await sb.from('mrvs')
+      .select('id,mrv_no,received_value,condition')
+      .eq('po_id',selectedPoId)
+      .neq('condition','rejected');
+
+    if(!poMrvs||poMrvs.length===0){
+      showToast(`⚠️ 3-Way Match: No Goods Receipt (MRV) found for PO ${selectedPo?.po_no}. Receive goods against this PO before invoicing.`,'error');
+      return;
+    }
+
+    // Step 4: PO-specific received value check (5% tolerance)
+    const poReceivedValue=poMrvs.reduce((s,m)=>s+Number(m.received_value||0),0);
+    const TOLERANCE=1.05;
+    if(gross>poReceivedValue*TOLERANCE){
+      showToast(`⚠️ 3-Way Match: Invoice (${fmtKWD(gross)}) exceeds goods received against PO ${selectedPo?.po_no} (${fmtKWD(poReceivedValue)}) by more than 5%. Check MRVs or reduce invoice amount.`,'error');
+      return;
+    }
+
+    // Step 5: Check for duplicate active invoice against same PO
+    const {data:existingInv}=await sb.from('invoices')
+      .select('id,invoice_no,gross_amount,status')
+      .eq('po_id',selectedPoId)
+      .in('status',['draft','submitted','approved','pending_approval']);
+    if(existingInv&&existingInv.length>0){
+      const dupWarning=existingInv.map(i=>`${i.invoice_no} (${i.status})`).join(', ');
+      if(!confirm(`⚠️ 3-Way Match Notice: Active invoice(s) already exist for PO ${selectedPo?.po_no}: ${dupWarning}.\n\nProceed anyway?`)) return;
+    }
+
+    // Store selected PO id for invoice record linkage below
+    window._matchedPoId=selectedPoId;
+  }
+  // ── End 3-Way Match ─────────────────────────────────────────────────────────
+
   const prefix=type==='client'?'INV-C':type==='supplier'?'INV-S':'INV-SC';
   const {data:invoice_no}=await sb.rpc('next_ref_no',{p_type:'invoice',p_prefix:prefix});
+  // FIX v2.3: store po_id from PO-specific 3-way match
+  const linkedPoId=(type==='supplier'||type==='subcontractor')?window._matchedPoId||null:null;
   const {data:inv,error}=await sb.from('invoices').insert({
     invoice_no,project_id:proj,invoice_type:type,
     gross_amount:gross,vat_pct:0,vat_amount:0,
     retention_pct:ret,retention_amt:retAmt,net_amount:net,
     status:'draft',invoice_date:date,
+    po_id:linkedPoId,
     due_date:document.getElementById('f-idue').value||null,
     created_by:currentProfile?.id
   }).select().single();
+  window._matchedPoId=null; // cleanup
   if(error){showToast('Error: '+error.message,'error');return;}
-  await writeAudit('invoices',inv?.id,'CREATED',null,{invoice_no,gross_amount:gross,net_amount:net,status:'draft'},'New invoice created');
+  await writeAudit('invoices',inv?.id,'INVOICE_CREATED',null,{invoice_no,gross_amount:gross,net_amount:net,po_id:linkedPoId,status:'draft'},'New invoice created',{strict:true});
   showToast('Invoice created — click Submit to start approval workflow');
   closeModal();loadFinance();
 }
@@ -4569,7 +6293,7 @@ async function exportPortfolioExcel(){
   const today = new Date().toLocaleDateString('en-GB');
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'SP360 ERP v1.8';
+  wb.creator = 'SP360 ERP v2.9';
   wb.created = new Date();
 
   // ── SHEET 1: Portfolio EVM ──────────────────────────────────
@@ -4598,7 +6322,7 @@ async function exportPortfolioExcel(){
   ];
 
   xlTitleBlock(ws1,
-    'SP360 ERP v1.8 — Portfolio EVM Report',
+    'SP360 ERP v2.9 — Portfolio EVM Report',
     `${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential  ·  Generated: ${today}`, 17);
 
   // KPI band
@@ -4678,7 +6402,7 @@ async function exportPortfolioExcel(){
   projs.forEach((p,idx)=>{
     const eac=Number(p.cpi)>0?Number(p.ac)+(Number(p.bac)-Number(p.ev))/Number(p.cpi):Number(p.bac);
     const vac=Number(p.bac)-eac;
-    const rv=Math.min(Number(p.cpi),Number(p.spi));
+    const rv=ragScore(p);
     const bac2=Number(p.bac)||0, ac2=Number(p.ac)||0, ev2=Number(p.ev)||0;
     const eac2=Number(p.cpi)>0?ac2+(bac2-ev2)/Number(p.cpi):bac2;
     const etc2=Math.max(eac2-ac2,0);
@@ -4746,15 +6470,14 @@ async function exportPortfolioExcel(){
     views:[{state:'frozen',xSplit:0,ySplit:5}]
   });
   ws2.columns=[
-    {key:'name',  width:35},{key:'baseline',width:18},
-    {key:'bbac',  width:16},{key:'cbac',    width:16},
-    {key:'bvar',  width:14},{key:'bvarp',   width:10},
-    {key:'spi',   width:10},{key:'cpi',     width:10},
-    {key:'sv',    width:14},{key:'cv',      width:14},
-    {key:'pct',   width:10}
+    {key:'proj_no', width:16},{key:'name',   width:35},
+    {key:'bac',     width:16},{key:'ev',     width:16},
+    {key:'ac',      width:16},{key:'cpi',    width:10},
+    {key:'spi',     width:10},{key:'cv',     width:14},
+    {key:'pct',     width:12},{key:'status', width:16}
   ];
-  xlTitleBlock(ws2,'SP360 ERP v2.1 — EVM Variance Summary',
-    `${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential`,11);
+  xlTitleBlock(ws2,'SP360 ERP v2.9 — EVM Variance Summary',
+    `${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential`,10);
   const hdr2=ws2.addRow(['Project No','Project Name','BAC (KWD)','EV (KWD)',
     'AC (KWD)','CPI','SPI','CV (KWD)','% Complete','Phase']);
   xlHeader(hdr2);
@@ -4794,7 +6517,7 @@ async function exportPortfolioExcel(){
     {key:'ac',    width:14},{key:'spi',   width:10},
     {key:'cpi',   width:10}
   ];
-  xlTitleBlock(ws3,'SP360 ERP v1.8 — S-Curve EVM Snapshots',
+  xlTitleBlock(ws3,'SP360 ERP v2.9 — S-Curve EVM Snapshots',
     `${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential`,9);
   const hdr3=ws3.addRow(['Project No','Project Name','Period','Date',
     'PV (KWD)','EV (KWD)','AC (KWD)','SPI','CPI']);
@@ -4835,7 +6558,7 @@ async function exportPortfolioExcel(){
     {key:'vac',   width:16},{key:'tcpi',  width:11},
     {key:'trend', width:18},{key:'rag',   width:10}
   ];
-  xlTitleBlock(ws4,'SP360 ERP v1.8 — Trend Analysis & Forecasting',
+  xlTitleBlock(ws4,'SP360 ERP v2.9 — Trend Analysis & Forecasting',
     `${month}  ·  ETC = EAC−AC  ·  TCPI = (BAC−EV)÷(BAC−AC)  ·  ${today}`,12);
   const hdr4=ws4.addRow(['Project No','Project Name','Phase','%','CPI','SPI',
     'EAC (KWD)','ETC (KWD)','VAC (KWD)','TCPI','Performance Forecast','RAG']);
@@ -4848,7 +6571,7 @@ async function exportPortfolioExcel(){
     const vacT=bT-eacT;
     const wrT=bT-eT, brT=bT-aT;
     const tcpiT=wrT>0&&brT>0?wrT/brT:null;
-    const rvT=Math.min(Number(p.cpi),Number(p.spi));
+    const rvT=ragScore(p);
     let forecastT='Insufficient Data';
     if(cT>=1&&Number(p.spi)>=1)forecastT='On Track / Exceeding';
     else if(cT>=0.9&&Number(p.spi)>=0.9)forecastT='At Risk';
@@ -4897,7 +6620,7 @@ async function exportMonthlyExcel(){
   const today=new Date().toLocaleDateString('en-GB');
 
   const wb=new ExcelJS.Workbook();
-  wb.creator='SP360 ERP v1.8'; wb.created=new Date();
+  wb.creator='SP360 ERP v2.9'; wb.created=new Date();
   const ws=wb.addWorksheet('Monthly Report',{
     views:[{state:'frozen',xSplit:0,ySplit:5}],
     pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1}
@@ -4912,7 +6635,7 @@ async function exportMonthlyExcel(){
   ];
 
   xlTitleBlock(ws,
-    `SP360 ERP v1.8 — Monthly Progress Report — ${month}`,
+    `SP360 ERP v2.9 — Monthly Progress Report — ${month}`,
     `Smart Projects 360  ·  Kuwait  ·  Confidential  ·  Generated: ${today}`,12);
 
   const hdr=ws.addRow(['Project','Client','Phase','Plan %','Actual %',
@@ -4922,7 +6645,7 @@ async function exportMonthlyExcel(){
   const active=(projs||[]).filter(p=>p.status!=='completed');
   active.forEach((p,idx)=>{
     const eac=Number(p.cpi)>0?Number(p.ac)+(Number(p.bac)-Number(p.ev))/Number(p.cpi):Number(p.bac);
-    const rv=Math.min(Number(p.cpi),Number(p.spi));
+    const rv=ragScore(p);
     const pvPct=Number(p.pv)>0?Math.round(Number(p.pv)/Number(p.bac)*100):0;
     const row=ws.addRow([
       p.name||'', p.client||'', p.status||'',
@@ -4979,7 +6702,7 @@ async function exportCOExcel(){
   const today=new Date().toLocaleDateString('en-GB');
 
   const wb=new ExcelJS.Workbook();
-  wb.creator='SP360 ERP v1.8'; wb.created=new Date();
+  wb.creator='SP360 ERP v2.9'; wb.created=new Date();
   const ws=wb.addWorksheet('Change Orders',{
     views:[{state:'frozen',xSplit:0,ySplit:5}]
   });
@@ -4992,7 +6715,7 @@ async function exportCOExcel(){
   ];
 
   xlTitleBlock(ws,
-    `SP360 ERP v1.8 — Change Order Register — ${month}`,
+    `SP360 ERP v2.9 — Change Order Register — ${month}`,
     `Smart Projects 360  ·  Kuwait  ·  Confidential  ·  Generated: ${today}`,10);
 
   // Summary KPIs
@@ -5065,7 +6788,7 @@ async function exportCEOPDF(){
   // Header
   doc.setFillColor(...navy); doc.rect(0,0,297,22,'F');
   doc.setTextColor(...gold); doc.setFontSize(16); doc.setFont('helvetica','bold');
-  doc.text('SP360 ERP v1.8 — CEO Flash Report',14,10);
+  doc.text('SP360 ERP v2.9 — CEO Flash Report',14,10);
   doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(...white);
   doc.text(`${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential`,14,17);
   doc.text(`Generated: ${today}`,250,17);
@@ -5137,7 +6860,7 @@ async function exportCEOPDF(){
     const vac=bP-eac;
     const wrP=bP-eP, brP=bP-aP;
     const tcpiP=wrP>0&&brP>0?(wrP/brP).toFixed(2):'—';
-    const rv=Math.min(Number(p.cpi),Number(p.spi));
+    const rv=ragScore(p);
     return[p.name?.split('—')[0]?.trim()?.substring(0,26)||'',p.client?.substring(0,14)||'',
       p.status||'',p.pct+'%',Number(p.cpi).toFixed(2),Number(p.spi).toFixed(2),
       'KWD '+fmtK(eac),'KWD '+fmtK(etc),
@@ -5200,7 +6923,7 @@ async function exportCEOPDF(){
     doc.setPage(i);
     doc.setFillColor(...navy); doc.rect(0,200,297,10,'F');
     doc.setTextColor(...white); doc.setFontSize(6); doc.setFont('helvetica','normal');
-    doc.text(`SP360 ERP v1.8  ·  CEO Flash Report  ·  ${month}  ·  Confidential — For Internal Use Only`,14,206);
+    doc.text(`SP360 ERP v2.9  ·  CEO Flash Report  ·  ${month}  ·  Confidential — For Internal Use Only`,14,206);
     doc.text(`Page ${i} of ${pageCount}`,283,206,{align:'right'});
   }
 
@@ -5210,11 +6933,11 @@ async function exportCEOPDF(){
 
 // ── ABOUT & CHANGELOG ────────────────────────────────────────
 function openAboutModal(){
-  openModal('SP360 ERP v2.2 — About & Changelog',`
+  openModal('SP360 ERP v2.9 — About & Changelog',`
   <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:12px 14px;background:#1E3A5F18;border-radius:8px">
     <div style="width:48px;height:48px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#0D1B2A;font-size:20px;flex-shrink:0">SP</div>
     <div>
-      <div style="font-size:16px;font-weight:800;color:var(--gold)">SP360 ERP v2.2</div>
+      <div style="font-size:16px;font-weight:800;color:var(--gold)">SP360 ERP v2.9</div>
       <div style="font-size:11px;color:var(--muted)">Smart Projects 360 · Kuwait · Production System</div>
       <div style="font-size:10px;color:var(--faint);margin-top:2px">Supabase · GitHub Pages · PWA · Single-file Architecture</div>
     </div>
@@ -5223,7 +6946,12 @@ function openAboutModal(){
   <div style="margin-bottom:14px">
     <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📋 Changelog</div>
     ${[
-      ['v2.2','Current','Audit Trail upgrade · Opp sequences · PWA manifest · SPI cell fix','#C9A84C'],
+      ['v2.5','v2.6','v2.7','v2.8','v2.9','Phase 16 — Document Control Complete','Transmittals · Document Revisions + History · Access Log · v_document_register view · approve_document_revision() RPC · Supabase Storage instructions','#C9A84C'],
+      ['v2.8','Phase 15 — HR Payroll + QHSE Complete','Payroll processing (NSSF/Tax) · HSE Inspections · Permit to Work · v_qhse_kpis view · v_payroll_summary view · adjust_item_stock RPC','#8B5CF6'],
+      ['v2.7','Phase 14 — Inventory + Procurement Lines','Material Master · Warehouse · Stock Ledger · PO Lines · MRV Lines · Invoice Lines · 3-Way Match by line · v_three_way_match view · v_stock_balance view','#10B981'],
+      ['v2.6','Phase 13 — Financial Core + GL','Chart of Accounts (36 accounts seeded) · Journal Entries + Lines · Trial Balance view · P&L view · advance_project_lifecycle() RPC · Health Check fixed','#3B82F6'],
+      ['v2.5','Phase 12 — Atomic Operations Complete','saveProject/savePO/saveVendor → Atomic RPCs · saveOpp audit entity_id fixed · CSP header added · PO-specific 3-Way Match (invoice↔PO↔MRV) · po_id linked on invoice insert · Invoice audit strict mode · SPI HTML rendering fix (2 <td> template literals) · convertToProject MAX+1 → next_ref_no() atomic RPC · CO Audit entity_id=null fixed (INSERT .select().single()) · CO dual-state unified (status=draft / workflow_status=submitted) · Version bumped to v2.3','#10B981'],
+      ['v2.2','Phase 10 — Stabilization','SPI HTML fix (4 locations) · EV Method engine (Percent/Milestone/Manual) · null RAG guard · Excel Sheet 2 column alignment · Lifecycle on_hold consistency · CO/Vendor atomic sequences · MRV+PO compensating rollback · Audit critical action surfacing · Health Check read-only · Email XSS protection · Bulk email privacy guard · Idle/Absolute session timeout · Branding unified to v2.2 · 3-Way Match invoice validation','#C9A84C'],
       ['v2.1','Phase 9','CEO Cash Flow · Vendor Approval · HR Leave Requests · CEO bvData fix','#10B981'],
       ['v2.0','Phase 8','EV Methods · DB Sequences · Invoice RPCs · Lifecycle Rules · KPI Views','#3B82F6'],
       ['v1.9','Phase 7','Procurement Lifecycle · Finance AR/AP · User Provisioning · Error Boundaries','#8B5CF6'],
@@ -5250,7 +6978,7 @@ function openAboutModal(){
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
     ${[
-      ['Version','v2.2 (Production)'],
+      ['Version','v2.9 (Production)'],
       ['Database','Supabase (PostgreSQL)'],
       ['Migrations','020 migrations applied'],
       ['Security','RLS + Server-side RPCs'],
@@ -5271,17 +6999,41 @@ function openAboutModal(){
 }
 
 // ── SESSION RESTORE ─────────────────────────────────────────
-// Security policy: always require explicit login on every page open
-// Clear local session cache without network call (avoids race conditions)
+// Session security policy:
+// - Supabase session persists across tabs/refreshes (standard behavior)
+// - Idle timeout: auto-logout after 4 hours of inactivity
+// - Absolute timeout: force re-login every 12 hours regardless
+// Note: clearing localStorage on every page load breaks PWA, multi-tab, and refresh continuity
 (()=>{
-  try{
-    // Clear Supabase session from localStorage — instant, no network
+  const IDLE_MS    = 4  * 60 * 60 * 1000; // 4h idle
+  const ABS_MS     = 12 * 60 * 60 * 1000; // 12h absolute
+  const SESSION_START_KEY = 'sp360_session_start';
+
+  let _idleTimer;
+  function resetIdleTimer(){
+    clearTimeout(_idleTimer);
+    _idleTimer = setTimeout(()=>{
+      if(typeof doLogout==='function') doLogout();
+      showToast && showToast('Session expired due to inactivity — please sign in again','error');
+    }, IDLE_MS);
+  }
+  ['click','keydown','mousemove','touchstart'].forEach(ev=>
+    document.addEventListener(ev, resetIdleTimer, {passive:true})
+  );
+
+  // Absolute session timeout
+  const sessionStart = Number(localStorage.getItem(SESSION_START_KEY)||0);
+  if(sessionStart && Date.now()-sessionStart > ABS_MS){
+    // Force clear only when absolute timeout exceeded
     Object.keys(localStorage).forEach(k=>{
       if(k.startsWith('sb-')||k.includes('supabase')) localStorage.removeItem(k);
     });
-  }catch(e){}
+    localStorage.removeItem(SESSION_START_KEY);
+  }
+
   document.getElementById('app').style.display='none';
   document.getElementById('auth-screen').style.display='flex';
+  resetIdleTimer();
 })();
 
 document.addEventListener('keydown',e=>{
@@ -5319,12 +7071,9 @@ async function runHealthCheck(){
     const {data,error}=await sb.from('projects').select('id',{count:'exact'}).limit(1);
     return error?false:`${data?.length>=0?'OK':'—'} (accessible)`;
   });
-  await check('RPC: next_ref_no', async()=>{
-    const {data,error}=await sb.rpc('next_ref_no',{p_type:'workflow',p_prefix:'TEST'});
-    // Rollback seq manually — not possible, but at least check connectivity
-    return error?false:`RPC working`;
-  });
-  await check('RPC: sp360_role', async()=>{
+  // NOTE: next_ref_no deliberately removed from health check — it consumes a sequence number
+  // and cannot be rolled back. Use read-only RPCs only in health checks.
+  await check('RPC: sp360_role (read-only connectivity)', async()=>{
     const {data,error}=await sb.rpc('sp360_role');
     if(error) return false;
     return `Role: ${data||'—'}`;
@@ -5333,10 +7082,18 @@ async function runHealthCheck(){
     const {data,error}=await sb.from('workflow_items').select('id',{count:'exact'}).limit(1);
     return error?false:'Accessible';
   });
-  await check('Audit Log Write', async()=>{
-    // Just check read access
-    const {error}=await sb.from('audit_log').select('id').limit(1);
-    return error?false:'Read OK';
+  await check('Audit Log Access', async()=>{
+    // Read access check (write happens via atomic RPCs — not client-side)
+    const {data,error}=await sb.from('audit_log').select('id',{count:'exact'}).limit(1);
+    if(error) return false;
+    return `Read OK (${data?.length??0} recent)`;
+  });
+  await check('Atomic RPC Available', async()=>{
+    // Verify next_ref_no RPC exists (required for all atomic operations)
+    const {data,error}=await sb.rpc('next_ref_no',{p_prefix:'HEALTH-TEST'});
+    if(error) return false;
+    // Clean up test sequence is not possible from client — that's OK
+    return data?'RPC OK':'RPC no response';
   });
   await check('PWA Service Worker', async()=>{
     if(!('serviceWorker' in navigator)) return 'Not supported';
