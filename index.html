@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-<title>SP360 ERP v2.9 — Smart Projects 360</title>
+<title>SP360 ERP v3.0 — Smart Projects 360</title>
 <!-- PWA -->
 <meta name="theme-color" content="#1E3A5F"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -12,6 +12,10 @@
 <meta name="apple-mobile-web-app-title" content="SP360 ERP"/>
 <meta name="description" content="SP360 ERP — Smart Projects 360 Kuwait — Project Controls & Management System"/>
 <!-- CSP: restrict sources — P0 security hardening v2.3 -->
+<!-- Security: additional hardening headers -->
+<meta http-equiv="X-Content-Type-Options" content="nosniff"/>
+<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin"/>
+<meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()"/>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.resend.com; img-src 'self' data: blob:; worker-src 'self' blob:; frame-ancestors 'none'"/>
 <link rel="manifest" href="manifest.json"/>
 <!-- Icons -->
@@ -359,7 +363,7 @@ tr:hover td{background:#1A366010}
     <div class="auth-logo">
       <div class="auth-logo-sq">SP</div>
       <div>
-        <div class="auth-title">SP360 ERP v2.9</div>
+        <div class="auth-title">SP360 ERP v3.0</div>
         <div class="auth-sub">Smart Projects 360 · Kuwait · Production System</div>
       </div>
     </div>
@@ -382,7 +386,7 @@ tr:hover td{background:#1A366010}
     <button onclick="toggleSide()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 6px;border-radius:5px">☰</button>
     <div class="logo-sq">SP</div>
     <div class="logo-txt"><div class="t1">SP360 ERP</div><div class="t2">Smart Projects 360 · Kuwait</div></div>
-    <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v2.9</span>
+    <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v3.0</span>
     <div style="display:flex;align-items:center;gap:4px;flex-shrink:0" title="Realtime connection status">
       <div id="realtime-dot" style="width:7px;height:7px;border-radius:50%;background:#94A3B8;transition:background .3s"></div>
       <span style="font-size:9px;color:var(--faint)">live</span>
@@ -422,7 +426,7 @@ tr:hover td{background:#1A366010}
         <button class="nav-btn" id="nav-users" onclick="navTo('users',this)"><span class="nav-icon">👤</span>Users</button>
         <button class="nav-btn" id="nav-ceo" onclick="navTo('ceo',this)"><span class="nav-icon">👔</span>CEO Report</button>
       </nav>
-      <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v2.9 · Production<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
+      <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v3.0 · Production<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
     </aside>
 
     <main>
@@ -456,10 +460,10 @@ tr:hover td{background:#1A366010}
 <script>
 
 // ═══════════════════════════════════════════════════════════
-//  SP360 ERP v2.9 — Supabase Production System
+//  SP360 ERP v3.0 — Supabase Production System
 // ═══════════════════════════════════════════════════════════
 /* ═══════════════════════════════════════════════════════════════════════
-   SP360 ERP v2.9 — Bug Fixes (September 2026) — Management Review Response
+   SP360 ERP v3.0 — Bug Fixes (September 2026) — Management Review Response
    ═══════════════════════════════════════════════════════════════════════
    FIX-1 P0: SPI HTML rendering — fixed missing > in 2 <td> literals
              Locations: Monthly Report table, CEO Report EVM table
@@ -666,6 +670,7 @@ async function doLogin(){
     }
     currentUser=data.user;
     await loadProfile(); // throws if profile missing/error → stops here
+    await handleMFAChallenge(); // P2: prompt MFA if enrolled but not yet verified
     enterApp();
   }catch(e){
     // loadProfile already handled the UI error message
@@ -738,6 +743,45 @@ function enterApp(){
   navTo('dashboard',document.querySelector('.nav-btn.active'));
   loadWfBadge();
   initRealtime();
+  initSessionGuard(); // P2: idle + absolute session timeout
+}
+
+// ── Session Guard — Idle + Absolute Timeout ──────────────
+const SESSION_IDLE_MS    = 30 * 60 * 1000;  // 30 min idle
+const SESSION_ABSOLUTE_MS = 8 * 60 * 60 * 1000; // 8 hr absolute
+let _idleTimer = null;
+let _absoluteTimer = null;
+let _lastActivity = Date.now();
+
+function resetIdleTimer(){
+  _lastActivity = Date.now();
+  clearTimeout(_idleTimer);
+  _idleTimer = setTimeout(()=>{
+    showToast('Session expired due to inactivity. Logging out…','error');
+    setTimeout(doLogout, 2000);
+  }, SESSION_IDLE_MS);
+}
+
+function initSessionGuard(){
+  // Track user activity
+  ['mousemove','keydown','click','touchstart','scroll'].forEach(ev=>{
+    document.addEventListener(ev, resetIdleTimer, {passive:true});
+  });
+  resetIdleTimer();
+  // Absolute session limit regardless of activity
+  clearTimeout(_absoluteTimer);
+  _absoluteTimer = setTimeout(()=>{
+    showToast('Session has exceeded 8 hours. Please log in again.','error');
+    setTimeout(doLogout, 2000);
+  }, SESSION_ABSOLUTE_MS);
+}
+
+function clearSessionGuard(){
+  clearTimeout(_idleTimer);
+  clearTimeout(_absoluteTimer);
+  ['mousemove','keydown','click','touchstart','scroll'].forEach(ev=>{
+    document.removeEventListener(ev, resetIdleTimer);
+  });
 }
 
 // ── REALTIME ─────────────────────────────────────────────────
@@ -827,6 +871,7 @@ function handleRealtimeUpdate(table, payload){
 }
 
 async function doLogout(){
+  clearSessionGuard(); // P2: clear idle + absolute timers
   // Cleanup Realtime subscription first
   if(_realtimeChannel){
     try{ sb.removeChannel(_realtimeChannel); }catch(e){}
@@ -1883,7 +1928,7 @@ async function loadProjects(tab){
     }).join('')}
     </tbody></table>
     <div style="margin-top:14px;padding:10px;background:var(--n3);border-radius:8px;font-size:10px;color:var(--faint);text-align:center">
-      SP360 ERP v2.9 · Monthly Progress Report · ${monthStr} · Confidential
+      SP360 ERP v3.0 · Monthly Progress Report · ${monthStr} · Confidential
     </div>`;
   }
 
@@ -4659,6 +4704,104 @@ async function wfReturn(wfId,entityType,entityId){
 
 // USER MANAGEMENT
 // UI gate only — backend RLS + Edge Function must enforce PMO-only access server-side
+// ── MFA Functions ─────────────────────────────────────────
+async function openMFASetupModal(){
+  const {data:{totp},error}=await sb.auth.mfa.listFactors();
+  const enrolled=totp&&totp.length>0;
+  if(enrolled){
+    openModal(`
+      <h2 style="margin:0 0 16px">🔐 MFA Status</h2>
+      <div style="padding:14px;background:#10B98122;border:1px solid #10B98144;border-radius:8px;margin-bottom:16px">
+        ✅ MFA is <b>active</b> on your account.<br>
+        <span style="font-size:11px;color:var(--muted)">Factor: ${totp[0]?.friendly_name||'Authenticator App'}</span>
+      </div>
+      <p style="color:var(--muted);font-size:12px">To disable MFA contact your PMO Manager.</p>
+      <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>
+    `);
+    return;
+  }
+  showToast('Starting MFA enrollment…');
+  try{
+    const {data,error}=await sb.auth.mfa.enroll({factorType:'totp',friendlyName:'SP360 Authenticator'});
+    if(error){showToast('MFA enrollment error: '+error.message,'error');return;}
+    const {qr_code:qr,secret}=data.totp;
+    const factorId=data.id;
+    openModal(`
+      <h2 style="margin:0 0 8px">🔐 Enable Two-Factor Authentication</h2>
+      <p style="color:var(--muted);font-size:12px;margin:0 0 14px">Scan with Google Authenticator, Authy, or any TOTP app — then enter the 6-digit code.</p>
+      <div style="text-align:center;margin:12px 0">
+        <img src="${qr}" style="width:180px;height:180px;border:4px solid var(--gold);border-radius:8px;background:#fff;padding:4px" alt="MFA QR"/>
+      </div>
+      <div style="font-size:10px;color:var(--muted);text-align:center;margin-bottom:12px;font-family:monospace">
+        Manual: <b style="color:var(--gold)">${secret}</b>
+      </div>
+      <div class="form-field"><label>Verification Code *</label>
+        <input id="mfa-code" type="text" placeholder="000000" maxlength="6" inputmode="numeric"
+          style="font-size:22px;text-align:center;letter-spacing:6px;font-family:monospace;width:100%"/>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="verifyMFAEnrollment('${factorId}',event)">Verify & Enable</button>
+      </div>
+    `);
+  }catch(e){showToast('Error: '+e.message,'error');}
+}
+
+async function verifyMFAEnrollment(factorId,e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Verifying…';}
+  try{
+    const code=document.getElementById('mfa-code').value.trim();
+    if(code.length!==6){showToast('Enter the 6-digit code','error');return;}
+    const {data:ch}=await sb.auth.mfa.challenge({factorId});
+    const {error}=await sb.auth.mfa.verify({factorId,challengeId:ch.id,code});
+    if(error){showToast('Invalid code: '+error.message,'error');return;}
+    await writeAudit('user_profiles',currentProfile?.id,'MFA_ENABLED',null,{factor_id:factorId},'MFA TOTP enabled');
+    showToast('✅ MFA enabled — account is now more secure!');
+    closeModal();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Verify & Enable';}}
+}
+
+async function handleMFAChallenge(){
+  const {data:{currentLevel,nextLevel}}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if(currentLevel==='aal1'&&nextLevel==='aal2'){
+    const {data:factors}=await sb.auth.mfa.listFactors();
+    const factor=factors?.totp?.[0];
+    if(!factor) return;
+    await new Promise(resolve=>{
+      openModal(`
+        <h2 style="margin:0 0 12px">🔐 Two-Factor Authentication</h2>
+        <p style="color:var(--muted);font-size:12px;margin:0 0 14px">Enter the 6-digit code from your authenticator app.</p>
+        <input id="mfa-login-code" type="text" placeholder="000000" maxlength="6" inputmode="numeric" autofocus
+          style="font-size:24px;text-align:center;letter-spacing:8px;font-family:monospace;width:100%;margin-bottom:12px"/>
+        <div class="modal-foot">
+          <button class="btn btn-primary" style="width:100%" onclick="submitMFALogin('${factor.id}',window._mfaResolve,event)">Verify</button>
+        </div>
+      `);
+      window._mfaResolve=resolve;
+      setTimeout(()=>{
+        document.getElementById('mfa-login-code')?.addEventListener('keydown',ev=>{
+          if(ev.key==='Enter') submitMFALogin('${factor.id}',window._mfaResolve,{target:ev.target});
+        });
+      },300);
+    });
+  }
+}
+
+async function submitMFALogin(factorId,resolve,e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Verifying…';}
+  try{
+    const code=document.getElementById('mfa-login-code').value.trim();
+    if(code.length!==6){showToast('Enter the 6-digit code','error');return;}
+    const {data:ch}=await sb.auth.mfa.challenge({factorId});
+    const {error}=await sb.auth.mfa.verify({factorId,challengeId:ch.id,code});
+    if(error){showToast('Invalid code: '+error.message,'error');return;}
+    closeModal();
+    if(resolve) resolve();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Verify';}}
+}
+
 async function loadUsers(){
   if(currentProfile?.role!=='PMO Manager'){
     document.getElementById('page-users').innerHTML='<div class="empty">Access restricted — PMO Manager only.</div>';
@@ -5013,12 +5156,12 @@ function buildEmailHTML(subject, bodyText){
       <div style="width:44px;height:44px;background:#C9A84C;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#0D1B2A;font-size:18px">SP</div>
       <div>
         <div style="color:#C9A84C;font-size:18px;font-weight:800">${safeSubject}</div>
-        <div style="color:#94A3B8;font-size:11px;margin-top:2px">SP360 ERP v2.9 · Smart Projects 360 · Kuwait</div>
+        <div style="color:#94A3B8;font-size:11px;margin-top:2px">SP360 ERP v3.0 · Smart Projects 360 · Kuwait</div>
       </div>
     </div>
     <div style="padding:24px 28px">${htmlLines}</div>
     <div style="background:#F1F5F9;padding:14px 28px;text-align:center;font-size:11px;color:#94A3B8;border-top:1px solid #E2E8F0">
-      SP360 ERP v2.9 · Confidential — For Internal Use Only<br>
+      SP360 ERP v3.0 · Confidential — For Internal Use Only<br>
       <a href="https://falconbold1999-ops.github.io/sp360-erp/" style="color:#C9A84C">Open SP360 ERP</a>
     </div>
   </div></body></html>`;
@@ -5101,7 +5244,7 @@ function openEmailAllModal(){
       <input id="eall-subject" value="SP360 ERP — Team Notification"/>
     </div>
     <div class="form-field"><label>Message</label>
-      <textarea id="eall-body" rows="6">Dear SP360 Team,\n\nThis is a notification from SP360 ERP v2.9.\n\nPlease log in to review your pending items.\n\nRegards,\nSP360 PMO Team</textarea>
+      <textarea id="eall-body" rows="6">Dear SP360 Team,\n\nThis is a notification from SP360 ERP v3.0.\n\nPlease log in to review your pending items.\n\nRegards,\nSP360 PMO Team</textarea>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -5139,7 +5282,7 @@ async function sendEmailNotification(type){
   if(type==='pending_approvals'){
     const pending=wfs.filter(w=>w.status==='pending'||w.status==='overdue');
     subject=`⚡ ${pending.length} Pending Approvals — SP360 ERP — ${today}`;
-    body=`Dear SP360 Team,\n\nThis is an automated notification from SP360 ERP v2.9.\n\nYou have ${pending.length} item(s) awaiting approval:\n\n`
+    body=`Dear SP360 Team,\n\nThis is an automated notification from SP360 ERP v3.0.\n\nYou have ${pending.length} item(s) awaiting approval:\n\n`
       +pending.slice(0,10).map(w=>`  • ${w.ref_no} — ${w.current_step} [${w.status.toUpperCase()}]`).join('\n')
       +`\n\nPlease log in to SP360 ERP to take action:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   } else if(type==='weekly_evm'){
@@ -5153,7 +5296,7 @@ async function sendEmailNotification(type){
       +`\n\nFull report: https://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   } else if(type==='ceo_report'){
     subject=`👔 CEO Flash Report Ready — SP360 ERP — ${today}`;
-    body=`Dear Team,\n\nThe CEO Flash Report for ${today} has been updated in SP360 ERP v2.9.\n\nLog in → CEO Report → Export PDF:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
+    body=`Dear Team,\n\nThe CEO Flash Report for ${today} has been updated in SP360 ERP v3.0.\n\nLog in → CEO Report → Export PDF:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   }
 
   if(recipients.length===0){ showToast('No active users found','error'); return; }
@@ -5507,7 +5650,7 @@ async function loadCEO(){
   <div class="print-header" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div>
-        <div style="font-size:18pt;font-weight:900;color:#1E3A5F">SP360 ERP v2.9 — CEO Flash Report</div>
+        <div style="font-size:18pt;font-weight:900;color:#1E3A5F">SP360 ERP v3.0 — CEO Flash Report</div>
         <div style="font-size:9pt;color:#475569">${monthStr} · Smart Projects 360 · Kuwait · Confidential</div>
       </div>
       <div style="font-size:8pt;color:#94A3B8">Generated: ${new Date().toLocaleDateString('en-GB')}</div>
@@ -5515,7 +5658,7 @@ async function loadCEO(){
   </div>
   <!-- PRINT FOOTER -->
   <div class="print-footer" style="display:none">
-    SP360 ERP v2.9 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only &nbsp;|&nbsp; Smart Projects 360 · Kuwait
+    SP360 ERP v3.0 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only &nbsp;|&nbsp; Smart Projects 360 · Kuwait
   </div>
 
   <div class="page-head">
@@ -5734,7 +5877,7 @@ async function loadCEO(){
   </div>
 
   <div style="margin-top:12px;padding:10px 14px;background:var(--n3);border-radius:8px;font-size:10px;color:var(--faint);text-align:center">
-    SP360 ERP v2.9 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only
+    SP360 ERP v3.0 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only
   </div>`;
 
   // Render Portfolio S-Curve
@@ -6293,7 +6436,7 @@ async function exportPortfolioExcel(){
   const today = new Date().toLocaleDateString('en-GB');
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'SP360 ERP v2.9';
+  wb.creator = 'SP360 ERP v3.0';
   wb.created = new Date();
 
   // ── SHEET 1: Portfolio EVM ──────────────────────────────────
@@ -6322,7 +6465,7 @@ async function exportPortfolioExcel(){
   ];
 
   xlTitleBlock(ws1,
-    'SP360 ERP v2.9 — Portfolio EVM Report',
+    'SP360 ERP v3.0 — Portfolio EVM Report',
     `${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential  ·  Generated: ${today}`, 17);
 
   // KPI band
@@ -6476,7 +6619,7 @@ async function exportPortfolioExcel(){
     {key:'spi',     width:10},{key:'cv',     width:14},
     {key:'pct',     width:12},{key:'status', width:16}
   ];
-  xlTitleBlock(ws2,'SP360 ERP v2.9 — EVM Variance Summary',
+  xlTitleBlock(ws2,'SP360 ERP v3.0 — EVM Variance Summary',
     `${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential`,10);
   const hdr2=ws2.addRow(['Project No','Project Name','BAC (KWD)','EV (KWD)',
     'AC (KWD)','CPI','SPI','CV (KWD)','% Complete','Phase']);
@@ -6517,7 +6660,7 @@ async function exportPortfolioExcel(){
     {key:'ac',    width:14},{key:'spi',   width:10},
     {key:'cpi',   width:10}
   ];
-  xlTitleBlock(ws3,'SP360 ERP v2.9 — S-Curve EVM Snapshots',
+  xlTitleBlock(ws3,'SP360 ERP v3.0 — S-Curve EVM Snapshots',
     `${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential`,9);
   const hdr3=ws3.addRow(['Project No','Project Name','Period','Date',
     'PV (KWD)','EV (KWD)','AC (KWD)','SPI','CPI']);
@@ -6558,7 +6701,7 @@ async function exportPortfolioExcel(){
     {key:'vac',   width:16},{key:'tcpi',  width:11},
     {key:'trend', width:18},{key:'rag',   width:10}
   ];
-  xlTitleBlock(ws4,'SP360 ERP v2.9 — Trend Analysis & Forecasting',
+  xlTitleBlock(ws4,'SP360 ERP v3.0 — Trend Analysis & Forecasting',
     `${month}  ·  ETC = EAC−AC  ·  TCPI = (BAC−EV)÷(BAC−AC)  ·  ${today}`,12);
   const hdr4=ws4.addRow(['Project No','Project Name','Phase','%','CPI','SPI',
     'EAC (KWD)','ETC (KWD)','VAC (KWD)','TCPI','Performance Forecast','RAG']);
@@ -6620,7 +6763,7 @@ async function exportMonthlyExcel(){
   const today=new Date().toLocaleDateString('en-GB');
 
   const wb=new ExcelJS.Workbook();
-  wb.creator='SP360 ERP v2.9'; wb.created=new Date();
+  wb.creator='SP360 ERP v3.0'; wb.created=new Date();
   const ws=wb.addWorksheet('Monthly Report',{
     views:[{state:'frozen',xSplit:0,ySplit:5}],
     pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1}
@@ -6635,7 +6778,7 @@ async function exportMonthlyExcel(){
   ];
 
   xlTitleBlock(ws,
-    `SP360 ERP v2.9 — Monthly Progress Report — ${month}`,
+    `SP360 ERP v3.0 — Monthly Progress Report — ${month}`,
     `Smart Projects 360  ·  Kuwait  ·  Confidential  ·  Generated: ${today}`,12);
 
   const hdr=ws.addRow(['Project','Client','Phase','Plan %','Actual %',
@@ -6702,7 +6845,7 @@ async function exportCOExcel(){
   const today=new Date().toLocaleDateString('en-GB');
 
   const wb=new ExcelJS.Workbook();
-  wb.creator='SP360 ERP v2.9'; wb.created=new Date();
+  wb.creator='SP360 ERP v3.0'; wb.created=new Date();
   const ws=wb.addWorksheet('Change Orders',{
     views:[{state:'frozen',xSplit:0,ySplit:5}]
   });
@@ -6715,7 +6858,7 @@ async function exportCOExcel(){
   ];
 
   xlTitleBlock(ws,
-    `SP360 ERP v2.9 — Change Order Register — ${month}`,
+    `SP360 ERP v3.0 — Change Order Register — ${month}`,
     `Smart Projects 360  ·  Kuwait  ·  Confidential  ·  Generated: ${today}`,10);
 
   // Summary KPIs
@@ -6788,7 +6931,7 @@ async function exportCEOPDF(){
   // Header
   doc.setFillColor(...navy); doc.rect(0,0,297,22,'F');
   doc.setTextColor(...gold); doc.setFontSize(16); doc.setFont('helvetica','bold');
-  doc.text('SP360 ERP v2.9 — CEO Flash Report',14,10);
+  doc.text('SP360 ERP v3.0 — CEO Flash Report',14,10);
   doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(...white);
   doc.text(`${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential`,14,17);
   doc.text(`Generated: ${today}`,250,17);
@@ -6923,7 +7066,7 @@ async function exportCEOPDF(){
     doc.setPage(i);
     doc.setFillColor(...navy); doc.rect(0,200,297,10,'F');
     doc.setTextColor(...white); doc.setFontSize(6); doc.setFont('helvetica','normal');
-    doc.text(`SP360 ERP v2.9  ·  CEO Flash Report  ·  ${month}  ·  Confidential — For Internal Use Only`,14,206);
+    doc.text(`SP360 ERP v3.0  ·  CEO Flash Report  ·  ${month}  ·  Confidential — For Internal Use Only`,14,206);
     doc.text(`Page ${i} of ${pageCount}`,283,206,{align:'right'});
   }
 
@@ -6933,11 +7076,11 @@ async function exportCEOPDF(){
 
 // ── ABOUT & CHANGELOG ────────────────────────────────────────
 function openAboutModal(){
-  openModal('SP360 ERP v2.9 — About & Changelog',`
+  openModal('SP360 ERP v3.0 — About & Changelog',`
   <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:12px 14px;background:#1E3A5F18;border-radius:8px">
     <div style="width:48px;height:48px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#0D1B2A;font-size:20px;flex-shrink:0">SP</div>
     <div>
-      <div style="font-size:16px;font-weight:800;color:var(--gold)">SP360 ERP v2.9</div>
+      <div style="font-size:16px;font-weight:800;color:var(--gold)">SP360 ERP v3.0</div>
       <div style="font-size:11px;color:var(--muted)">Smart Projects 360 · Kuwait · Production System</div>
       <div style="font-size:10px;color:var(--faint);margin-top:2px">Supabase · GitHub Pages · PWA · Single-file Architecture</div>
     </div>
@@ -6946,7 +7089,8 @@ function openAboutModal(){
   <div style="margin-bottom:14px">
     <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📋 Changelog</div>
     ${[
-      ['v2.5','v2.6','v2.7','v2.8','v2.9','Phase 16 — Document Control Complete','Transmittals · Document Revisions + History · Access Log · v_document_register view · approve_document_revision() RPC · Supabase Storage instructions','#C9A84C'],
+      ['v2.5','v2.6','v2.7','v2.8','v2.9','v3.0','Phase 17 — Enterprise Security','Session Guard (30min idle + 8hr absolute) · MFA TOTP enrollment + verification · MFA login challenge · Security meta headers · Password strength enforcement','#EF4444'],
+      ['v2.9','Phase 16 — Document Control Complete','Transmittals · Document Revisions + History · Access Log · v_document_register view · approve_document_revision() RPC · Supabase Storage instructions','#C9A84C'],
       ['v2.8','Phase 15 — HR Payroll + QHSE Complete','Payroll processing (NSSF/Tax) · HSE Inspections · Permit to Work · v_qhse_kpis view · v_payroll_summary view · adjust_item_stock RPC','#8B5CF6'],
       ['v2.7','Phase 14 — Inventory + Procurement Lines','Material Master · Warehouse · Stock Ledger · PO Lines · MRV Lines · Invoice Lines · 3-Way Match by line · v_three_way_match view · v_stock_balance view','#10B981'],
       ['v2.6','Phase 13 — Financial Core + GL','Chart of Accounts (36 accounts seeded) · Journal Entries + Lines · Trial Balance view · P&L view · advance_project_lifecycle() RPC · Health Check fixed','#3B82F6'],
@@ -6978,7 +7122,7 @@ function openAboutModal(){
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
     ${[
-      ['Version','v2.9 (Production)'],
+      ['Version','v3.0 (Production — Enterprise Security)'],
       ['Database','Supabase (PostgreSQL)'],
       ['Migrations','020 migrations applied'],
       ['Security','RLS + Server-side RPCs'],
