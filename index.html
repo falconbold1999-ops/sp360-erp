@@ -12,10 +12,6 @@
 <meta name="apple-mobile-web-app-title" content="SP360 ERP"/>
 <meta name="description" content="SP360 ERP — Smart Projects 360 Kuwait — Project Controls & Management System"/>
 <!-- CSP: restrict sources — P0 security hardening v2.3 -->
-<!-- Security: additional hardening headers -->
-<meta http-equiv="X-Content-Type-Options" content="nosniff"/>
-<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin"/>
-<meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()"/>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.resend.com; img-src 'self' data: blob:; worker-src 'self' blob:; frame-ancestors 'none'"/>
 <link rel="manifest" href="manifest.json"/>
 <!-- Icons -->
@@ -426,7 +422,7 @@ tr:hover td{background:#1A366010}
         <button class="nav-btn" id="nav-users" onclick="navTo('users',this)"><span class="nav-icon">👤</span>Users</button>
         <button class="nav-btn" id="nav-ceo" onclick="navTo('ceo',this)"><span class="nav-icon">👔</span>CEO Report</button>
       </nav>
-      <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v3.0 · Production · Modular Ready<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
+      <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v3.0 · Production<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
     </aside>
 
     <main>
@@ -480,26 +476,6 @@ tr:hover td{background:#1A366010}
        RETURNING last_seq INTO v_seq;
        RETURN p_prefix||'-'||LPAD(v_seq::text,3,'0'); END; $$;
    ═══════════════════════════════════════════════════════════════════════ */
-/* ════════════════════════════════════════════════════════════════════
-   SP360 ERP v3.0 — Application JavaScript
-   ════════════════════════════════════════════════════════════════════
-   Architecture: Single-file (Monolithic) — Production Deployment
-   Future: Modular (see /js/module-index.js for split plan)
-
-   Module boundaries are marked with // ── SECTION ── comments
-   Run: node scripts/split-modules.js to extract into separate files
-
-   Load order (when split):
-   1. services/supabase.js  → Supabase client
-   2. core/config.js        → ROLE_PAGES, constants
-   3. core/auth.js          → Auth + login flow
-   4. core/session.js       → Session guard
-   5. core/realtime.js      → Realtime subscriptions
-   6. core/nav.js           → Navigation + modal + toast
-   7. core/mfa.js           → MFA enrollment + challenge
-   8. modules/*.js          → Feature modules (dashboard, projects…)
-   ════════════════════════════════════════════════════════════════════ */
-
 const SUPABASE_URL = 'https://sqizirpsatofcoqshwer.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxaXppcnBzYXRvZmNvcXNod2VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxNTM5MTAsImV4cCI6MjEwMjcyOTkxMH0.LnfA4pGIbv30uQVNHa7MeFioP9OF2ukNTol_cDUF8mk';
 // ── SUPABASE INIT (safe, non-blocking) ───────────────────────
@@ -613,6 +589,9 @@ const cpiColor = v=>Number(v)>=1?'#10B981':Number(v)>=0.9?'#F97316':'#EF4444';
 const ragScore = p=>{const cpi=Number(p.cpi);if(p.spi==null)return null;return Math.min(cpi,Number(p.spi));};
 const rag = v=>v===null?'⚪':v>=1?'🟢':v>=0.9?'🟡':'🔴';
 const esc = s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Safe JavaScript argument for inline event handlers. HTML escaping alone is not sufficient
+// because the browser decodes entities before evaluating the onclick JavaScript.
+const jsArg = v=>esc(JSON.stringify(String(v==null?'':v)));
 
 let _toastT;
 function showToast(msg,type='success'){
@@ -690,7 +669,8 @@ async function doLogin(){
     }
     currentUser=data.user;
     await loadProfile(); // throws if profile missing/error → stops here
-    await handleMFAChallenge(); // P2: prompt MFA if enrolled but not yet verified
+    if(!localStorage.getItem('sp360_session_start'))
+      localStorage.setItem('sp360_session_start',String(Date.now()));
     enterApp();
   }catch(e){
     // loadProfile already handled the UI error message
@@ -750,59 +730,29 @@ function enterApp(){
     const btn=document.getElementById('nav-'+p);
     if(btn)btn.style.display=allowed.includes(p)?'':'none';
   });
-  // Pre-cache lookup data for modal selects (runs async, non-blocking)
+  // Pre-cache lookups for modals
   Promise.all([
     sb.from('employees').select('id,full_name,employee_no').eq('status','active').order('full_name'),
     sb.from('user_profiles').select('id,full_name,role').order('full_name'),
-    sb.from('projects').select('id,project_no,name').in('status',['planning','execution','monitoring','closeout']).order('project_no')
-  ]).then(([{data:_emps},{data:_users},{data:_projs}])=>{
-    window._cachedEmployees=_emps||[];
-    window._cachedUsers=_users||[];
-    window._cachedProjects=_projs||[];
+    sb.from('projects').select('id,project_no,name').in('status',['planning','execution','monitoring','closeout']).order('project_no'),
+    sb.from('material_master').select('id,item_code,item_name').eq('is_active',true).order('item_code')
+  ]).then(([{data:_e},{data:_u},{data:_p},{data:_i}])=>{
+    window._cachedEmployees=_e||[];
+    window._cachedUsers=_u||[];
+    window._cachedProjects=_p||[];
+    window._cachedItems=_i||[];
   });
   navTo('dashboard',document.querySelector('.nav-btn.active'));
   loadWfBadge();
   initRealtime();
-  initSessionGuard(); // P2: idle + absolute session timeout
+  initSessionGuard();
 }
 
-// ── Session Guard — Idle + Absolute Timeout ──────────────
-const SESSION_IDLE_MS    = 30 * 60 * 1000;  // 30 min idle
-const SESSION_ABSOLUTE_MS = 8 * 60 * 60 * 1000; // 8 hr absolute
-let _idleTimer = null;
-let _absoluteTimer = null;
-let _lastActivity = Date.now();
-
-function resetIdleTimer(){
-  _lastActivity = Date.now();
-  clearTimeout(_idleTimer);
-  _idleTimer = setTimeout(()=>{
-    showToast('Session expired due to inactivity. Logging out…','error');
-    setTimeout(doLogout, 2000);
-  }, SESSION_IDLE_MS);
-}
-
-function initSessionGuard(){
-  // Track user activity
-  ['mousemove','keydown','click','touchstart','scroll'].forEach(ev=>{
-    document.addEventListener(ev, resetIdleTimer, {passive:true});
-  });
-  resetIdleTimer();
-  // Absolute session limit regardless of activity
-  clearTimeout(_absoluteTimer);
-  _absoluteTimer = setTimeout(()=>{
-    showToast('Session has exceeded 8 hours. Please log in again.','error');
-    setTimeout(doLogout, 2000);
-  }, SESSION_ABSOLUTE_MS);
-}
-
-function clearSessionGuard(){
-  clearTimeout(_idleTimer);
-  clearTimeout(_absoluteTimer);
-  ['mousemove','keydown','click','touchstart','scroll'].forEach(ev=>{
-    document.removeEventListener(ev, resetIdleTimer);
-  });
-}
+const SESSION_IDLE_MS=30*60*1000,SESSION_ABS_MS=8*60*60*1000;
+let _idleTimer=null,_absTimer=null;
+function resetIdleTimer(){clearTimeout(_idleTimer);_idleTimer=setTimeout(()=>{showToast('Session expired','error');setTimeout(doLogout,2000);},SESSION_IDLE_MS);}
+function initSessionGuard(){['mousemove','keydown','click','touchstart'].forEach(e=>document.addEventListener(e,resetIdleTimer,{passive:true}));resetIdleTimer();clearTimeout(_absTimer);_absTimer=setTimeout(()=>{showToast('Session exceeded 8 hours','error');setTimeout(doLogout,2000);},SESSION_ABS_MS);}
+function clearSessionGuard(){clearTimeout(_idleTimer);clearTimeout(_absTimer);}
 
 // ── REALTIME ─────────────────────────────────────────────────
 let _realtimeChannel = null;
@@ -891,7 +841,7 @@ function handleRealtimeUpdate(table, payload){
 }
 
 async function doLogout(){
-  clearSessionGuard(); // P2: clear idle + absolute timers
+  if(typeof clearSessionGuard==='function')clearSessionGuard();
   // Cleanup Realtime subscription first
   if(_realtimeChannel){
     try{ sb.removeChannel(_realtimeChannel); }catch(e){}
@@ -923,10 +873,10 @@ function navTo(id,btn){
   const pg=document.getElementById('page-'+id);
   if(pg)pg.classList.add('active');
   const loaders={
-    dashboard:loadDashboard,bizdev:loadBizdev,projects:loadProjects,inventory:loadInventory,
+    dashboard:loadDashboard,bizdev:loadBizdev,projects:loadProjects,
     procurement:()=>loadProc(curProcTab),finance:loadFinance,
     hr:()=>loadHR(curHRTab),qhse:()=>loadQHSE(curQHSETab),
-    documents:()=>loadDocs(curDocTab),workflow:loadWorkflow,audit:loadAudit,
+    inventory:loadInventory,documents:()=>loadDocs(curDocTab),workflow:loadWorkflow,audit:loadAudit,
     users:loadUsers,ceo:loadCEO
   };
   if(loaders[id])loaders[id]();
@@ -1346,8 +1296,8 @@ async function loadBizdev(){
         ${o.status==='bid_review'?`<button class="btn btn-primary btn-sm" onclick="advanceOpp('${o.id}','tender_prep')">Go Bid</button> <button class="btn btn-danger btn-sm" onclick="advanceOpp('${o.id}','no_bid')">No Bid</button>`:''}
         ${o.status==='tender_prep'?`<button class="btn btn-primary btn-sm" onclick="advanceOpp('${o.id}','submitted')">Submit</button>`:''}
         ${o.status==='submitted'?`<button class="btn btn-ghost btn-sm" onclick="advanceOpp('${o.id}','under_evaluation')">Evaluating</button>`:''}
-        ${o.status==='under_evaluation'?`<button class="btn btn-primary btn-sm" onclick="awardOpp('${o.id}','${o.opp_no}','${esc(o.title)}','${esc(o.client)}',${o.est_value},'${o.department}')">Award ✓</button> <button class="btn btn-danger btn-sm" onclick="advanceOpp('${o.id}','lost')">Lost</button>`:''}
-        ${o.status==='won'&&!o.project_id?`<button class="btn btn-primary btn-sm" style="background:#8B5CF6" onclick="convertToProject('${o.id}','${o.opp_no}','${esc(o.title)}','${esc(o.client)}',${o.est_value},'${o.department}')">→ Convert to Project</button>`:''}
+        ${o.status==='under_evaluation'?`<button class="btn btn-primary btn-sm" onclick="awardOpp(${jsArg(o.id)},${jsArg(o.opp_no)},${jsArg(o.title)},${jsArg(o.client)},${Number(o.est_value)||0},${jsArg(o.department)})">Award ✓</button> <button class="btn btn-danger btn-sm" onclick="advanceOpp('${o.id}','lost')">Lost</button>`:''}
+        ${o.status==='won'&&!o.project_id?`<button class="btn btn-primary btn-sm" style="background:#8B5CF6" onclick="convertToProject(${jsArg(o.id)},${jsArg(o.opp_no)},${jsArg(o.title)},${jsArg(o.client)},${Number(o.est_value)||0},${jsArg(o.department)})">→ Convert to Project</button>`:''}
         ${o.status==='won'&&o.project_id?`<span style="color:#10B981;font-size:10px;font-weight:700">✓ Project Created</span>`:''}
       </td>
     </tr>`).join('')}
@@ -2110,14 +2060,11 @@ async function advanceProject(projId, newStatus, event){
     loadProjects('lifecycle'); // reset dropdown
     return;
   }
-  // ATOMIC: transition validation + update + audit in single DB transaction
-  const {data:rpcData,error}=await sb.rpc('advance_project_lifecycle',{
-    p_project_id:  projId,
-    p_new_status:  newStatus,
-    p_performed_by: currentProfile?.id
-  });
+  const {error}=await sb.from('projects').update({status:newStatus}).eq('id',projId);
   if(error){showToast('Error: '+error.message,'error');return;}
-  if(!rpcData?.ok){showToast('Transition not allowed: '+(rpcData?.error||'Unknown'),'error');loadProjects('lifecycle');return;}
+  await writeAudit('projects',projId,'LIFECYCLE_ADVANCE',
+    {status:currentStatus},{status:newStatus},
+    `Phase: ${currentStatus} → ${newStatus}`);
   showToast(`${proj?.name?.split('—')[0]?.trim()||'Project'} → ${PROJ_LIFECYCLE_LABELS[newStatus]||newStatus} ✓`);
   loadProjects('lifecycle');
 }
@@ -2160,7 +2107,7 @@ async function loadProc(tab='vendors'){
         ${isPMO?`<td style="text-align:center;white-space:nowrap;display:flex;gap:4px;justify-content:center">
           ${canApprove?`<button class="btn btn-primary btn-sm" style="font-size:9px;padding:2px 7px" onclick="approveVendor('${v.id}',true)">✓ Approve</button>`:''}
           ${canRevoke?`<button class="btn btn-ghost btn-sm" style="font-size:9px;padding:2px 7px" onclick="approveVendor('${v.id}',false)">Revoke</button>`:''}
-          ${canBlacklist?`<button class="btn btn-ghost btn-sm" style="font-size:9px;padding:2px 7px;color:#EF4444" onclick="blacklistVendor('${v.id}','${esc(v.name)}')">🚫</button>`:''}
+          ${canBlacklist?`<button class="btn btn-ghost btn-sm" style="font-size:9px;padding:2px 7px;color:#EF4444" onclick="blacklistVendor(${jsArg(v.id)},${jsArg(v.name)})">🚫</button>`:''}
         </td>`:''}
       </tr>`;
     }).join('')}
@@ -2180,7 +2127,7 @@ async function loadProc(tab='vendors'){
         <td style="color:var(--muted);font-size:11px">${r.close_date||'—'}</td>
         <td style="text-align:center">${pill(r.status)}</td>
         <td style="text-align:center">
-          ${canAward?`<button class="btn btn-primary btn-sm" style="font-size:10px;padding:3px 8px" onclick="openAwardRFQModal('${r.id}','${esc(r.rfq_no)}','${esc(r.title)}','${r.project_id||''}',${r.budget||0})">Award → PO</button>`:''}
+          ${canAward?`<button class="btn btn-primary btn-sm" style="font-size:10px;padding:3px 8px" onclick="openAwardRFQModal(${jsArg(r.id)},${jsArg(r.rfq_no)},${jsArg(r.title)},${jsArg(r.project_id||'')},${Number(r.budget)||0})">Award → PO</button>`:''}
         </td>
       </tr>`;
     }).join('')}
@@ -2205,7 +2152,7 @@ async function loadProc(tab='vendors'){
         <td style="text-align:center">${pill(p.status)}</td>
         <td style="text-align:center;white-space:nowrap">
           ${canSubmit?`<button class="btn btn-primary btn-sm" style="font-size:10px;padding:3px 8px" onclick="submitPO(event,'${p.id}')">Submit ▶</button>`:''}
-          ${canReceive?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px" onclick="openMRVFromPO('${p.id}','${esc(p.po_no)}')">Receive ✓</button>`:''}
+          ${canReceive?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px" onclick="openMRVFromPO(${jsArg(p.id)},${jsArg(p.po_no)})">Receive ✓</button>`:''}
         </td>
       </tr>`;
     }).join('')}
@@ -2241,7 +2188,7 @@ async function openCreatePOModal(){
     sb.from('projects').select('id,project_no,name').in('status',ACTIVE_STATUSES).order('project_no'),
     sb.from('vendors').select('id,name,vendor_code').eq('is_approved',true).order('name')
   ]);
-  const {data:newPONo}=await sb.rpc('next_ref_no',{p_type:'po'});
+  const {data:newPONo}=await sb.rpc('next_ref_no',{p_prefix:'PO'});
 
   openModal('New Purchase Order',`
   <div class="form-row">
@@ -2327,7 +2274,7 @@ async function submitPO(e,poId){
 
 async function openAwardRFQModal(rfqId,rfqNo,title,projectId,budget){
   const {data:vendors}=await sb.from('vendors').select('id,name,vendor_code').eq('is_approved',true).order('name');
-  const {data:newPONo}=await sb.rpc('next_ref_no',{p_type:'po'});
+  const {data:newPONo}=await sb.rpc('next_ref_no',{p_prefix:'PO'});
 
   openModal(`Award RFQ → PO: ${rfqNo}`,`
   <div style="padding:8px 12px;background:#C9A84C18;border:1px solid #C9A84C33;border-radius:6px;font-size:11px;color:var(--muted);margin-bottom:12px">
@@ -2376,7 +2323,7 @@ async function awardRFQ(rfqId,rfqNo,projectId){
 
 async function openMRVFromPO(poId,poNo){
   const {data:po}=await sb.from('purchase_orders').select('*,vendor:vendors(name),project:projects(project_no)').eq('id',poId).single();
-  const {data:newMRVNo}=await sb.rpc('next_ref_no',{p_type:'mrv'});
+  const {data:newMRVNo}=await sb.rpc('next_ref_no',{p_prefix:'MRV'});
 
   openModal(`Goods Receipt (MRV) — ${poNo}`,`
   <div style="padding:8px 12px;background:#1E3A5F18;border-radius:6px;font-size:11px;color:var(--muted);margin-bottom:12px">
@@ -2401,7 +2348,7 @@ async function openMRVFromPO(poId,poNo){
   <div class="form-field"><label>Notes</label><textarea id="mrv-notes" rows="2" placeholder="Delivery notes, discrepancies…"></textarea></div>
   <div class="modal-foot">
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    <button class="btn btn-primary" onclick="saveMRV('${poId}','${esc(po?.project_id||'')}')">Save MRV</button>
+    <button class="btn btn-primary" onclick="saveMRV(${jsArg(poId)},${jsArg(po?.project_id||'')})">Save MRV</button>
   </div>`);
 }
 
@@ -2455,7 +2402,7 @@ async function saveMRV(poId,projectId){
 
 async function openCreateRFQModal(){
   const {data:projs}=await sb.from('projects').select('id,project_no,name').in('status',ACTIVE_STATUSES).order('project_no');
-  const {data:newRFQNo}=await sb.rpc('next_ref_no',{p_type:'rfq'});
+  const {data:newRFQNo}=await sb.rpc('next_ref_no',{p_prefix:'RFQ'});
   openModal('New RFQ',`
   <div class="form-row">
     <div class="form-field"><label>RFQ No</label><input id="rfq-no" value="${newRFQNo}" readonly style="font-family:monospace;opacity:.7"/></div>
@@ -2507,7 +2454,7 @@ async function saveRFQ(e){
 
 async function openCreateVendorModal(){
   // Generate vendor code — atomic DB sequence, concurrency-safe
-  const {data:newCode,error:seqErr}=await sb.rpc('next_ref_no',{p_type:'vendor',p_prefix:'VEN'});
+  const {data:newCode,error:seqErr}=await sb.rpc('next_ref_no',{p_prefix:'VEN'});
   if(seqErr){showToast('Error generating Vendor code: '+seqErr.message,'error');return;}
   openModal('Add Vendor',`
   <div class="form-row">
@@ -2592,7 +2539,7 @@ async function loadFinance(tab='overview'){
   const tabs=`<div class="tabs">
     ${['overview','ar','ap','cashflow','retention','coa','journal','trial','pl'].map((t,idx)=>
     `<button class="tab${t===tab?' act':''}" onclick="loadFinance('${t}')">
-      ${['📊 Overview','📥 AR','📤 AP','💹 Cash Flow','🔒 Retention','📋 Chart of Accounts','📒 Journal','⚖️ Trial Balance','📈 P&L'][idx]}
+      ${['📊 Overview','📥 AR','📤 AP','💹 Cash Flow','🔒 Retention','📋 COA','📒 Journal','⚖️ Trial','📈 P&L'][idx]}
     </button>`).join('')}
   </div>`;
 
@@ -2820,68 +2767,38 @@ async function loadFinance(tab='overview'){
     }).join('')}
     </tbody></table>`;
 
-  // ── Financial Core Tabs ─────────────────────────────────
   } else if(tab==='coa'){
     const isPMO=currentProfile?.role==='PMO Manager'||currentProfile?.role==='Finance Manager';
     const {data:list}=await sb.from('chart_of_accounts').select('*').order('account_code');
     const L=list||[];
-    const byType={};
-    L.forEach(a=>{byType[a.account_type]=(byType[a.account_type]||0)+1;});
-    kpis=kpi('Total Accounts',L.length,'#E2E8F0')
-        +kpi('Asset',byType['Asset']||0,'#3B82F6')
-        +kpi('Liability',byType['Liability']||0,'#EF4444')
-        +kpi('Equity',byType['Equity']||0,'#8B5CF6')
-        +kpi('Revenue',byType['Revenue']||0,'#10B981')
-        +kpi('Expense',byType['Expense']||0,'#F97316');
-    const typeColor={Asset:'#3B82F6',Liability:'#EF4444',Equity:'#8B5CF6',Revenue:'#10B981',Expense:'#F97316',COGS:'#EAB308'};
-    body=`
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-      ${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewCOAModal()">+ Add Account</button>`:''}
-    </div>
-    <table><thead><tr>
-      <th>Code</th><th>Account Name</th><th>Type</th><th>Sub-Type</th>
-      <th style="text-align:center">Normal Balance</th><th style="text-align:center">Active</th>
-    </tr></thead><tbody>
+    const byType={};L.forEach(a=>{byType[a.account_type]=(byType[a.account_type]||0)+1;});
+    kpis=kpi('Total',L.length,'#E2E8F0')+kpi('Asset',byType['Asset']||0,'#3B82F6')+kpi('Liability',byType['Liability']||0,'#EF4444')+kpi('Revenue',byType['Revenue']||0,'#10B981')+kpi('Expense',byType['Expense']||0,'#F97316');
+    const tc={Asset:'#3B82F6',Liability:'#EF4444',Equity:'#8B5CF6',Revenue:'#10B981',Expense:'#F97316',COGS:'#EAB308'};
+    body=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px">${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewCOAModal()">+ Add Account</button>`:''}</div>
+    <table><thead><tr><th>Code</th><th>Account Name</th><th>Type</th><th style="text-align:center">Normal Balance</th><th style="text-align:center">Active</th></tr></thead><tbody>
     ${L.map(a=>`<tr>
-      <td style="color:var(--gold);font-weight:700;font-size:11px">${esc(a.account_code)}</td>
+      <td style="color:var(--gold);font-weight:700;font-family:monospace">${esc(a.account_code)}</td>
       <td style="font-weight:600;font-size:11px">${esc(a.account_name)}</td>
-      <td>${pill(a.account_type,typeColor[a.account_type]||'#94A3B8')}</td>
-      <td style="color:var(--muted);font-size:11px">${esc(a.sub_type||'—')}</td>
+      <td>${pill(a.account_type,tc[a.account_type]||'#94A3B8')}</td>
       <td style="text-align:center;font-size:11px;color:var(--muted)">${a.normal_balance||'Debit'}</td>
       <td style="text-align:center">${a.is_active!==false?'<span style="color:#10B981">✓</span>':'<span style="color:#EF4444">✗</span>'}</td>
-    </tr>`).join('')}
-    </tbody></table>`;
+    </tr>`).join('')}</tbody></table>`;
 
   } else if(tab==='journal'){
     const isPMO=currentProfile?.role==='PMO Manager'||currentProfile?.role==='Finance Manager';
-    const {data:list}=await sb.from('journal_entries')
-      .select('*,lines:journal_lines(*,account:chart_of_accounts(account_code,account_name))')
-      .order('entry_date',{ascending:false}).limit(50);
+    const {data:list}=await sb.from('journal_entries').select('*').order('entry_date',{ascending:false}).limit(50);
     const L=list||[];
-    const totalDebit=L.reduce((s,j)=>s+(j.total_debit||0),0);
-    kpis=kpi('Entries',L.length,'#E2E8F0')
-        +kpi('Posted',L.filter(j=>j.status==='posted').length,'#10B981')
-        +kpi('Draft',L.filter(j=>j.status==='draft').length,'#F97316')
-        +kpi('Total Debit',fmtKWD(totalDebit),'#3B82F6');
-    body=`
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-      ${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewJournalModal()">+ New Journal Entry</button>`:''}
-    </div>
-    <table><thead><tr>
-      <th>Entry No</th><th>Date</th><th>Description</th><th>Reference</th>
-      <th style="text-align:right">Debit (KWD)</th><th style="text-align:right">Credit (KWD)</th>
-      <th style="text-align:center">Status</th>
-    </tr></thead><tbody>
+    kpis=kpi('Entries',L.length,'#E2E8F0')+kpi('Posted',L.filter(j=>j.status==='posted').length,'#10B981')+kpi('Draft',L.filter(j=>j.status==='draft').length,'#F97316')+kpi('Total Debit',fmtKWD(L.filter(j=>j.status==='posted').reduce((s,j)=>s+(j.total_debit||0),0)),'#3B82F6');
+    body=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px">${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewJournalModal()">+ New Entry</button>`:''}</div>
+    <table><thead><tr><th>Entry No</th><th>Date</th><th>Description</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th style="text-align:center">Status</th></tr></thead><tbody>
     ${L.map(j=>`<tr>
       <td style="color:var(--gold);font-size:10px">${esc(j.entry_no||'—')}</td>
       <td style="color:var(--muted);font-size:11px">${j.entry_date||'—'}</td>
       <td style="font-weight:600;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(j.description)}</td>
-      <td style="color:var(--muted);font-size:11px">${esc(j.reference||'—')}</td>
       <td style="text-align:right;font-weight:700;color:#3B82F6">${fmtKWD(j.total_debit||0)}</td>
       <td style="text-align:right;font-weight:700;color:#EF4444">${fmtKWD(j.total_credit||0)}</td>
       <td style="text-align:center">${pill(j.status,j.status==='posted'?'#10B981':'#F97316')}</td>
-    </tr>`).join('')}
-    </tbody></table>`;
+    </tr>`).join('')}</tbody></table>`;
 
   } else if(tab==='trial'){
     const {data:list}=await sb.from('v_trial_balance').select('*').order('account_code');
@@ -2889,68 +2806,32 @@ async function loadFinance(tab='overview'){
     const totalDr=L.reduce((s,r)=>s+Number(r.total_debit||0),0);
     const totalCr=L.reduce((s,r)=>s+Number(r.total_credit||0),0);
     const balanced=Math.abs(totalDr-totalCr)<0.01;
-    kpis=kpi('Accounts',L.length,'#E2E8F0')
-        +kpi('Total Debit',fmtKWD(totalDr),'#3B82F6')
-        +kpi('Total Credit',fmtKWD(totalCr),'#EF4444')
-        +kpi('Balanced',balanced?'✅ Yes':'❌ No',balanced?'#10B981':'#EF4444');
-    body=`
-    <div style="margin-bottom:10px;padding:8px 12px;background:${balanced?'#10B98122':'#EF444422'};border:1px solid ${balanced?'#10B98144':'#EF444444'};border-radius:6px;font-size:12px;font-weight:700;color:${balanced?'#10B981':'#EF4444'}">
-      ${balanced?'✅ Trial Balance is balanced — Debits = Credits':'❌ Trial Balance is NOT balanced — check journal entries'}
-    </div>
-    <table><thead><tr>
-      <th>Code</th><th>Account</th><th>Type</th>
-      <th style="text-align:right">Total Debit</th><th style="text-align:right">Total Credit</th>
-      <th style="text-align:right">Balance</th>
-    </tr></thead><tbody>
-    ${L.map(r=>{
-      const bal=Number(r.balance||0);
-      return`<tr>
-        <td style="color:var(--gold);font-size:10px">${esc(r.account_code)}</td>
-        <td style="font-weight:600;font-size:11px">${esc(r.account_name)}</td>
-        <td style="color:var(--muted);font-size:11px">${esc(r.account_type)}</td>
-        <td style="text-align:right;color:#3B82F6">${fmtKWD(r.total_debit||0)}</td>
-        <td style="text-align:right;color:#EF4444">${fmtKWD(r.total_credit||0)}</td>
-        <td style="text-align:right;font-weight:700;color:${bal>=0?'#10B981':'#EF4444'}">${fmtKWD(Math.abs(bal))} ${bal<0?'Cr':''}</td>
-      </tr>`;
-    }).join('')}
-    <tr style="border-top:2px solid var(--bdr);font-weight:900">
-      <td colspan="3" style="color:var(--gold)">TOTALS</td>
-      <td style="text-align:right;color:#3B82F6">${fmtKWD(totalDr)}</td>
-      <td style="text-align:right;color:#EF4444">${fmtKWD(totalCr)}</td>
-      <td style="text-align:right;color:${balanced?'#10B981':'#EF4444'}">${balanced?'✅ Balanced':'❌ Diff: '+fmtKWD(Math.abs(totalDr-totalCr))}</td>
-    </tr>
-    </tbody></table>`;
+    kpis=kpi('Accounts',L.length,'#E2E8F0')+kpi('Total Debit',fmtKWD(totalDr),'#3B82F6')+kpi('Total Credit',fmtKWD(totalCr),'#EF4444')+kpi('Balanced',balanced?'✅ Yes':'❌ No',balanced?'#10B981':'#EF4444');
+    body=`<div style="margin-bottom:10px;padding:8px 12px;background:${balanced?'#10B98122':'#EF444422'};border:1px solid ${balanced?'#10B98144':'#EF444444'};border-radius:6px;font-size:12px;font-weight:700;color:${balanced?'#10B981':'#EF4444'}">${balanced?'✅ Trial Balance is balanced':'❌ Trial Balance is NOT balanced — check journal entries'}</div>
+    <table><thead><tr><th>Code</th><th>Account</th><th>Type</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th style="text-align:right">Balance</th></tr></thead><tbody>
+    ${L.map(r=>{const bal=Number(r.balance||0);return`<tr>
+      <td style="color:var(--gold);font-size:10px">${esc(r.account_code)}</td>
+      <td style="font-weight:600;font-size:11px">${esc(r.account_name)}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(r.account_type)}</td>
+      <td style="text-align:right;color:#3B82F6">${fmtKWD(r.total_debit||0)}</td>
+      <td style="text-align:right;color:#EF4444">${fmtKWD(r.total_credit||0)}</td>
+      <td style="text-align:right;font-weight:700;color:${bal>=0?'#10B981':'#EF4444'}">${fmtKWD(Math.abs(bal))}</td>
+    </tr>`;}).join('')}</tbody></table>`;
 
   } else if(tab==='pl'){
     const {data:plData}=await sb.from('v_income_statement').select('*');
     const PL=plData?.[0]||{};
-    const revenue=Number(PL.total_revenue||0);
-    const cogs=Number(PL.total_cogs||0);
-    const expenses=Number(PL.total_expenses||0);
-    const grossProfit=revenue-cogs;
-    const netProfit=grossProfit-expenses;
-    const gpm=revenue>0?((grossProfit/revenue)*100).toFixed(1)+'%':'—';
-    const npm=revenue>0?((netProfit/revenue)*100).toFixed(1)+'%':'—';
-    kpis=kpi('Revenue',fmtKWD(revenue),'#10B981')
-        +kpi('Gross Profit',fmtKWD(grossProfit),grossProfit>=0?'#10B981':'#EF4444')
-        +kpi('Net Profit',fmtKWD(netProfit),netProfit>=0?'#10B981':'#EF4444')
-        +kpi('Net Margin',npm,netProfit>=0?'#10B981':'#EF4444');
-    body=`
-    <div style="max-width:600px;margin:0 auto">
-      <div class="card" style="margin-bottom:12px">
-        <h3 style="color:var(--gold);font-size:14px;margin:0 0 12px">Income Statement — ${new Date().getFullYear()}</h3>
-        <table>
-          <tr><td style="font-weight:700;padding:6px 0">Revenue</td><td style="text-align:right;font-weight:700;color:#10B981">${fmtKWD(revenue)}</td></tr>
-          <tr><td style="color:var(--muted);padding:4px 0 4px 16px">Cost of Goods Sold</td><td style="text-align:right;color:#EF4444">(${fmtKWD(cogs)})</td></tr>
-          <tr style="border-top:1px solid var(--bdr)"><td style="font-weight:700;padding:6px 0">Gross Profit</td><td style="text-align:right;font-weight:700;color:${grossProfit>=0?'#10B981':'#EF4444'}">${fmtKWD(grossProfit)}</td></tr>
-          <tr><td style="color:var(--muted);font-size:11px;padding:2px 0 2px 16px">Gross Margin</td><td style="text-align:right;color:var(--muted);font-size:11px">${gpm}</td></tr>
-          <tr><td style="color:var(--muted);padding:4px 0 4px 16px">Operating Expenses</td><td style="text-align:right;color:#EF4444">(${fmtKWD(expenses)})</td></tr>
-          <tr style="border-top:2px solid var(--bdr);background:#0F2744"><td style="font-weight:900;font-size:14px;padding:8px 0;color:var(--gold)">Net Profit / Loss</td><td style="text-align:right;font-weight:900;font-size:14px;color:${netProfit>=0?'#10B981':'#EF4444'}">${fmtKWD(netProfit)}</td></tr>
-          <tr><td style="color:var(--muted);font-size:11px;padding:2px 0 2px 16px">Net Margin</td><td style="text-align:right;color:var(--muted);font-size:11px">${npm}</td></tr>
-        </table>
-      </div>
-      <p style="color:var(--muted);font-size:10px;text-align:center">Based on posted journal entries in Chart of Accounts. Run migrations v2.6 to enable.</p>
-    </div>`;
+    const rev=Number(PL.total_revenue||0),cogs=Number(PL.total_cogs||0),exp=Number(PL.total_expenses||0);
+    const gp=rev-cogs,np=gp-exp;
+    kpis=kpi('Revenue',fmtKWD(rev),'#10B981')+kpi('Gross Profit',fmtKWD(gp),gp>=0?'#10B981':'#EF4444')+kpi('Net Profit',fmtKWD(np),np>=0?'#10B981':'#EF4444')+kpi('Net Margin',rev>0?((np/rev)*100).toFixed(1)+'%':'—',np>=0?'#10B981':'#EF4444');
+    body=`<div style="max-width:500px;margin:0 auto"><div class="card" style="margin-bottom:12px"><h3 style="color:var(--gold);font-size:14px;margin:0 0 12px">Income Statement — ${new Date().getFullYear()}</h3>
+    <table>
+      <tr><td style="font-weight:700;padding:6px 0">Revenue</td><td style="text-align:right;font-weight:700;color:#10B981">${fmtKWD(rev)}</td></tr>
+      <tr><td style="color:var(--muted);padding:4px 0 4px 16px">Cost of Goods Sold</td><td style="text-align:right;color:#EF4444">(${fmtKWD(cogs)})</td></tr>
+      <tr style="border-top:1px solid var(--bdr)"><td style="font-weight:700;padding:6px 0">Gross Profit</td><td style="text-align:right;font-weight:700;color:${gp>=0?'#10B981':'#EF4444'}">${fmtKWD(gp)}</td></tr>
+      <tr><td style="color:var(--muted);padding:4px 0 4px 16px">Operating Expenses</td><td style="text-align:right;color:#EF4444">(${fmtKWD(exp)})</td></tr>
+      <tr style="border-top:2px solid var(--bdr);background:#0F2744"><td style="font-weight:900;font-size:14px;padding:8px 0;color:var(--gold)">Net Profit / Loss</td><td style="text-align:right;font-weight:900;font-size:14px;color:${np>=0?'#10B981':'#EF4444'}">${fmtKWD(np)}</td></tr>
+    </table></div></div>`;
 
   } else {
     kpis=''; body='';
@@ -3018,7 +2899,7 @@ async function loadHR(tab='employees'){
     body=`<table><thead><tr><th>No</th><th>Name</th><th>Department</th><th>Title</th><th>Join Date</th><th style="text-align:center">Status</th></tr></thead><tbody>
     ${L.map(e=>`<tr><td style="color:var(--gold);font-size:10px">${esc(e.employee_no)}</td><td style="font-weight:700">${esc(e.full_name)}</td><td style="color:var(--muted);font-size:11px">${esc(e.department)}</td><td style="color:var(--muted);font-size:11px">${esc(e.job_title)}</td><td style="color:var(--muted);font-size:11px">${e.join_date}</td><td style="text-align:center">${pill(e.status)}</td></tr>`).join('')}
     </tbody></table>`;
-  } else {
+  } else if(tab==='leave'){
     const {data:list}=await sb.from('leave_requests').select('*,employee:employees(full_name,employee_no)').order('created_at',{ascending:false});
     const L=list||[];
     const isPMO=currentProfile?.role==='PMO Manager';
@@ -3052,150 +2933,69 @@ async function loadHR(tab='employees'){
       </tr>`;
     }).join('')}
     </tbody></table>`;
-  }
+
   } else if(tab==='contracts'){
-    // ── Employee Contracts ─────────────────────────────────
     const isPMO=currentProfile?.role==='PMO Manager';
-    const {data:list}=await sb.from('employee_contracts')
-      .select('*,employee:employees(full_name,employee_no,department)')
-      .order('created_at',{ascending:false});
+    const {data:list}=await sb.from('employee_contracts').select('*,employee:employees(full_name,employee_no,department)').order('created_at',{ascending:false});
     const L=list||[];
     const today=new Date();
     const expiring=L.filter(c=>c.end_date&&c.status==='active'&&(new Date(c.end_date)-today)<30*86400000).length;
-    kpis=kpi('Total Contracts',L.length,'#E2E8F0')
-        +kpi('Active',L.filter(c=>c.status==='active').length,'#10B981')
-        +kpi('Expiring Soon',expiring,'#F97316')
-        +kpi('Expired',L.filter(c=>c.status==='expired').length,'#EF4444');
-    body=`
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-      ${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewContractModal()">+ New Contract</button>`:''}
-    </div>
-    <table><thead><tr>
-      <th>Employee</th><th>Type</th><th>Start</th><th>End</th>
-      <th style="text-align:right">Basic (KWD)</th><th style="text-align:right">Package (KWD)</th>
-      <th style="text-align:center">Status</th>
-    </tr></thead><tbody>
-    ${L.map(c=>{
-      const exp=c.end_date&&c.status==='active'&&(new Date(c.end_date)-today)<30*86400000;
-      return`<tr>
-        <td style="font-weight:700;font-size:11px">${esc(c.employee?.full_name||'—')}<div style="font-size:9px;color:var(--faint)">${esc(c.employee?.employee_no||'')} · ${esc(c.employee?.department||'')}</div></td>
-        <td>${pill(c.contract_type,c.contract_type==='permanent'?'#10B981':c.contract_type==='temporary'?'#F97316':'#8B5CF6')}</td>
-        <td style="color:var(--muted);font-size:11px">${c.start_date||'—'}</td>
-        <td style="color:${exp?'#EF4444':'#94A3B8'};font-size:11px">${c.end_date||'Open'} ${exp?'⚠️':''}</td>
-        <td style="text-align:right;font-weight:600">${fmtKWD(c.basic_salary)}</td>
-        <td style="text-align:right;font-weight:700;color:var(--gold)">${fmtKWD(c.total_package)}</td>
-        <td style="text-align:center">${pill(c.status,c.status==='active'?'#10B981':c.status==='expired'?'#EF4444':'#475569')}</td>
-      </tr>`;
-    }).join('')}
-    </tbody></table>`;
+    kpis=kpi('Total',L.length,'#E2E8F0')+kpi('Active',L.filter(c=>c.status==='active').length,'#10B981')+kpi('Expiring Soon',expiring,'#F97316')+kpi('Expired',L.filter(c=>c.status==='expired').length,'#EF4444');
+    body=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px">${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewContractModal()">+ New Contract</button>`:''}</div>
+    <table><thead><tr><th>Employee</th><th>Type</th><th>Start</th><th>End</th><th style="text-align:right">Basic (KWD)</th><th style="text-align:right">Package (KWD)</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${L.map(c=>{const exp=c.end_date&&c.status==='active'&&(new Date(c.end_date)-today)<30*86400000;return`<tr>
+      <td style="font-weight:700;font-size:11px">${esc(c.employee?.full_name||'—')}<div style="font-size:9px;color:var(--faint)">${esc(c.employee?.employee_no||'')} · ${esc(c.employee?.department||'')}</div></td>
+      <td>${pill(c.contract_type,c.contract_type==='permanent'?'#10B981':'#F97316')}</td>
+      <td style="color:var(--muted);font-size:11px">${c.start_date||'—'}</td>
+      <td style="color:${exp?'#EF4444':'#94A3B8'};font-size:11px">${c.end_date||'Open'}${exp?' ⚠️':''}</td>
+      <td style="text-align:right;font-weight:600">${fmtKWD(c.basic_salary||0)}</td>
+      <td style="text-align:right;font-weight:700;color:var(--gold)">${fmtKWD(c.total_package||0)}</td>
+      <td style="text-align:center">${pill(c.status,c.status==='active'?'#10B981':c.status==='expired'?'#EF4444':'#475569')}</td>
+    </tr>`;}).join('')}</tbody></table>`;
 
   } else if(tab==='attendance'){
-    // ── Attendance ────────────────────────────────────────
     const isPMO=currentProfile?.role==='PMO Manager';
     const today_str=new Date().toISOString().split('T')[0];
-    const {data:list}=await sb.from('attendance')
-      .select('*,employee:employees(full_name,employee_no)')
-      .gte('work_date', new Date(Date.now()-30*86400000).toISOString().split('T')[0])
-      .order('work_date',{ascending:false})
-      .limit(200);
+    const {data:list}=await sb.from('attendance').select('*,employee:employees(full_name,employee_no)').gte('work_date',new Date(Date.now()-30*86400000).toISOString().split('T')[0]).order('work_date',{ascending:false}).limit(200);
     const L=list||[];
     const today_att=L.filter(a=>a.work_date===today_str);
-    kpis=kpi('Today Present',today_att.filter(a=>a.status==='present').length,'#10B981')
-        +kpi('Today Absent',today_att.filter(a=>a.status==='absent').length,'#EF4444')
-        +kpi('Late Today',today_att.filter(a=>a.status==='late').length,'#F97316')
-        +kpi('Records (30d)',L.length,'#E2E8F0');
-    body=`
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-      ${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewAttendanceModal()">+ Record Attendance</button>`:''}
-    </div>
-    <table><thead><tr>
-      <th>Employee</th><th>Date</th><th>Check In</th><th>Check Out</th>
-      <th style="text-align:center">Hours</th><th style="text-align:center">Status</th>
-      <th>Notes</th>
-    </tr></thead><tbody>
+    kpis=kpi('Today Present',today_att.filter(a=>a.status==='present').length,'#10B981')+kpi('Today Absent',today_att.filter(a=>a.status==='absent').length,'#EF4444')+kpi('Late',today_att.filter(a=>a.status==='late').length,'#F97316')+kpi('Records (30d)',L.length,'#E2E8F0');
+    body=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px">${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewAttendanceModal()">+ Record</button>`:''}</div>
+    <table><thead><tr><th>Employee</th><th>Date</th><th>Check In</th><th>Check Out</th><th style="text-align:center">Hours</th><th style="text-align:center">Status</th></tr></thead><tbody>
     ${L.map(a=>`<tr>
-      <td style="font-weight:700;font-size:11px">${esc(a.employee?.full_name||'—')}<div style="font-size:9px;color:var(--faint)">${esc(a.employee?.employee_no||'')}</div></td>
+      <td style="font-weight:700;font-size:11px">${esc(a.employee?.full_name||'—')}</td>
       <td style="color:var(--muted);font-size:11px">${a.work_date}</td>
       <td style="color:var(--muted);font-size:11px">${a.check_in||'—'}</td>
       <td style="color:var(--muted);font-size:11px">${a.check_out||'—'}</td>
       <td style="text-align:center;font-weight:700;color:var(--gold)">${a.hours_worked!=null?Number(a.hours_worked).toFixed(1)+'h':'—'}</td>
-      <td style="text-align:center">${pill(a.status,a.status==='present'?'#10B981':a.status==='absent'?'#EF4444':a.status==='late'?'#F97316':'#8B5CF6')}</td>
-      <td style="color:var(--muted);font-size:11px">${esc(a.notes||'')}</td>
-    </tr>`).join('')}
-    </tbody></table>`;
+      <td style="text-align:center">${pill(a.status,a.status==='present'?'#10B981':a.status==='absent'?'#EF4444':'#F97316')}</td>
+    </tr>`).join('')}</tbody></table>`;
 
   } else if(tab==='balance'){
-    // ── Leave Balance ─────────────────────────────────────
     const {data:list}=await sb.from('v_leave_balance').select('*').order('days_remaining',{ascending:true});
     const L=list||[];
-    const critical=L.filter(e=>e.days_remaining<=5).length;
-    kpis=kpi('Employees',L.length,'#E2E8F0')
-        +kpi('Avg Remaining',L.length?Math.round(L.reduce((s,e)=>s+e.days_remaining,0)/L.length)+'d':'—','#3B82F6')
-        +kpi('Low Balance (≤5d)',critical,'#EF4444')
-        +kpi('Year',new Date().getFullYear(),'#8B5CF6');
-    body=`
-    <table><thead><tr>
-      <th>Employee</th><th>Department</th>
-      <th style="text-align:center">Entitlement</th>
-      <th style="text-align:center">Taken</th>
-      <th style="text-align:center">Remaining</th>
-      <th style="text-align:center">Pending Requests</th>
-      <th style="text-align:center">Balance</th>
-    </tr></thead><tbody>
-    ${L.map(e=>{
-      const pct=Math.round(e.days_remaining/e.annual_entitlement*100);
-      const col=pct<=20?'#EF4444':pct<=50?'#F97316':'#10B981';
-      return`<tr>
-        <td style="font-weight:700">${esc(e.employee_name)}</td>
-        <td style="color:var(--muted);font-size:11px">${esc(e.department||'—')}</td>
-        <td style="text-align:center;color:var(--muted)">${e.annual_entitlement}d</td>
-        <td style="text-align:center;font-weight:600;color:#F97316">${e.days_taken}d</td>
-        <td style="text-align:center;font-weight:700;color:${col}">${e.days_remaining}d</td>
-        <td style="text-align:center;color:${e.pending_requests>0?'#F97316':'var(--muted)'}">${e.pending_requests>0?e.pending_requests+' pending':'—'}</td>
-        <td style="text-align:center">
-          <div style="background:#1E3A5F;border-radius:4px;height:8px;width:80px;margin:0 auto">
-            <div style="background:${col};border-radius:4px;height:8px;width:${pct}%;transition:width .3s"></div>
-          </div>
-          <div style="font-size:9px;color:${col};margin-top:2px">${pct}%</div>
-        </td>
-      </tr>`;
-    }).join('')}
-    </tbody></table>`;
-
-  } else {
-    kpis=''; body='';
-  }
+    kpis=kpi('Employees',L.length,'#E2E8F0')+kpi('Avg Remaining',L.length?Math.round(L.reduce((s,e)=>s+e.days_remaining,0)/L.length)+'d':'—','#3B82F6')+kpi('Low Balance (≤5d)',L.filter(e=>e.days_remaining<=5).length,'#EF4444')+kpi('Year',new Date().getFullYear(),'#8B5CF6');
+    body=`<table><thead><tr><th>Employee</th><th>Department</th><th style="text-align:center">Entitlement</th><th style="text-align:center">Taken</th><th style="text-align:center">Remaining</th><th style="text-align:center">Balance</th></tr></thead><tbody>
+    ${L.map(e=>{const pct=Math.round(e.days_remaining/e.annual_entitlement*100);const col=pct<=20?'#EF4444':pct<=50?'#F97316':'#10B981';return`<tr>
+      <td style="font-weight:700">${esc(e.employee_name)}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(e.department||'—')}</td>
+      <td style="text-align:center;color:var(--muted)">${e.annual_entitlement}d</td>
+      <td style="text-align:center;font-weight:600;color:#F97316">${e.days_taken}d</td>
+      <td style="text-align:center;font-weight:700;color:${col}">${e.days_remaining}d</td>
+      <td style="text-align:center"><div style="background:#1E3A5F;border-radius:4px;height:8px;width:80px;margin:0 auto"><div style="background:${col};border-radius:4px;height:8px;width:${pct}%"></div></div><div style="font-size:9px;color:${col};margin-top:2px">${pct}%</div></td>
+    </tr>`;}).join('')}</tbody></table>`;
 
   } else if(tab==='payroll'){
-    // ── Payroll Processing ─────────────────────────────────
     const isPMO=currentProfile?.role==='PMO Manager';
-    const period=new Date().toISOString().slice(0,7); // YYYY-MM
-    const {data:list}=await sb.from('payroll_runs')
-      .select('*,employee:employees(full_name,employee_no,department)')
-      .order('period_month',{ascending:false}).limit(100);
+    const period=new Date().toISOString().slice(0,7);
+    const {data:list}=await sb.from('payroll_runs').select('*,employee:employees(full_name,employee_no,department)').order('period_month',{ascending:false}).limit(100);
     const L=list||[];
     const thisMon=L.filter(r=>r.period_month===period);
-    const totalGross=thisMon.reduce((s,r)=>s+Number(r.gross_salary||0),0);
-    const totalNet=thisMon.reduce((s,r)=>s+Number(r.net_salary||0),0);
-    const totalDed=thisMon.reduce((s,r)=>s+Number(r.total_deductions||0),0);
-    kpis=kpi('This Month Payroll',thisMon.length,'#E2E8F0')
-        +kpi('Gross Salary',fmtKWD(totalGross),'#3B82F6')
-        +kpi('Deductions',fmtKWD(totalDed),'#EF4444')
-        +kpi('Net Payable',fmtKWD(totalNet),'#10B981');
-    body=`
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <span style="font-size:12px;color:var(--muted)">Showing: <b style="color:var(--gold)">${period}</b></span>
-      ${isPMO?`<button class="btn btn-primary btn-sm" onclick="openRunPayrollModal()">▶ Run Payroll</button>`:''}
-    </div>
-    <table><thead><tr>
-      <th>Employee</th><th>Department</th><th>Period</th>
-      <th style="text-align:right">Basic</th><th style="text-align:right">Allowances</th>
-      <th style="text-align:right">Gross</th><th style="text-align:right">Deductions</th>
-      <th style="text-align:right">Net</th><th style="text-align:center">Status</th>
-    </tr></thead><tbody>
+    kpis=kpi('This Month',thisMon.length,'#E2E8F0')+kpi('Gross',fmtKWD(thisMon.reduce((s,r)=>s+Number(r.gross_salary||0),0)),'#3B82F6')+kpi('Deductions',fmtKWD(thisMon.reduce((s,r)=>s+Number(r.total_deductions||0),0)),'#EF4444')+kpi('Net Payable',fmtKWD(thisMon.reduce((s,r)=>s+Number(r.net_salary||0),0)),'#10B981');
+    body=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:12px;color:var(--muted)">Period: <b style="color:var(--gold)">${period}</b></span>${isPMO?`<button class="btn btn-primary btn-sm" onclick="openRunPayrollModal()">▶ Run Payroll</button>`:''}</div>
+    <table><thead><tr><th>Employee</th><th>Period</th><th style="text-align:right">Basic</th><th style="text-align:right">Allowances</th><th style="text-align:right">Gross</th><th style="text-align:right">Deductions</th><th style="text-align:right">Net</th><th style="text-align:center">Status</th></tr></thead><tbody>
     ${L.map(r=>`<tr>
-      <td style="font-weight:700;font-size:11px">${esc(r.employee?.full_name||'—')}<div style="font-size:9px;color:var(--faint)">${esc(r.employee?.employee_no||'')}</div></td>
-      <td style="color:var(--muted);font-size:11px">${esc(r.employee?.department||'—')}</td>
+      <td style="font-weight:700;font-size:11px">${esc(r.employee?.full_name||'—')}</td>
       <td style="color:var(--muted);font-size:11px;font-family:monospace">${r.period_month||'—'}</td>
       <td style="text-align:right;font-size:11px">${fmtKWD(r.basic_salary||0)}</td>
       <td style="text-align:right;font-size:11px">${fmtKWD(r.allowances||0)}</td>
@@ -3203,8 +3003,7 @@ async function loadHR(tab='employees'){
       <td style="text-align:right;color:#EF4444">${fmtKWD(r.total_deductions||0)}</td>
       <td style="text-align:right;font-weight:900;color:#10B981">${fmtKWD(r.net_salary||0)}</td>
       <td style="text-align:center">${pill(r.status,r.status==='paid'?'#10B981':r.status==='processed'?'#3B82F6':'#F97316')}</td>
-    </tr>`).join('')}
-    </tbody></table>`;
+    </tr>`).join('')}</tbody></table>`;
 
   } else {
     kpis=''; body='';
@@ -3261,552 +3060,6 @@ function calcLeaveDays(){
     const el=document.getElementById('lr-days');
     if(el&&!el._manual) el.value=days;
   }
-}
-
-// ── New CAPA Modal ───────────────────────────────────────
-function openNewCAPAModal(){
-  const projSel=window._cachedProjects||[];
-  const userSel=window._cachedUsers||[];
-  openModal(`
-    <h2 style="margin:0 0 16px">New CAPA Action</h2>
-    <div class="form-row">
-      <div class="form-field"><label>Type *</label>
-        <select id="capa-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="corrective">Corrective</option>
-          <option value="preventive">Preventive</option>
-        </select>
-      </div>
-      <div class="form-field"><label>Project</label>
-        <select id="capa-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="">— Select Project —</option>
-          ${projSel.map(p=>`<option value="${p.id}">${p.project_no} — ${p.name}</option>`).join('')}
-        </select>
-      </div>
-    </div>
-    <div class="form-field"><label>Title *</label><input id="capa-title" placeholder="CAPA title"/></div>
-    <div class="form-field"><label>Root Cause</label><textarea id="capa-root" rows="2" placeholder="Describe root cause…" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
-    <div class="form-field"><label>Action Taken / Planned</label><textarea id="capa-action" rows="2" placeholder="Describe action…" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
-    <div class="form-row">
-      <div class="form-field"><label>Responsible</label>
-        <select id="capa-resp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="">— Select —</option>
-          ${userSel.map(u=>`<option value="${u.id}">${u.full_name}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-field"><label>Due Date</label><input id="capa-due" type="date"/></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveCAPAAction(event)">Create CAPA</button>
-    </div>
-  `);
-}
-
-async function saveCAPAAction(e){
-  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
-  try{
-    const type=document.getElementById('capa-type').value;
-    const title=document.getElementById('capa-title').value.trim();
-    const projId=document.getElementById('capa-proj').value||null;
-    const root=document.getElementById('capa-root').value.trim();
-    const action=document.getElementById('capa-action').value.trim();
-    const resp=document.getElementById('capa-resp').value||null;
-    const due=document.getElementById('capa-due').value||null;
-    if(!title){showToast('Title is required','error');return;}
-    const {data:capa_no}=await sb.rpc('next_ref_no',{p_prefix:'CAPA'});
-    const {data,error}=await sb.from('capa_actions').insert({
-      capa_no,type,title,project_id:projId,
-      root_cause:root||null,action_taken:action||null,
-      responsible:resp,due_date:due,
-      status:'open',created_by:currentProfile?.id
-    }).select('id').single();
-    if(error){showToast('Error: '+error.message,'error');return;}
-    await writeAudit('capa_actions',data.id,'CREATED',null,{capa_no,type,title},'CAPA action created');
-    showToast(`CAPA ${capa_no} created ✓`);
-    closeModal(); loadQHSE('capa');
-  }catch(e2){showToast('Error: '+e2.message,'error');}
-  finally{if(btn){btn.disabled=false;btn.textContent='Create CAPA';}}
-}
-
-// ── New Risk Modal ────────────────────────────────────────
-function openNewRiskModal(){
-  const projSel=window._cachedProjects||[];
-  const userSel=window._cachedUsers||[];
-  openModal(`
-    <h2 style="margin:0 0 16px">New Risk Entry</h2>
-    <div class="form-row">
-      <div class="form-field"><label>Project *</label>
-        <select id="risk-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="">— Select Project —</option>
-          ${projSel.map(p=>`<option value="${p.id}">${p.project_no} — ${p.name}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-field"><label>Category</label>
-        <select id="risk-cat" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="technical">Technical</option>
-          <option value="financial">Financial</option>
-          <option value="schedule">Schedule</option>
-          <option value="safety">Safety</option>
-          <option value="environmental">Environmental</option>
-          <option value="legal">Legal</option>
-          <option value="reputational">Reputational</option>
-          <option value="operational">Operational</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-field"><label>Risk Title *</label><input id="risk-title" placeholder="Describe the risk…"/></div>
-    <div class="form-field"><label>Description</label><textarea id="risk-desc" rows="2" placeholder="Detailed description…" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
-    <div class="form-row">
-      <div class="form-field"><label>Probability (1–5) *</label><input id="risk-prob" type="number" min="1" max="5" placeholder="1–5"/></div>
-      <div class="form-field"><label>Impact (1–5) *</label><input id="risk-impact" type="number" min="1" max="5" placeholder="1–5"/></div>
-    </div>
-    <div id="risk-score-preview" style="text-align:center;font-size:13px;color:var(--muted);margin:4px 0 8px">Score: P × I = ?</div>
-    <div class="form-row">
-      <div class="form-field"><label>Mitigation</label><textarea id="risk-mit" rows="2" placeholder="Mitigation plan…" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
-      <div class="form-field"><label>Contingency</label><textarea id="risk-cont" rows="2" placeholder="Contingency plan…" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
-    </div>
-    <div class="form-row">
-      <div class="form-field"><label>Risk Owner</label>
-        <select id="risk-owner" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="">— Select —</option>
-          ${userSel.map(u=>`<option value="${u.id}">${u.full_name}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-field"><label>Review Date</label><input id="risk-review" type="date"/></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveRisk(event)">Add Risk</button>
-    </div>
-  `);
-  // Live score preview
-  ['risk-prob','risk-impact'].forEach(id=>{
-    document.getElementById(id)?.addEventListener('input',()=>{
-      const p=Number(document.getElementById('risk-prob')?.value)||0;
-      const i=Number(document.getElementById('risk-impact')?.value)||0;
-      const score=p*i;
-      const level=score>=15?'🔴 Critical':score>=10?'🟠 High':score>=5?'🟡 Medium':'🟢 Low';
-      const el=document.getElementById('risk-score-preview');
-      if(el) el.innerHTML=`Score: ${p} × ${i} = <strong style="font-size:16px">${score}</strong> — ${level}`;
-    });
-  });
-}
-
-// ── HSE Inspection Modal ─────────────────────────────────
-function openNewInspectionModal(){
-  const projSel=window._cachedProjects||[];
-  const userSel=window._cachedUsers||[];
-  const today=new Date().toISOString().split('T')[0];
-  openModal(`
-    <h2 style="margin:0 0 16px">New HSE Inspection</h2>
-    <div class="form-row">
-      <div class="form-field"><label>Type *</label>
-        <select id="ins-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="site">Site Inspection</option>
-          <option value="equipment">Equipment Inspection</option>
-          <option value="fire">Fire & Emergency</option>
-          <option value="housekeeping">Housekeeping</option>
-          <option value="electrical">Electrical Safety</option>
-        </select>
-      </div>
-      <div class="form-field"><label>Date *</label><input id="ins-date" type="date" value="${today}"/></div>
-    </div>
-    <div class="form-row">
-      <div class="form-field"><label>Project</label>
-        <select id="ins-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="">— Select Project —</option>
-          ${projSel.map(p=>`<option value="${p.id}">${p.project_no} — ${p.name}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-field"><label>Inspector</label>
-        <select id="ins-insp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="">— Select —</option>
-          ${userSel.map(u=>`<option value="${u.id}">${u.full_name}</option>`).join('')}
-        </select>
-      </div>
-    </div>
-    <div class="form-field"><label>Location / Area</label><input id="ins-loc" placeholder="e.g. Site A - Block 3"/></div>
-    <div class="form-field"><label>Findings / Observations</label>
-      <textarea id="ins-findings" rows="3" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical" placeholder="Describe what was found…"></textarea>
-    </div>
-    <div class="form-row">
-      <div class="form-field"><label>Result *</label>
-        <select id="ins-result" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="pass">✅ Pass</option>
-          <option value="fail">❌ Fail — Action Required</option>
-          <option value="conditional">⚠️ Conditional Pass</option>
-        </select>
-      </div>
-      <div class="form-field"><label>Action Required (if fail)</label><input id="ins-action" placeholder="Corrective action required…"/></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveInspection(event)">Save Inspection</button>
-    </div>
-  `);
-}
-
-async function saveInspection(e){
-  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
-  try{
-    const type=document.getElementById('ins-type').value;
-    const date=document.getElementById('ins-date').value;
-    const result=document.getElementById('ins-result').value;
-    if(!date){showToast('Date is required','error');return;}
-    const {data:insNo}=await sb.rpc('next_ref_no',{p_prefix:'INS'});
-    const {data,error}=await sb.from('hse_inspections').insert({
-      inspection_no:insNo,
-      inspection_type:type,
-      inspection_date:date,
-      project_id:document.getElementById('ins-proj').value||null,
-      inspector_id:document.getElementById('ins-insp').value||null,
-      location:document.getElementById('ins-loc').value.trim()||null,
-      findings:document.getElementById('ins-findings').value.trim()||null,
-      result,
-      action_required:document.getElementById('ins-action').value.trim()||null,
-      status:'open',
-      created_by:currentProfile?.id
-    }).select('id').single();
-    if(error){showToast('Error: '+error.message,'error');return;}
-    await writeAudit('hse_inspections',data.id,'CREATED',null,{inspection_no:insNo,type,result},'HSE Inspection recorded');
-    showToast(`Inspection ${insNo} recorded — Result: ${result} ✓`);
-    closeModal(); loadQHSE('inspections');
-  }catch(e2){showToast('Error: '+e2.message,'error');}
-  finally{if(btn){btn.disabled=false;btn.textContent='Save Inspection';}}
-}
-
-// ── Permit to Work Modal ──────────────────────────────────
-function openNewPTWModal(){
-  const projSel=window._cachedProjects||[];
-  const today=new Date().toISOString().split('T')[0];
-  const tomorrow=new Date(Date.now()+86400000).toISOString().split('T')[0];
-  openModal(`
-    <h2 style="margin:0 0 16px">New Permit to Work</h2>
-    <div class="form-row">
-      <div class="form-field"><label>Permit Type *</label>
-        <select id="ptw-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="hot_work">🔥 Hot Work</option>
-          <option value="confined_space">⬛ Confined Space</option>
-          <option value="electrical">⚡ Electrical</option>
-          <option value="excavation">🔧 Excavation</option>
-          <option value="working_at_height">🪜 Working at Height</option>
-          <option value="general">📋 General</option>
-        </select>
-      </div>
-      <div class="form-field"><label>Project *</label>
-        <select id="ptw-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="">— Select Project —</option>
-          ${projSel.map(p=>`<option value="${p.id}">${p.project_no} — ${p.name}</option>`).join('')}
-        </select>
-      </div>
-    </div>
-    <div class="form-field"><label>Work Description *</label>
-      <textarea id="ptw-desc" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical" placeholder="Describe work to be performed…"></textarea>
-    </div>
-    <div class="form-field"><label>Location</label><input id="ptw-loc" placeholder="Where the work will be done"/></div>
-    <div class="form-row">
-      <div class="form-field"><label>Valid From *</label><input id="ptw-from" type="date" value="${today}"/></div>
-      <div class="form-field"><label>Valid To *</label><input id="ptw-to" type="date" value="${tomorrow}"/></div>
-    </div>
-    <div class="form-field"><label>Precautions / Safety Measures</label>
-      <textarea id="ptw-precautions" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical" placeholder="Required PPE, safety measures, isolation…"></textarea>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="savePTW(event)">Issue Permit</button>
-    </div>
-  `);
-}
-
-async function savePTW(e){
-  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Issuing…';}
-  try{
-    const ptype=document.getElementById('ptw-type').value;
-    const projId=document.getElementById('ptw-proj').value;
-    const desc=document.getElementById('ptw-desc').value.trim();
-    const from=document.getElementById('ptw-from').value;
-    const to=document.getElementById('ptw-to').value;
-    if(!projId){showToast('Project is required','error');return;}
-    if(!desc){showToast('Work description is required','error');return;}
-    if(!from||!to){showToast('Valid dates are required','error');return;}
-    if(to<from){showToast('Valid To must be after Valid From','error');return;}
-    const {data:ptwNo}=await sb.rpc('next_ref_no',{p_prefix:'PTW'});
-    const {data,error}=await sb.from('permits_to_work').insert({
-      permit_no:ptwNo,
-      permit_type:ptype,
-      project_id:projId,
-      work_description:desc,
-      location:document.getElementById('ptw-loc').value.trim()||null,
-      valid_from:from,
-      valid_to:to,
-      precautions:document.getElementById('ptw-precautions').value.trim()||null,
-      status:'active',
-      permit_date:from,
-      issued_by:currentProfile?.id,
-      created_by:currentProfile?.id
-    }).select('id').single();
-    if(error){showToast('Error: '+error.message,'error');return;}
-    await writeAudit('permits_to_work',data.id,'CREATED',null,{permit_no:ptwNo,permit_type:ptype},'Permit to Work issued',{strict:true});
-    showToast(`Permit ${ptwNo} issued ✓`);
-    closeModal(); loadQHSE('ptw');
-  }catch(e2){showToast('Error: '+e2.message,'error');}
-  finally{if(btn){btn.disabled=false;btn.textContent='Issue Permit';}}
-}
-
-async function saveRisk(e){
-  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
-  try{
-    const projId=document.getElementById('risk-proj').value;
-    const title=document.getElementById('risk-title').value.trim();
-    const prob=Number(document.getElementById('risk-prob').value);
-    const impact=Number(document.getElementById('risk-impact').value);
-    if(!projId){showToast('Project is required','error');return;}
-    if(!title){showToast('Risk title is required','error');return;}
-    if(!prob||prob<1||prob>5){showToast('Probability must be 1–5','error');return;}
-    if(!impact||impact<1||impact>5){showToast('Impact must be 1–5','error');return;}
-    const {data:risk_no}=await sb.rpc('next_ref_no',{p_prefix:'RISK'});
-    const {data,error}=await sb.from('risk_register').insert({
-      risk_no,project_id:projId,
-      title,description:document.getElementById('risk-desc').value.trim()||null,
-      category:document.getElementById('risk-cat').value,
-      probability:prob,impact,
-      mitigation:document.getElementById('risk-mit').value.trim()||null,
-      contingency:document.getElementById('risk-cont').value.trim()||null,
-      owner:document.getElementById('risk-owner').value||null,
-      review_date:document.getElementById('risk-review').value||null,
-      status:'open',created_by:currentProfile?.id
-    }).select('id').single();
-    if(error){showToast('Error: '+error.message,'error');return;}
-    await writeAudit('risk_register',data.id,'CREATED',null,{risk_no,title,probability:prob,impact,score:prob*impact},'Risk added');
-    showToast(`Risk ${risk_no} added ✓`);
-    closeModal(); loadQHSE('risks');
-  }catch(e2){showToast('Error: '+e2.message,'error');}
-  finally{if(btn){btn.disabled=false;btn.textContent='Add Risk';}}
-}
-
-// ── New Contract Modal ────────────────────────────────────
-function openNewContractModal(){
-  const empSel=window._cachedEmployees||[];
-  openModal(`
-    <h2 style="margin:0 0 16px">New Employee Contract</h2>
-    <div class="form-field"><label>Employee *</label>
-      <select id="con-emp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-        <option value="">— Select Employee —</option>
-        ${empSel.map(e=>`<option value="${e.id}">${e.full_name} (${e.employee_no})</option>`).join('')}
-      </select>
-    </div>
-    <div class="form-row">
-      <div class="form-field"><label>Contract Type *</label>
-        <select id="con-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="permanent">Permanent</option>
-          <option value="temporary">Temporary</option>
-          <option value="contract">Contract</option>
-          <option value="probation">Probation</option>
-        </select>
-      </div>
-      <div class="form-field"><label>Currency</label>
-        <select id="con-curr" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="KWD">KWD</option>
-          <option value="USD">USD</option>
-          <option value="EUR">EUR</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-field"><label>Start Date *</label><input id="con-start" type="date"/></div>
-      <div class="form-field"><label>End Date (blank = open)</label><input id="con-end" type="date"/></div>
-    </div>
-    <div class="form-row">
-      <div class="form-field"><label>Basic Salary *</label><input id="con-basic" type="number" min="0" step="0.001" placeholder="0.000"/></div>
-      <div class="form-field"><label>Allowances</label><input id="con-allow" type="number" min="0" step="0.001" placeholder="0.000"/></div>
-    </div>
-    <div class="form-field"><label>Notes</label><textarea id="con-notes" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveContract(event)">Create Contract</button>
-    </div>
-  `);
-}
-
-async function saveContract(e){
-  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
-  try{
-    const empId=document.getElementById('con-emp').value;
-    const type=document.getElementById('con-type').value;
-    const start=document.getElementById('con-start').value;
-    const basic=Number(document.getElementById('con-basic').value)||0;
-    const allow=Number(document.getElementById('con-allow').value)||0;
-    if(!empId){showToast('Employee is required','error');return;}
-    if(!start){showToast('Start date is required','error');return;}
-    if(basic<=0){showToast('Basic salary must be greater than zero','error');return;}
-    const {data,error}=await sb.from('employee_contracts').insert({
-      employee_id:empId,contract_type:type,
-      start_date:start,end_date:document.getElementById('con-end').value||null,
-      basic_salary:basic,allowances:allow,
-      currency:document.getElementById('con-curr').value,
-      notes:document.getElementById('con-notes').value.trim()||null,
-      status:'active',created_by:currentProfile?.id
-    }).select('id').single();
-    if(error){showToast('Error: '+error.message,'error');return;}
-    await writeAudit('employee_contracts',data.id,'CREATED',null,{employee_id:empId,contract_type:type,basic_salary:basic},'Contract created');
-    showToast('Contract created ✓');
-    closeModal(); loadHR('contracts');
-  }catch(e2){showToast('Error: '+e2.message,'error');}
-  finally{if(btn){btn.disabled=false;btn.textContent='Create Contract';}}
-}
-
-// ── New Attendance Modal ──────────────────────────────────
-function openNewAttendanceModal(){
-  const empSel=window._cachedEmployees||[];
-  const today=new Date().toISOString().split('T')[0];
-  openModal(`
-    <h2 style="margin:0 0 16px">Record Attendance</h2>
-    <div class="form-field"><label>Employee *</label>
-      <select id="att-emp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-        <option value="">— Select Employee —</option>
-        ${empSel.map(e=>`<option value="${e.id}">${e.full_name} (${e.employee_no})</option>`).join('')}
-      </select>
-    </div>
-    <div class="form-row">
-      <div class="form-field"><label>Date *</label><input id="att-date" type="date" value="${today}"/></div>
-      <div class="form-field"><label>Status *</label>
-        <select id="att-status" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="present">Present</option>
-          <option value="absent">Absent</option>
-          <option value="late">Late</option>
-          <option value="half_day">Half Day</option>
-          <option value="leave">On Leave</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-field"><label>Check In</label><input id="att-in" type="time"/></div>
-      <div class="form-field"><label>Check Out</label><input id="att-out" type="time"/></div>
-    </div>
-    <div class="form-field"><label>Notes</label><input id="att-notes" placeholder="Optional notes…"/></div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveAttendance(event)">Record</button>
-    </div>
-  `);
-}
-
-async function saveAttendance(e){
-  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
-  try{
-    const empId=document.getElementById('att-emp').value;
-    const date=document.getElementById('att-date').value;
-    const status=document.getElementById('att-status').value;
-    if(!empId){showToast('Employee is required','error');return;}
-    if(!date){showToast('Date is required','error');return;}
-    const {error}=await sb.from('attendance').upsert({
-      employee_id:empId, work_date:date, status,
-      check_in:document.getElementById('att-in').value||null,
-      check_out:document.getElementById('att-out').value||null,
-      notes:document.getElementById('att-notes').value.trim()||null,
-      created_by:currentProfile?.id
-    },{onConflict:'employee_id,work_date'});
-    if(error){showToast('Error: '+error.message,'error');return;}
-    showToast('Attendance recorded ✓');
-    closeModal(); loadHR('attendance');
-  }catch(e2){showToast('Error: '+e2.message,'error');}
-  finally{if(btn){btn.disabled=false;btn.textContent='Record';}}
-}
-
-// ── Run Payroll Modal ─────────────────────────────────────
-function openRunPayrollModal(){
-  const empSel=window._cachedEmployees||[];
-  const period=new Date().toISOString().slice(0,7);
-  openModal(`
-    <h2 style="margin:0 0 16px">Run Payroll</h2>
-    <div class="form-row">
-      <div class="form-field"><label>Period *</label><input id="pay-period" type="month" value="${period}"/></div>
-      <div class="form-field"><label>Employee (blank = all active)</label>
-        <select id="pay-emp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="">— All Active Employees —</option>
-          ${empSel.map(e=>`<option value="${e.id}">${e.full_name} (${e.employee_no})</option>`).join('')}
-        </select>
-      </div>
-    </div>
-    <div style="padding:10px 12px;background:#1E3A5F;border-radius:8px;font-size:11px;color:var(--muted);margin-bottom:12px">
-      ℹ Payroll pulls <b>Basic Salary + Allowances</b> from active contracts. 
-      Deductions: NSSF (5%), Income Tax (applicable). 
-      Overtime and bonuses can be added per employee after processing.
-    </div>
-    <div class="form-row">
-      <div class="form-field"><label>Working Days</label><input id="pay-days" type="number" min="1" max="31" value="22"/></div>
-      <div class="form-field"><label>Notes</label><input id="pay-notes" placeholder="e.g. Regular payroll March 2026"/></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="runPayroll(event)">▶ Process Payroll</button>
-    </div>
-  `);
-}
-
-async function runPayroll(e){
-  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Processing…';}
-  try{
-    const period=document.getElementById('pay-period').value;
-    const empId=document.getElementById('pay-emp').value||null;
-    const workDays=Number(document.getElementById('pay-days').value)||22;
-    if(!period){showToast('Period is required','error');return;}
-
-    // Load employees with active contracts
-    let empQuery=sb.from('employees')
-      .select('id,full_name,employee_no,department,employee_contracts!inner(basic_salary,allowances,contract_type,status)')
-      .eq('status','active')
-      .eq('employee_contracts.status','active');
-    if(empId) empQuery=empQuery.eq('id',empId);
-    const {data:emps}=await empQuery;
-    if(!emps||emps.length===0){showToast('No employees with active contracts found','error');return;}
-
-    // Check already processed
-    const {data:existing}=await sb.from('payroll_runs')
-      .select('employee_id').eq('period_month',period).in('employee_id',emps.map(e=>e.id));
-    const existingIds=new Set((existing||[]).map(r=>r.employee_id));
-
-    const toProcess=emps.filter(e=>!existingIds.has(e.id));
-    if(toProcess.length===0){showToast('All employees already processed for this period','error');return;}
-
-    const rows=toProcess.map(emp=>{
-      const contract=emp.employee_contracts?.[0]||{};
-      const basic=Number(contract.basic_salary||0);
-      const allow=Number(contract.allowances||0);
-      const gross=basic+allow;
-      // NSSF: 5% of basic (Kuwait standard)
-      const nssf=Math.round(basic*0.05*1000)/1000;
-      // Simple income tax placeholder (0 for most in Kuwait)
-      const tax=0;
-      const totalDed=nssf+tax;
-      const net=Math.round((gross-totalDed)*1000)/1000;
-      return{
-        employee_id:emp.id,
-        period_month:period,
-        working_days:workDays,
-        basic_salary:basic,
-        allowances:allow,
-        gross_salary:gross,
-        nssf_deduction:nssf,
-        tax_deduction:tax,
-        other_deductions:0,
-        total_deductions:totalDed,
-        net_salary:net,
-        status:'processed',
-        processed_by:currentProfile?.id,
-        notes:document.getElementById('pay-notes').value.trim()||null
-      };
-    });
-
-    const {error}=await sb.from('payroll_runs').insert(rows);
-    if(error){showToast('Error: '+error.message,'error');return;}
-    await writeAudit('payroll_runs',null,'PAYROLL_PROCESSED',null,
-      {period,employees:toProcess.length,total_net:rows.reduce((s,r)=>s+r.net_salary,0)},
-      `Payroll processed for ${period} — ${toProcess.length} employees`);
-    showToast(`Payroll processed for ${toProcess.length} employees ✓`);
-    closeModal(); loadHR('payroll');
-  }catch(e2){showToast('Error: '+e2.message,'error');}
-  finally{if(btn){btn.disabled=false;btn.textContent='▶ Process Payroll';}}
 }
 
 async function saveLeaveRequest(e){
@@ -3894,158 +3147,88 @@ async function loadQHSE(tab='ncrs'){
     ${L.map(t=>`<tr><td style="color:var(--gold);font-size:10px">${esc(t.itp_no)}</td><td style="font-weight:600;font-size:11px">${esc(t.title)}</td><td style="color:var(--muted);font-size:11px">${esc(t.project?.project_no||'—')}</td><td style="color:var(--muted);font-size:11px">${esc(t.discipline)}</td><td style="color:var(--muted);font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.hold_point||'')}</td><td style="color:var(--muted);font-size:11px">${t.inspection_date||'—'}</td><td style="text-align:center">${pill(t.status)}</td></tr>`).join('')}
     </tbody></table>`;
 
+  } else if(tab==='itps'){
+    const {data:list}=await sb.from('itps').select('*,project:projects(project_no)').order('inspection_date',{ascending:false});
+    const L=list||[];
+    kpis=kpi('Total',L.length,'#E2E8F0')+kpi('Approved',L.filter(t=>t.status==='approved').length,'#10B981')+kpi('In Progress',L.filter(t=>t.status==='in_progress').length,'#F97316')+kpi('Pending',L.filter(t=>t.status==='pending').length,'#94A3B8');
+    body=`<table><thead><tr><th>ITP No</th><th>Title</th><th>Project</th><th>Discipline</th><th>Date</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${L.map(t=>`<tr><td style="color:var(--gold);font-size:10px">${esc(t.itp_no)}</td><td style="font-weight:600;font-size:11px">${esc(t.title)}</td><td style="color:var(--muted);font-size:11px">${esc(t.project?.project_no||'—')}</td><td style="color:var(--muted);font-size:11px">${esc(t.discipline)}</td><td style="color:var(--muted);font-size:11px">${t.inspection_date||'—'}</td><td style="text-align:center">${pill(t.status)}</td></tr>`).join('')}
+    </tbody></table>`;
+
   } else if(tab==='capa'){
-    // ── CAPA Module ──────────────────────────────────────
-    const isPMO=currentProfile?.role==='PMO Manager';
-    const isQHSE=currentProfile?.role==='QHSE Engineer'||isPMO;
-    const {data:list}=await sb.from('capa_actions')
-      .select('*,project:projects(project_no),responsible:user_profiles!responsible(full_name)')
-      .order('created_at',{ascending:false});
+    const isQHSE=currentProfile?.role==='QHSE Engineer'||currentProfile?.role==='PMO Manager';
+    const {data:list}=await sb.from('capa_actions').select('*,project:projects(project_no),responsible:user_profiles!responsible(full_name)').order('created_at',{ascending:false});
     const L=list||[];
     const today=new Date();
     const overdue=L.filter(c=>c.status==='open'&&c.due_date&&new Date(c.due_date)<today).length;
-    kpis=kpi('Total CAPA',L.length,'#E2E8F0')
-        +kpi('Open',L.filter(c=>c.status==='open'||c.status==='in_progress').length,'#F97316')
-        +kpi('Overdue',overdue,'#EF4444')
-        +kpi('Closed',L.filter(c=>c.status==='closed').length,'#10B981');
-    const riskColor={open:'#F97316',in_progress:'#3B82F6',closed:'#10B981',overdue:'#EF4444',cancelled:'#475569'};
-    body=`
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-      ${isQHSE?`<button class="btn btn-primary btn-sm" onclick="openNewCAPAModal()">+ New CAPA</button>`:''}
-    </div>
-    <table><thead><tr>
-      <th>CAPA No</th><th>Type</th><th>Title</th><th>Project</th>
-      <th>Root Cause</th><th>Responsible</th><th>Due</th>
-      <th style="text-align:center">Status</th>
-      <th style="text-align:center">Effectiveness</th>
-    </tr></thead><tbody>
-    ${L.map(c=>{
-      const ov=c.status==='open'&&c.due_date&&new Date(c.due_date)<today;
-      return`<tr>
-        <td style="color:var(--gold);font-size:10px;white-space:nowrap">${esc(c.capa_no||'—')}</td>
-        <td>${pill(c.type,c.type==='corrective'?'#EF4444':'#8B5CF6')}</td>
-        <td style="font-weight:600;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.title)}</td>
-        <td style="color:var(--muted);font-size:11px">${esc(c.project?.project_no||'—')}</td>
-        <td style="color:var(--muted);font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.root_cause||'')}</td>
-        <td style="color:var(--muted);font-size:11px">${esc(c.responsible?.full_name||'—')}</td>
-        <td style="color:${ov?'#EF4444':'#94A3B8'};font-size:11px">${c.due_date||'—'}${ov?' ⚠️':''}</td>
-        <td style="text-align:center">${pill(c.status,riskColor[c.status]||'#94A3B8')}</td>
-        <td style="text-align:center;font-size:10px">${c.effectiveness?pill(c.effectiveness,c.effectiveness==='effective'?'#10B981':c.effectiveness==='partially_effective'?'#F97316':'#EF4444'):'—'}</td>
-      </tr>`;
-    }).join('')}
-    </tbody></table>`;
+    kpis=kpi('Total',L.length,'#E2E8F0')+kpi('Open',L.filter(c=>c.status==='open'||c.status==='in_progress').length,'#F97316')+kpi('Overdue',overdue,overdue>0?'#EF4444':'#10B981')+kpi('Closed',L.filter(c=>c.status==='closed').length,'#10B981');
+    body=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px">${isQHSE?`<button class="btn btn-primary btn-sm" onclick="openNewCAPAModal()">+ New CAPA</button>`:''}</div>
+    <table><thead><tr><th>CAPA No</th><th>Type</th><th>Title</th><th>Project</th><th>Responsible</th><th>Due</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${L.map(c=>{const ov=c.status==='open'&&c.due_date&&new Date(c.due_date)<today;return`<tr>
+      <td style="color:var(--gold);font-size:10px">${esc(c.capa_no||'—')}</td>
+      <td>${pill(c.type,c.type==='corrective'?'#EF4444':'#8B5CF6')}</td>
+      <td style="font-weight:600;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.title)}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(c.project?.project_no||'—')}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(c.responsible?.full_name||'—')}</td>
+      <td style="color:${ov?'#EF4444':'#94A3B8'};font-size:11px">${c.due_date||'—'}${ov?' ⚠️':''}</td>
+      <td style="text-align:center">${pill(c.status,c.status==='closed'?'#10B981':c.status==='open'?'#F97316':'#3B82F6')}</td>
+    </tr>`;}).join('')}</tbody></table>`;
 
   } else if(tab==='risks'){
-    // ── Risk Register ─────────────────────────────────────
-    const isPMO=currentProfile?.role==='PMO Manager';
-    const isQHSE=currentProfile?.role==='QHSE Engineer'||isPMO;
-    const {data:list}=await sb.from('risk_register')
-      .select('*,project:projects(project_no),owner:user_profiles!owner(full_name)')
-      .order('risk_score',{ascending:false});
+    const isQHSE=currentProfile?.role==='QHSE Engineer'||currentProfile?.role==='PMO Manager';
+    const {data:list}=await sb.from('risk_register').select('*,project:projects(project_no),owner:user_profiles!owner(full_name)').order('risk_score',{ascending:false});
     const L=list||[];
-    const levelColor={critical:'#EF4444',high:'#F97316',medium:'#EAB308',low:'#10B981'};
-    kpis=kpi('Total Risks',L.length,'#E2E8F0')
-        +kpi('Critical',L.filter(r=>r.risk_level==='critical').length,'#EF4444')
-        +kpi('High',L.filter(r=>r.risk_level==='high').length,'#F97316')
-        +kpi('Open',L.filter(r=>r.status==='open').length,'#94A3B8');
-    body=`
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-      ${isQHSE?`<button class="btn btn-primary btn-sm" onclick="openNewRiskModal()">+ New Risk</button>`:''}
-    </div>
-    <table><thead><tr>
-      <th>Risk No</th><th>Title</th><th>Project</th><th>Category</th>
-      <th style="text-align:center">P</th><th style="text-align:center">I</th>
-      <th style="text-align:center">Score</th><th style="text-align:center">Level</th>
-      <th>Owner</th><th style="text-align:center">Status</th>
-    </tr></thead><tbody>
+    const lc={critical:'#EF4444',high:'#F97316',medium:'#EAB308',low:'#10B981'};
+    kpis=kpi('Total',L.length,'#E2E8F0')+kpi('Critical',L.filter(r=>r.risk_level==='critical').length,'#EF4444')+kpi('High',L.filter(r=>r.risk_level==='high').length,'#F97316')+kpi('Open',L.filter(r=>r.status==='open').length,'#94A3B8');
+    body=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px">${isQHSE?`<button class="btn btn-primary btn-sm" onclick="openNewRiskModal()">+ New Risk</button>`:''}</div>
+    <table><thead><tr><th>Risk No</th><th>Title</th><th>Project</th><th>Category</th><th style="text-align:center">P</th><th style="text-align:center">I</th><th style="text-align:center">Score</th><th style="text-align:center">Level</th><th style="text-align:center">Status</th></tr></thead><tbody>
     ${L.map(r=>`<tr>
       <td style="color:var(--gold);font-size:10px">${esc(r.risk_no||'—')}</td>
-      <td style="font-weight:600;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.title)}</td>
+      <td style="font-weight:600;font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.title)}</td>
       <td style="color:var(--muted);font-size:11px">${esc(r.project?.project_no||'—')}</td>
       <td style="color:var(--muted);font-size:10px">${esc(r.category||'—')}</td>
       <td style="text-align:center;font-weight:700;color:var(--gold)">${r.probability||'—'}</td>
       <td style="text-align:center;font-weight:700;color:var(--gold)">${r.impact||'—'}</td>
-      <td style="text-align:center;font-weight:900;font-size:14px;color:${levelColor[r.risk_level]||'#94A3B8'}">${r.risk_score||'—'}</td>
-      <td style="text-align:center">${r.risk_level?pill(r.risk_level,levelColor[r.risk_level]):'—'}</td>
-      <td style="color:var(--muted);font-size:11px">${esc(r.owner?.full_name||'—')}</td>
-      <td style="text-align:center">${pill(r.status,r.status==='open'?'#F97316':r.status==='mitigated'?'#3B82F6':r.status==='closed'?'#10B981':'#475569')}</td>
-    </tr>`).join('')}
-    </tbody></table>`;
-
-  } else {
-    kpis=''; body='';
-  }
+      <td style="text-align:center;font-weight:900;font-size:14px;color:${lc[r.risk_level]||'#94A3B8'}">${r.risk_score||'—'}</td>
+      <td style="text-align:center">${r.risk_level?pill(r.risk_level,lc[r.risk_level]):'—'}</td>
+      <td style="text-align:center">${pill(r.status,r.status==='open'?'#F97316':r.status==='mitigated'?'#3B82F6':'#10B981')}</td>
+    </tr>`).join('')}</tbody></table>`;
 
   } else if(tab==='inspections'){
     const isQHSE=currentProfile?.role==='QHSE Engineer'||currentProfile?.role==='PMO Manager';
-    const {data:list}=await sb.from('hse_inspections')
-      .select('*,project:projects(project_no),inspector:user_profiles!inspector_id(full_name)')
-      .order('inspection_date',{ascending:false});
+    const {data:list}=await sb.from('hse_inspections').select('*,project:projects(project_no),inspector:user_profiles!inspector_id(full_name)').order('inspection_date',{ascending:false});
     const L=list||[];
-    const today=new Date();
-    const failed=L.filter(i=>i.result==='fail').length;
-    kpis=kpi('Total',L.length,'#E2E8F0')
-        +kpi('Passed',L.filter(i=>i.result==='pass').length,'#10B981')
-        +kpi('Failed',failed,failed>0?'#EF4444':'#10B981')
-        +kpi('Pending',L.filter(i=>i.status==='open').length,'#F97316');
-    body=`
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-      ${isQHSE?`<button class="btn btn-primary btn-sm" onclick="openNewInspectionModal()">+ New Inspection</button>`:''}
-    </div>
-    <table><thead><tr>
-      <th>Ref No</th><th>Type</th><th>Project</th><th>Inspector</th>
-      <th>Date</th><th>Location</th>
-      <th style="text-align:center">Result</th><th style="text-align:center">Status</th>
-    </tr></thead><tbody>
+    kpis=kpi('Total',L.length,'#E2E8F0')+kpi('Passed',L.filter(i=>i.result==='pass').length,'#10B981')+kpi('Failed',L.filter(i=>i.result==='fail').length,'#EF4444')+kpi('Pending',L.filter(i=>i.status==='open').length,'#F97316');
+    body=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px">${isQHSE?`<button class="btn btn-primary btn-sm" onclick="openNewInspectionModal()">+ New Inspection</button>`:''}</div>
+    <table><thead><tr><th>Ref No</th><th>Type</th><th>Project</th><th>Inspector</th><th>Date</th><th style="text-align:center">Result</th><th style="text-align:center">Status</th></tr></thead><tbody>
     ${L.map(i=>`<tr>
       <td style="color:var(--gold);font-size:10px">${esc(i.inspection_no||'—')}</td>
-      <td>${pill(i.inspection_type,i.inspection_type==='site'?'#3B82F6':i.inspection_type==='equipment'?'#8B5CF6':'#F97316')}</td>
+      <td>${pill(i.inspection_type,'#3B82F6')}</td>
       <td style="color:var(--muted);font-size:11px">${esc(i.project?.project_no||'—')}</td>
       <td style="color:var(--muted);font-size:11px">${esc(i.inspector?.full_name||'—')}</td>
       <td style="color:var(--muted);font-size:11px">${i.inspection_date||'—'}</td>
-      <td style="color:var(--muted);font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(i.location||'')}</td>
       <td style="text-align:center">${i.result?pill(i.result,i.result==='pass'?'#10B981':'#EF4444'):'—'}</td>
       <td style="text-align:center">${pill(i.status,i.status==='closed'?'#10B981':'#F97316')}</td>
-    </tr>`).join('')}
-    </tbody></table>`;
+    </tr>`).join('')}</tbody></table>`;
 
   } else if(tab==='ptw'){
     const isQHSE=currentProfile?.role==='QHSE Engineer'||currentProfile?.role==='PMO Manager';
-    const {data:list}=await sb.from('permits_to_work')
-      .select('*,project:projects(project_no),issuer:user_profiles!issued_by(full_name)')
-      .order('permit_date',{ascending:false});
+    const {data:list}=await sb.from('permits_to_work').select('*,project:projects(project_no),issuer:user_profiles!issued_by(full_name)').order('permit_date',{ascending:false});
     const L=list||[];
     const today_str=new Date().toISOString().split('T')[0];
     const active=L.filter(p=>p.status==='active'&&p.valid_to>=today_str).length;
-    const expired=L.filter(p=>p.status==='active'&&p.valid_to<today_str).length;
-    kpis=kpi('Total',L.length,'#E2E8F0')
-        +kpi('Active',active,'#10B981')
-        +kpi('Expired',expired,expired>0?'#EF4444':'#94A3B8')
-        +kpi('Closed',L.filter(p=>p.status==='closed').length,'#475569');
-    const ptypeColor={hot_work:'#EF4444',confined_space:'#8B5CF6',electrical:'#EAB308',excavation:'#F97316',working_at_height:'#3B82F6',general:'#475569'};
-    body=`
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-      ${isQHSE?`<button class="btn btn-primary btn-sm" onclick="openNewPTWModal()">+ New Permit</button>`:''}
-    </div>
-    <table><thead><tr>
-      <th>Permit No</th><th>Type</th><th>Project</th><th>Work Description</th>
-      <th>Valid From</th><th>Valid To</th><th>Issued By</th>
-      <th style="text-align:center">Status</th>
-    </tr></thead><tbody>
-    ${L.map(p=>{
-      const exp=p.status==='active'&&p.valid_to<today_str;
-      return`<tr>
-        <td style="color:var(--gold);font-size:10px">${esc(p.permit_no||'—')}</td>
-        <td>${pill((p.permit_type||'').replace(/_/g,' '),ptypeColor[p.permit_type]||'#94A3B8')}</td>
-        <td style="color:var(--muted);font-size:11px">${esc(p.project?.project_no||'—')}</td>
-        <td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.work_description||'')}</td>
-        <td style="color:var(--muted);font-size:11px">${p.valid_from||'—'}</td>
-        <td style="color:${exp?'#EF4444':'#94A3B8'};font-size:11px">${p.valid_to||'—'}${exp?' ⚠️':''}</td>
-        <td style="color:var(--muted);font-size:11px">${esc(p.issuer?.full_name||'—')}</td>
-        <td style="text-align:center">${pill(exp?'expired':p.status,exp?'#EF4444':p.status==='active'?'#10B981':p.status==='closed'?'#475569':'#F97316')}</td>
-      </tr>`;
-    }).join('')}
-    </tbody></table>`;
+    kpis=kpi('Total',L.length,'#E2E8F0')+kpi('Active',active,'#10B981')+kpi('Expired',L.filter(p=>p.status==='active'&&p.valid_to<today_str).length,'#EF4444')+kpi('Closed',L.filter(p=>p.status==='closed').length,'#475569');
+    body=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px">${isQHSE?`<button class="btn btn-primary btn-sm" onclick="openNewPTWModal()">+ New Permit</button>`:''}</div>
+    <table><thead><tr><th>Permit No</th><th>Type</th><th>Project</th><th>Description</th><th>Valid From</th><th>Valid To</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${L.map(p=>{const exp=p.status==='active'&&p.valid_to<today_str;return`<tr>
+      <td style="color:var(--gold);font-size:10px">${esc(p.permit_no||'—')}</td>
+      <td style="font-size:10px">${esc((p.permit_type||'').replace(/_/g,' '))}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(p.project?.project_no||'—')}</td>
+      <td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.work_description||'')}</td>
+      <td style="color:var(--muted);font-size:11px">${p.valid_from||'—'}</td>
+      <td style="color:${exp?'#EF4444':'#94A3B8'};font-size:11px">${p.valid_to||'—'}${exp?' ⚠️':''}</td>
+      <td style="text-align:center">${pill(exp?'expired':p.status,exp?'#EF4444':p.status==='active'?'#10B981':'#475569')}</td>
+    </tr>`;}).join('')}</tbody></table>`;
 
   } else {
     kpis=''; body='';
@@ -4062,7 +3245,7 @@ var curInvTab='items';
 async function loadInventory(tab='items'){
   curInvTab=tab;
   const el=document.getElementById('page-inventory');
-  el.innerHTML=`<div class="loading">Loading…</div>`;
+  el.innerHTML=`<div class="loading">Loading...</div>`;
   const tabs=`<div class="tabs">
     <button class="tab${tab==='items'?' act':''}" onclick="loadInventory('items')">📦 Material Master</button>
     <button class="tab${tab==='stock'?' act':''}" onclick="loadInventory('stock')">📊 Stock Balance</button>
@@ -4071,260 +3254,77 @@ async function loadInventory(tab='items'){
   </div>`;
   const isPMO=currentProfile?.role==='PMO Manager'||currentProfile?.role==='Procurement Lead';
   let kpis='',body='';
-
   if(tab==='items'){
     const {data:list}=await sb.from('material_master').select('*').order('item_code');
     const L=list||[];
     const reorder=L.filter(i=>i.current_stock<=i.reorder_level).length;
-    kpis=kpi('Total Items',L.length,'#E2E8F0')
-        +kpi('Active',L.filter(i=>i.is_active).length,'#10B981')
-        +kpi('Below Reorder',reorder,reorder>0?'#EF4444':'#10B981')
-        +kpi('Total Stock Value',fmtKWD(L.reduce((s,i)=>s+(i.current_stock*i.standard_cost),0)),'#3B82F6');
-    body=`
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-      ${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewItemModal()">+ New Item</button>`:''}
-    </div>
-    <table><thead><tr>
-      <th>Code</th><th>Item Name</th><th>Category</th><th>UOM</th>
-      <th style="text-align:right">Stock</th><th style="text-align:right">Reorder Lvl</th>
-      <th style="text-align:right">Std Cost</th><th style="text-align:center">Status</th>
-    </tr></thead><tbody>
-    ${L.map(i=>{
-      const low=i.current_stock<=i.reorder_level;
-      return`<tr>
-        <td style="color:var(--gold);font-weight:700;font-family:monospace;font-size:11px">${esc(i.item_code)}</td>
-        <td style="font-weight:600;font-size:11px">${esc(i.item_name)}</td>
-        <td style="color:var(--muted);font-size:11px">${esc(i.category||'—')}</td>
-        <td style="color:var(--muted);font-size:11px">${esc(i.unit_of_measure)}</td>
-        <td style="text-align:right;font-weight:700;color:${low?'#EF4444':'#10B981'}">${Number(i.current_stock).toFixed(2)} ${low?'⚠️':''}</td>
-        <td style="text-align:right;color:var(--muted);font-size:11px">${Number(i.reorder_level||0).toFixed(2)}</td>
-        <td style="text-align:right;color:var(--muted);font-size:11px">${fmtKWD(i.standard_cost||0)}</td>
-        <td style="text-align:center">${pill(i.is_active?'active':'inactive',i.is_active?'#10B981':'#475569')}</td>
-      </tr>`;
-    }).join('')}
-    </tbody></table>`;
-
+    kpis=kpi('Total Items',L.length,'#E2E8F0')+kpi('Active',L.filter(i=>i.is_active).length,'#10B981')+kpi('Below Reorder',reorder,reorder>0?'#EF4444':'#10B981')+kpi('Stock Value',fmtKWD(L.reduce((s,i)=>s+(i.current_stock*i.standard_cost),0)),'#3B82F6');
+    body=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px">${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewItemModal()">+ New Item</button>`:''}</div>
+    <table><thead><tr><th>Code</th><th>Item Name</th><th>Category</th><th>UOM</th><th style="text-align:right">Stock</th><th style="text-align:right">Reorder</th><th style="text-align:right">Std Cost</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${L.map(i=>{const low=i.current_stock<=i.reorder_level;return`<tr>
+      <td style="color:var(--gold);font-weight:700;font-family:monospace;font-size:11px">${esc(i.item_code)}</td>
+      <td style="font-weight:600;font-size:11px">${esc(i.item_name)}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(i.category||'—')}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(i.unit_of_measure)}</td>
+      <td style="text-align:right;font-weight:700;color:${low?'#EF4444':'#10B981'}">${Number(i.current_stock).toFixed(2)}${low?' ⚠️':''}</td>
+      <td style="text-align:right;color:var(--muted);font-size:11px">${Number(i.reorder_level||0).toFixed(2)}</td>
+      <td style="text-align:right;color:var(--muted);font-size:11px">${fmtKWD(i.standard_cost||0)}</td>
+      <td style="text-align:center">${pill(i.is_active?'active':'inactive',i.is_active?'#10B981':'#475569')}</td>
+    </tr>`;}).join('')}</tbody></table>`;
   } else if(tab==='stock'){
     const {data:list}=await sb.from('v_stock_balance').select('*').order('item_code');
     const L=list||[];
-    const totalVal=L.reduce((s,r)=>s+Number(r.stock_value||0),0);
-    const reorder=L.filter(r=>r.needs_reorder).length;
-    kpis=kpi('Items',L.length,'#E2E8F0')
-        +kpi('Total Value',fmtKWD(totalVal),'#3B82F6')
-        +kpi('Need Reorder',reorder,reorder>0?'#EF4444':'#10B981')
-        +kpi('Warehouse',L[0]?.warehouse_name||'—','#8B5CF6');
-    body=`
-    <table><thead><tr>
-      <th>Code</th><th>Item Name</th><th>Warehouse</th><th>Category</th>
-      <th style="text-align:right">On Hand</th><th style="text-align:right">Reorder Lvl</th>
-      <th style="text-align:right">Stock Value (KWD)</th><th style="text-align:center">Status</th>
-    </tr></thead><tbody>
+    kpis=kpi('Items',L.length,'#E2E8F0')+kpi('Total Value',fmtKWD(L.reduce((s,r)=>s+Number(r.stock_value||0),0)),'#3B82F6')+kpi('Need Reorder',L.filter(r=>r.needs_reorder).length,'#EF4444')+kpi('Warehouse',L[0]?.warehouse_name||'—','#8B5CF6');
+    body=`<table><thead><tr><th>Code</th><th>Item Name</th><th>Warehouse</th><th style="text-align:right">On Hand</th><th style="text-align:right">Value</th><th style="text-align:center">Status</th></tr></thead><tbody>
     ${L.map(r=>`<tr>
       <td style="color:var(--gold);font-family:monospace;font-size:11px">${esc(r.item_code)}</td>
       <td style="font-weight:600;font-size:11px">${esc(r.item_name)}</td>
       <td style="color:var(--muted);font-size:11px">${esc(r.warehouse_name||'—')}</td>
-      <td style="color:var(--muted);font-size:11px">${esc(r.category||'—')}</td>
-      <td style="text-align:right;font-weight:700;color:${r.needs_reorder?'#EF4444':'#10B981'}">${Number(r.current_stock||0).toFixed(2)} ${r.needs_reorder?'⚠️':''}</td>
-      <td style="text-align:right;color:var(--muted);font-size:11px">${Number(r.reorder_level||0).toFixed(2)}</td>
+      <td style="text-align:right;font-weight:700;color:${r.needs_reorder?'#EF4444':'#10B981'}">${Number(r.current_stock||0).toFixed(2)}${r.needs_reorder?' ⚠️':''}</td>
       <td style="text-align:right;font-weight:600">${fmtKWD(r.stock_value||0)}</td>
       <td style="text-align:center">${pill(r.needs_reorder?'reorder':'ok',r.needs_reorder?'#EF4444':'#10B981')}</td>
-    </tr>`).join('')}
-    </tbody></table>`;
-
+    </tr>`).join('')}</tbody></table>`;
   } else if(tab==='ledger'){
-    const {data:list}=await sb.from('stock_ledger')
-      .select('*,item:material_master(item_code,item_name),warehouse:warehouses(warehouse_code)')
-      .order('transaction_date',{ascending:false}).limit(100);
+    const {data:list}=await sb.from('stock_ledger').select('*,item:material_master(item_code,item_name),warehouse:warehouses(warehouse_code)').order('transaction_date',{ascending:false}).limit(100);
     const L=list||[];
-    kpis=kpi('Transactions',L.length,'#E2E8F0')
-        +kpi('GRN',L.filter(t=>t.transaction_type==='GRN').length,'#10B981')
-        +kpi('Issues',L.filter(t=>t.transaction_type==='ISSUE').length,'#F97316')
-        +kpi('Adjustments',L.filter(t=>t.transaction_type==='ADJUSTMENT').length,'#8B5CF6');
-    body=`
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-      ${isPMO?`<button class="btn btn-primary btn-sm" onclick="openStockMovementModal()">+ Stock Movement</button>`:''}
-    </div>
-    <table><thead><tr>
-      <th>Trans No</th><th>Type</th><th>Date</th><th>Item</th><th>Warehouse</th>
-      <th style="text-align:right">Qty</th><th style="text-align:right">Unit Cost</th>
-      <th style="text-align:right">Total Value</th><th>Reference</th>
-    </tr></thead><tbody>
-    ${L.map(t=>{
-      const typeColor={GRN:'#10B981',ISSUE:'#F97316',TRANSFER:'#3B82F6',ADJUSTMENT:'#8B5CF6',RETURN:'#EAB308'};
-      return`<tr>
-        <td style="color:var(--gold);font-size:10px">${esc(t.transaction_no||'—')}</td>
-        <td>${pill(t.transaction_type,typeColor[t.transaction_type]||'#94A3B8')}</td>
-        <td style="color:var(--muted);font-size:11px">${t.transaction_date||'—'}</td>
-        <td style="font-size:11px;font-weight:600">${esc(t.item?.item_code||'—')} <span style="color:var(--muted);font-weight:400">${esc(t.item?.item_name||'')}</span></td>
-        <td style="color:var(--muted);font-size:11px">${esc(t.warehouse?.warehouse_code||'—')}</td>
-        <td style="text-align:right;font-weight:700;color:${t.quantity>0?'#10B981':'#EF4444'}">${t.quantity>0?'+':''}${Number(t.quantity).toFixed(2)}</td>
-        <td style="text-align:right;color:var(--muted);font-size:11px">${t.unit_cost?fmtKWD(t.unit_cost):'—'}</td>
-        <td style="text-align:right;font-weight:600">${fmtKWD(t.total_value||0)}</td>
-        <td style="color:var(--muted);font-size:11px">${esc(t.reference||'')}</td>
-      </tr>`;
-    }).join('')}
-    </tbody></table>`;
-
+    const tc={GRN:'#10B981',ISSUE:'#F97316',TRANSFER:'#3B82F6',ADJUSTMENT:'#8B5CF6',RETURN:'#EAB308'};
+    kpis=kpi('Transactions',L.length,'#E2E8F0')+kpi('GRN',L.filter(t=>t.transaction_type==='GRN').length,'#10B981')+kpi('Issues',L.filter(t=>t.transaction_type==='ISSUE').length,'#F97316')+kpi('Adjustments',L.filter(t=>t.transaction_type==='ADJUSTMENT').length,'#8B5CF6');
+    body=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px">${isPMO?`<button class="btn btn-primary btn-sm" onclick="openStockMovementModal()">+ Movement</button>`:''}</div>
+    <table><thead><tr><th>Trans No</th><th>Type</th><th>Date</th><th>Item</th><th style="text-align:right">Qty</th><th style="text-align:right">Value</th><th>Reference</th></tr></thead><tbody>
+    ${L.map(t=>`<tr>
+      <td style="color:var(--gold);font-size:10px">${esc(t.transaction_no||'—')}</td>
+      <td>${pill(t.transaction_type,tc[t.transaction_type]||'#94A3B8')}</td>
+      <td style="color:var(--muted);font-size:11px">${t.transaction_date||'—'}</td>
+      <td style="font-size:11px">${esc(t.item?.item_code||'—')} <span style="color:var(--muted)">${esc(t.item?.item_name||'')}</span></td>
+      <td style="text-align:right;font-weight:700;color:${t.quantity>0?'#10B981':'#EF4444'}">${t.quantity>0?'+':''}${Number(t.quantity).toFixed(2)}</td>
+      <td style="text-align:right;font-weight:600">${fmtKWD(t.total_value||0)}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(t.reference||'')}</td>
+    </tr>`).join('')}</tbody></table>`;
   } else if(tab==='match'){
-    // 3-Way Match by line
     const {data:list}=await sb.from('v_three_way_match').select('*').order('po_no,line_no');
     const L=list||[];
-    const matched=L.filter(r=>r.match_status.includes('Matched')).length;
-    const issues=L.filter(r=>r.match_status.includes('⚠️')).length;
-    kpis=kpi('PO Lines',L.length,'#E2E8F0')
-        +kpi('Matched',matched,'#10B981')
-        +kpi('Issues',issues,issues>0?'#EF4444':'#10B981')
-        +kpi('Not Invoiced',L.filter(r=>r.match_status==='Not Invoiced').length,'#94A3B8');
-    body=`
-    <table><thead><tr>
-      <th>PO No</th><th>Line</th><th>Description</th><th>Vendor</th>
-      <th style="text-align:right">Ordered</th><th style="text-align:right">Received</th>
-      <th style="text-align:right">Invoiced</th><th style="text-align:center">Match Status</th>
-    </tr></thead><tbody>
+    const matched=L.filter(r=>r.match_status&&r.match_status.includes('Matched')).length;
+    const issues=L.filter(r=>r.match_status&&r.match_status.includes('⚠️')).length;
+    kpis=kpi('PO Lines',L.length,'#E2E8F0')+kpi('Matched',matched,'#10B981')+kpi('Issues',issues,issues>0?'#EF4444':'#10B981')+kpi('Not Invoiced',L.filter(r=>r.match_status==='Not Invoiced').length,'#94A3B8');
+    body=`<table><thead><tr><th>PO No</th><th>Line</th><th>Description</th><th>Vendor</th><th style="text-align:right">Ordered</th><th style="text-align:right">Received</th><th style="text-align:right">Invoiced</th><th style="text-align:center">Match</th></tr></thead><tbody>
     ${L.map(r=>`<tr>
-      <td style="color:var(--gold);font-size:10px;white-space:nowrap">${esc(r.po_no)}</td>
+      <td style="color:var(--gold);font-size:10px">${esc(r.po_no)}</td>
       <td style="text-align:center;color:var(--muted);font-size:11px">${r.line_no}</td>
-      <td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.description)}</td>
+      <td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.description)}</td>
       <td style="color:var(--muted);font-size:11px">${esc(r.vendor_name||'—')}</td>
       <td style="text-align:right;font-size:11px">${fmtKWD(r.po_value||0)}</td>
-      <td style="text-align:right;font-size:11px;color:${Number(r.received_value||0)>0?'#10B981':'#94A3B8'}">${fmtKWD(r.received_value||0)}</td>
-      <td style="text-align:right;font-size:11px;color:${Number(r.invoiced_value||0)>0?'#3B82F6':'#94A3B8'}">${fmtKWD(r.invoiced_value||0)}</td>
-      <td style="text-align:center;font-size:10px;white-space:nowrap">${r.match_status}</td>
-    </tr>`).join('')}
-    </tbody></table>`;
+      <td style="text-align:right;font-size:11px;color:#10B981">${fmtKWD(r.received_value||0)}</td>
+      <td style="text-align:right;font-size:11px;color:#3B82F6">${fmtKWD(r.invoiced_value||0)}</td>
+      <td style="text-align:center;font-size:10px">${r.match_status}</td>
+    </tr>`).join('')}</tbody></table>`;
   }
-
   el.innerHTML=`
-  <div class="page-head">
-    <div class="page-head-left">
-      <span style="font-size:22px">🏭</span>
-      <div><h1>Inventory</h1><div class="sub">Material Master · Stock Balance · Ledger · 3-Way Match</div></div>
-    </div>
-    ${isPMO?`<div class="page-head-right"></div>`:''}
-  </div>
+  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">🏭</span><div><h1>Inventory</h1><div class="sub">Material Master · Stock · Ledger · 3-Way Match</div></div></div></div>
   <div class="grid4">${kpis}</div>
   <div class="card">${tabs}${body}</div>`;
 }
 
-// ── Inventory Modals ──────────────────────────────────────
-function openNewItemModal(){
-  openModal(`
-    <h2 style="margin:0 0 16px">New Material Item</h2>
-    <div class="form-row">
-      <div class="form-field"><label>Item Code *</label><input id="itm-code" placeholder="e.g. UPS-001"/></div>
-      <div class="form-field"><label>Unit of Measure</label>
-        <select id="itm-uom" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option>EA</option><option>M</option><option>M2</option><option>M3</option>
-          <option>KG</option><option>TON</option><option>L</option><option>BOX</option><option>SET</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-field"><label>Item Name *</label><input id="itm-name" placeholder="Full item description"/></div>
-    <div class="form-row">
-      <div class="form-field"><label>Category</label><input id="itm-cat" placeholder="e.g. UPS, Cables, Civil"/></div>
-      <div class="form-field"><label>Standard Cost (KWD)</label><input id="itm-cost" type="number" min="0" step="0.001" placeholder="0.000"/></div>
-    </div>
-    <div class="form-row">
-      <div class="form-field"><label>Initial Stock</label><input id="itm-stock" type="number" min="0" step="0.01" placeholder="0"/></div>
-      <div class="form-field"><label>Reorder Level</label><input id="itm-reorder" type="number" min="0" step="0.01" placeholder="0"/></div>
-    </div>
-    <div class="form-field"><label>Description</label><textarea id="itm-desc" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveNewItem(event)">Add Item</button>
-    </div>
-  `);
-}
-
-async function saveNewItem(e){
-  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
-  try{
-    const code=document.getElementById('itm-code').value.trim();
-    const name=document.getElementById('itm-name').value.trim();
-    if(!code||!name){showToast('Code and Name required','error');return;}
-    const {data:itemNo}=await sb.rpc('next_ref_no',{p_prefix:'ITM'});
-    const {data,error}=await sb.from('material_master').insert({
-      item_code:code||itemNo, item_name:name,
-      category:document.getElementById('itm-cat').value.trim()||null,
-      unit_of_measure:document.getElementById('itm-uom').value,
-      standard_cost:Number(document.getElementById('itm-cost').value)||0,
-      current_stock:Number(document.getElementById('itm-stock').value)||0,
-      reorder_level:Number(document.getElementById('itm-reorder').value)||0,
-      description:document.getElementById('itm-desc').value.trim()||null,
-      is_active:true, created_by:currentProfile?.id
-    }).select('id').single();
-    if(error){showToast('Error: '+error.message,'error');return;}
-    await writeAudit('material_master',data.id,'CREATED',null,{item_code:code,item_name:name},'Item added to material master');
-    showToast(`Item ${code||itemNo} added ✓`);
-    closeModal(); loadInventory('items');
-  }catch(e2){showToast('Error: '+e2.message,'error');}
-  finally{if(btn){btn.disabled=false;btn.textContent='Add Item';}}
-}
-
-function openStockMovementModal(){
-  const items=window._cachedItems||[];
-  openModal(`
-    <h2 style="margin:0 0 16px">Record Stock Movement</h2>
-    <div class="form-row">
-      <div class="form-field"><label>Type *</label>
-        <select id="st-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="GRN">GRN — Goods Received</option>
-          <option value="ISSUE">ISSUE — Issue to Project</option>
-          <option value="RETURN">RETURN — Return to Stock</option>
-          <option value="ADJUSTMENT">ADJUSTMENT — Inventory Adj.</option>
-        </select>
-      </div>
-      <div class="form-field"><label>Date *</label><input id="st-date" type="date" value="${new Date().toISOString().split('T')[0]}"/></div>
-    </div>
-    <div class="form-field"><label>Item *</label>
-      <select id="st-item" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-        <option value="">— Select Item —</option>
-        ${items.map(i=>`<option value="${i.id}">${i.item_code} — ${i.item_name}</option>`).join('')}
-      </select>
-    </div>
-    <div class="form-row">
-      <div class="form-field"><label>Quantity *</label><input id="st-qty" type="number" min="0" step="0.01" placeholder="0.00"/></div>
-      <div class="form-field"><label>Unit Cost (KWD)</label><input id="st-cost" type="number" min="0" step="0.001" placeholder="0.000"/></div>
-    </div>
-    <div class="form-field"><label>Reference</label><input id="st-ref" placeholder="PO No, MRV No, etc."/></div>
-    <div class="form-field"><label>Notes</label><input id="st-notes" placeholder="Optional notes…"/></div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveStockMovement(event)">Record</button>
-    </div>
-  `);
-}
-
-async function saveStockMovement(e){
-  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
-  try{
-    const type=document.getElementById('st-type').value;
-    const itemId=document.getElementById('st-item').value;
-    const qty=Number(document.getElementById('st-qty').value)||0;
-    const date=document.getElementById('st-date').value;
-    if(!itemId){showToast('Item is required','error');return;}
-    if(qty<=0){showToast('Quantity must be greater than zero','error');return;}
-    if(!date){showToast('Date is required','error');return;}
-    const {data:txNo}=await sb.rpc('next_ref_no',{p_prefix:'STK'});
-    const signedQty=type==='ISSUE'?-qty:qty;
-    const {data,error}=await sb.from('stock_ledger').insert({
-      transaction_no:txNo, transaction_type:type,
-      transaction_date:date, item_id:itemId,
-      quantity:signedQty,
-      unit_cost:Number(document.getElementById('st-cost').value)||null,
-      reference:document.getElementById('st-ref').value.trim()||null,
-      notes:document.getElementById('st-notes').value.trim()||null,
-      created_by:currentProfile?.id
-    }).select('id').single();
-    if(error){showToast('Error: '+error.message,'error');return;}
-    // Update current_stock on material_master
-    await sb.rpc('adjust_item_stock',{p_item_id:itemId,p_qty_change:signedQty});
-    showToast(`${type} ${txNo} recorded ✓`);
-    closeModal(); loadInventory('ledger');
-  }catch(e2){showToast('Error: '+e2.message,'error');}
-  finally{if(btn){btn.disabled=false;btn.textContent='Record';}}
-}
-
+// ── Documents: Add Transmittals + Revisions ──────────────
 // ── DOCUMENTS ────────────────────────────────────────────────
 async function loadDocs(tab='documents'){
   curDocTab=tab;
@@ -4334,8 +3334,6 @@ async function loadDocs(tab='documents'){
     <button class="tab${tab==='documents'?' act':''}" onclick="loadDocs('documents')">📄 Documents</button>
     <button class="tab${tab==='submittals'?' act':''}" onclick="loadDocs('submittals')">📤 Submittals</button>
     <button class="tab${tab==='rfis'?' act':''}" onclick="loadDocs('rfis')">❓ RFIs</button>
-    <button class="tab${tab==='transmittals'?' act':''}" onclick="loadDocs('transmittals')">📬 Transmittals</button>
-    <button class="tab${tab==='revisions'?' act':''}" onclick="loadDocs('revisions')">🔄 Revisions</button>
   </div>`;
   const today=new Date();
   let kpis='',body='';
@@ -4353,274 +3351,414 @@ async function loadDocs(tab='documents'){
     body=`<table><thead><tr><th>No</th><th>Title</th><th>Project</th><th>Submitted</th><th>Response Due</th><th style="text-align:center">Status</th></tr></thead><tbody>
     ${L.map(s=>{const ov=s.response_due&&!s.responded_date&&new Date(s.response_due)<today;return`<tr><td style="color:var(--gold);font-size:10px">${esc(s.submittal_no)}</td><td style="font-weight:600;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.title)}</td><td style="color:var(--muted);font-size:11px">${esc(s.project?.project_no||'—')}</td><td style="color:var(--muted);font-size:11px">${s.submitted_date}</td><td style="color:${ov?'#EF4444':'#94A3B8'};font-size:11px">${s.response_due||'—'}${ov?' ⚠️':''}</td><td style="text-align:center">${pill(s.status)}</td></tr>`}).join('')}
     </tbody></table>`;
-  } else {
+  } else if(tab==='rfis'){
     const {data:list}=await sb.from('rfis').select('*,project:projects(project_no)').order('raised_date',{ascending:false});
     const L=list||[];
     kpis=kpi('Total RFIs',L.length,'#E2E8F0')+kpi('Open',L.filter(r=>r.status==='open').length,'#F97316')+kpi('Cost Impact',L.filter(r=>r.has_cost_impact).length,'#EF4444')+kpi('Answered',L.filter(r=>r.status==='answered').length,'#10B981');
     body=`<table><thead><tr><th>No</th><th>Subject</th><th>Project</th><th>Raised</th><th>Due</th><th style="text-align:center">Cost</th><th style="text-align:center">Status</th></tr></thead><tbody>
     ${L.map(r=>{const ov=r.response_due&&r.status==='open'&&new Date(r.response_due)<today;return`<tr><td style="color:var(--gold);font-size:10px">${esc(r.rfi_no)}</td><td style="font-weight:600;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.subject)}</td><td style="color:var(--muted);font-size:11px">${esc(r.project?.project_no||'—')}</td><td style="color:var(--muted);font-size:11px">${r.raised_date}</td><td style="color:${ov?'#EF4444':'#94A3B8'};font-size:11px">${r.response_due||'—'}${ov?' ⚠️':''}</td><td style="text-align:center">${r.has_cost_impact?pill('Cost','#EF4444'):pill('None','#475569')}</td><td style="text-align:center">${pill(r.status)}</td></tr>`}).join('')}
     </tbody></table>`;
-  }
-  el.innerHTML=`
+
   } else if(tab==='transmittals'){
     const isPMO=currentProfile?.role==='PMO Manager';
-    const {data:list}=await sb.from('transmittals')
-      .select('*,project:projects(project_no),sender:user_profiles!sent_by(full_name)')
-      .order('transmittal_date',{ascending:false});
+    const {data:list}=await sb.from('transmittals').select('*,project:projects(project_no),sender:user_profiles!sent_by(full_name)').order('transmittal_date',{ascending:false});
     const L=list||[];
     const today=new Date();
-    const overdue=L.filter(t=>t.response_required&&!t.response_received&&new Date(t.response_due)<today).length;
-    kpis=kpi('Total',L.length,'#E2E8F0')
-        +kpi('Pending Response',L.filter(t=>t.response_required&&!t.response_received).length,'#F97316')
-        +kpi('Overdue',overdue,overdue>0?'#EF4444':'#10B981')
-        +kpi('Responded',L.filter(t=>t.response_received).length,'#10B981');
-    body=`
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-      ${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewTransmittalModal()">+ New Transmittal</button>`:''}
-    </div>
-    <table><thead><tr>
-      <th>Trans No</th><th>Subject</th><th>Project</th><th>Sent By</th>
-      <th>Date</th><th>To</th><th>Docs</th>
-      <th style="text-align:center">Response Due</th><th style="text-align:center">Status</th>
-    </tr></thead><tbody>
-    ${L.map(t=>{
-      const ov=t.response_required&&!t.response_received&&t.response_due&&new Date(t.response_due)<today;
-      return`<tr>
-        <td style="color:var(--gold);font-size:10px;white-space:nowrap">${esc(t.transmittal_no||'—')}</td>
-        <td style="font-weight:600;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.subject||'—')}</td>
-        <td style="color:var(--muted);font-size:11px">${esc(t.project?.project_no||'—')}</td>
-        <td style="color:var(--muted);font-size:11px">${esc(t.sender?.full_name||'—')}</td>
-        <td style="color:var(--muted);font-size:11px">${t.transmittal_date||'—'}</td>
-        <td style="color:var(--muted);font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.to_organization||'—')}</td>
-        <td style="text-align:center;color:var(--muted);font-size:11px">${t.document_count||0}</td>
-        <td style="text-align:center;color:${ov?'#EF4444':'#94A3B8'};font-size:11px">${t.response_due||'—'}${ov?' ⚠️':''}</td>
-        <td style="text-align:center">${pill(ov?'overdue':t.response_received?'responded':t.response_required?'awaiting':'sent',ov?'#EF4444':t.response_received?'#10B981':t.response_required?'#F97316':'#475569')}</td>
-      </tr>`;
-    }).join('')}
-    </tbody></table>`;
+    const overdue=L.filter(t=>t.response_required&&!t.response_received&&t.response_due&&new Date(t.response_due)<today).length;
+    kpis=kpi('Total',L.length,'#E2E8F0')+kpi('Pending Response',L.filter(t=>t.response_required&&!t.response_received).length,'#F97316')+kpi('Overdue',overdue,overdue>0?'#EF4444':'#10B981')+kpi('Responded',L.filter(t=>t.response_received).length,'#10B981');
+    body=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px">${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewTransmittalModal()">+ New Transmittal</button>`:''}</div>
+    <table><thead><tr><th>Trans No</th><th>Subject</th><th>Project</th><th>To</th><th>Date</th><th style="text-align:center">Response Due</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    ${L.map(t=>{const ov=t.response_required&&!t.response_received&&t.response_due&&new Date(t.response_due)<today;return`<tr>
+      <td style="color:var(--gold);font-size:10px">${esc(t.transmittal_no||'—')}</td>
+      <td style="font-weight:600;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.subject||'—')}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(t.project?.project_no||'—')}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(t.to_organization||'—')}</td>
+      <td style="color:var(--muted);font-size:11px">${t.transmittal_date||'—'}</td>
+      <td style="text-align:center;color:${ov?'#EF4444':'#94A3B8'};font-size:11px">${t.response_due||'—'}${ov?' ⚠️':''}</td>
+      <td style="text-align:center">${pill(ov?'overdue':t.response_received?'responded':t.response_required?'awaiting':'sent',ov?'#EF4444':t.response_received?'#10B981':t.response_required?'#F97316':'#475569')}</td>
+    </tr>`;}).join('')}</tbody></table>`;
 
   } else if(tab==='revisions'){
     const isPMO=currentProfile?.role==='PMO Manager';
-    const {data:list}=await sb.from('document_revisions')
-      .select('*,document:documents(doc_no,title),revised_by:user_profiles!revised_by(full_name),project:projects(project_no)')
-      .order('revised_date',{ascending:false}).limit(100);
+    const {data:list}=await sb.from('document_revisions').select('*,document:documents(doc_no,title),revised_by:user_profiles!revised_by(full_name)').order('revised_date',{ascending:false}).limit(100);
     const L=list||[];
-    kpis=kpi('Total Revisions',L.length,'#E2E8F0')
-        +kpi('Approved',L.filter(r=>r.status==='approved').length,'#10B981')
-        +kpi('Under Review',L.filter(r=>r.status==='under_review').length,'#F97316')
-        +kpi('Superseded',L.filter(r=>r.status==='superseded').length,'#475569');
-    body=`
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-      ${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewRevisionModal()">+ New Revision</button>`:''}
-    </div>
-    <table><thead><tr>
-      <th>Doc No</th><th>Title</th><th>Project</th>
-      <th style="text-align:center">Rev</th><th>Revised By</th><th>Date</th>
-      <th>Change Description</th><th style="text-align:center">Status</th>
-    </tr></thead><tbody>
+    kpis=kpi('Total',L.length,'#E2E8F0')+kpi('Approved',L.filter(r=>r.status==='approved').length,'#10B981')+kpi('Under Review',L.filter(r=>r.status==='under_review').length,'#F97316')+kpi('Superseded',L.filter(r=>r.status==='superseded').length,'#475569');
+    body=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px">${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewRevisionModal()">+ New Revision</button>`:''}</div>
+    <table><thead><tr><th>Doc No</th><th>Title</th><th style="text-align:center">Rev</th><th>Revised By</th><th>Date</th><th>Change</th><th style="text-align:center">Status</th></tr></thead><tbody>
     ${L.map(r=>`<tr>
       <td style="color:var(--gold);font-size:10px">${esc(r.document?.doc_no||'—')}</td>
-      <td style="font-weight:600;font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.document?.title||'—')}</td>
-      <td style="color:var(--muted);font-size:11px">${esc(r.project?.project_no||'—')}</td>
+      <td style="font-weight:600;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.document?.title||'—')}</td>
       <td style="text-align:center;font-weight:800;color:var(--gold)">${esc(r.revision_no||'—')}</td>
       <td style="color:var(--muted);font-size:11px">${esc(r.revised_by?.full_name||'—')}</td>
       <td style="color:var(--muted);font-size:11px">${r.revised_date||'—'}</td>
-      <td style="color:var(--muted);font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.change_description||'')}</td>
-      <td style="text-align:center">${pill(r.status,r.status==='approved'?'#10B981':r.status==='under_review'?'#F97316':r.status==='superseded'?'#475569':'#94A3B8')}</td>
-    </tr>`).join('')}
-    </tbody></table>`;
+      <td style="color:var(--muted);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.change_description||'')}</td>
+      <td style="text-align:center">${pill(r.status,r.status==='approved'?'#10B981':r.status==='under_review'?'#F97316':'#475569')}</td>
+    </tr>`).join('')}</tbody></table>`;
 
   } else {
     kpis=''; body='';
   }
 
-  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">📄</span><div><h1>Document Control</h1><div class="sub">Documents · Submittals · RFIs · Transmittals · Revisions</div></div></div></div>
+  el.innerHTML=`
+  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">📄</span><div><h1>Document Control</h1><div class="sub">Documents · Submittals · RFIs</div></div></div></div>
   <div class="grid4">${kpis}</div>
   <div class="card">${tabs}${body}</div>`;
 }
 
-// ── Document Control Modals ─────────────────────────────
+// ── New Modals ───────────────────────────────────────────
+
+function openNewCAPAModal(){
+  const projSel=window._cachedProjects||[];
+  const userSel=window._cachedUsers||[];
+  openModal('New CAPA Action',`
+    <div class="form-row"><div class="form-field"><label>Type *</label><select id="capa-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="corrective">Corrective</option><option value="preventive">Preventive</option></select></div><div class="form-field"><label>Project</label><select id="capa-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="">— Select —</option>${projSel.map(p=>`<option value="${p.id}">${p.project_no}</option>`).join('')}</select></div></div>
+    <div class="form-field"><label>Title *</label><input id="capa-title" placeholder="CAPA title"/></div>
+    <div class="form-field"><label>Root Cause</label><textarea id="capa-root" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
+    <div class="form-row"><div class="form-field"><label>Responsible</label><select id="capa-resp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="">— Select —</option>${userSel.map(u=>`<option value="${u.id}">${u.full_name}</option>`).join('')}</select></div><div class="form-field"><label>Due Date</label><input id="capa-due" type="date"/></div></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveCAPAAction(event)">Create CAPA</button></div>
+  `);
+}
+
+async function saveCAPAAction(e){
+  const btn=e?.target;if(btn){btn.disabled=true;btn.textContent='Saving...';}
+  try{
+    const title=document.getElementById('capa-title').value.trim();
+    if(!title){showToast('Title required','error');return;}
+    const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'CAPA'});
+    const {data,error}=await sb.from('capa_actions').insert({capa_no:no,type:document.getElementById('capa-type').value,title,project_id:document.getElementById('capa-proj').value||null,root_cause:document.getElementById('capa-root').value.trim()||null,responsible:document.getElementById('capa-resp').value||null,due_date:document.getElementById('capa-due').value||null,status:'open',created_by:currentProfile?.id}).select('id').single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('CAPA '+no+' created');closeModal();loadQHSE('capa');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Create CAPA';}}
+}
+
+function openNewRiskModal(){
+  const projSel=window._cachedProjects||[];
+  openModal('New Risk Entry',`
+    <div class="form-row"><div class="form-field"><label>Project *</label><select id="risk-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="">— Select —</option>${projSel.map(p=>`<option value="${p.id}">${p.project_no} — ${p.name}</option>`).join('')}</select></div><div class="form-field"><label>Category</label><select id="risk-cat" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="technical">Technical</option><option value="financial">Financial</option><option value="schedule">Schedule</option><option value="safety">Safety</option><option value="operational">Operational</option></select></div></div>
+    <div class="form-field"><label>Risk Title *</label><input id="risk-title" placeholder="Describe the risk..."/></div>
+    <div class="form-row"><div class="form-field"><label>Probability (1-5) *</label><input id="risk-prob" type="number" min="1" max="5" placeholder="1-5"/></div><div class="form-field"><label>Impact (1-5) *</label><input id="risk-impact" type="number" min="1" max="5" placeholder="1-5"/></div></div>
+    <div class="form-field"><label>Mitigation</label><textarea id="risk-mit" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveRisk(event)">Add Risk</button></div>
+  `);
+}
+
+async function saveRisk(e){
+  const btn=e?.target;if(btn){btn.disabled=true;btn.textContent='Saving...';}
+  try{
+    const projId=document.getElementById('risk-proj').value;
+    const title=document.getElementById('risk-title').value.trim();
+    const prob=Number(document.getElementById('risk-prob').value);
+    const impact=Number(document.getElementById('risk-impact').value);
+    if(!projId||!title||!prob||!impact){showToast('Project, title, P and I required','error');return;}
+    const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'RISK'});
+    const {error}=await sb.from('risk_register').insert({risk_no:no,project_id:projId,title,category:document.getElementById('risk-cat').value,probability:prob,impact,mitigation:document.getElementById('risk-mit').value.trim()||null,status:'open',created_by:currentProfile?.id});
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Risk '+no+' added');closeModal();loadQHSE('risks');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Add Risk';}}
+}
+
+function openNewContractModal(){
+  const empSel=window._cachedEmployees||[];
+  openModal('New Employee Contract',`
+    <div class="form-field"><label>Employee *</label><select id="con-emp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="">— Select —</option>${empSel.map(e=>`<option value="${e.id}">${e.full_name} (${e.employee_no})</option>`).join('')}</select></div>
+    <div class="form-row"><div class="form-field"><label>Type *</label><select id="con-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="permanent">Permanent</option><option value="temporary">Temporary</option><option value="contract">Contract</option><option value="probation">Probation</option></select></div><div class="form-field"><label>Start Date *</label><input id="con-start" type="date"/></div></div>
+    <div class="form-row"><div class="form-field"><label>Basic Salary *</label><input id="con-basic" type="number" min="0" step="0.001" placeholder="0.000"/></div><div class="form-field"><label>Allowances</label><input id="con-allow" type="number" min="0" step="0.001" placeholder="0.000"/></div></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveContract(event)">Create Contract</button></div>
+  `);
+}
+
+async function saveContract(e){
+  const btn=e?.target;if(btn){btn.disabled=true;btn.textContent='Saving...';}
+  try{
+    const empId=document.getElementById('con-emp').value;
+    const start=document.getElementById('con-start').value;
+    const basic=Number(document.getElementById('con-basic').value)||0;
+    if(!empId||!start||basic<=0){showToast('Employee, start date and basic salary required','error');return;}
+    const {data,error}=await sb.from('employee_contracts').insert({employee_id:empId,contract_type:document.getElementById('con-type').value,start_date:start,basic_salary:basic,allowances:Number(document.getElementById('con-allow').value)||0,currency:'KWD',status:'active',created_by:currentProfile?.id}).select('id').single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Contract created');closeModal();loadHR('contracts');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Create Contract';}}
+}
+
+function openNewAttendanceModal(){
+  const empSel=window._cachedEmployees||[];
+  const today=new Date().toISOString().split('T')[0];
+  openModal('Record Attendance',`
+    <div class="form-field"><label>Employee *</label><select id="att-emp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="">— Select —</option>${empSel.map(e=>`<option value="${e.id}">${e.full_name}</option>`).join('')}</select></div>
+    <div class="form-row"><div class="form-field"><label>Date *</label><input id="att-date" type="date" value="${today}"/></div><div class="form-field"><label>Status *</label><select id="att-status" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="present">Present</option><option value="absent">Absent</option><option value="late">Late</option><option value="half_day">Half Day</option><option value="leave">On Leave</option></select></div></div>
+    <div class="form-row"><div class="form-field"><label>Check In</label><input id="att-in" type="time"/></div><div class="form-field"><label>Check Out</label><input id="att-out" type="time"/></div></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveAttendance(event)">Record</button></div>
+  `);
+}
+
+async function saveAttendance(e){
+  const btn=e?.target;if(btn){btn.disabled=true;btn.textContent='Saving...';}
+  try{
+    const empId=document.getElementById('att-emp').value;
+    const date=document.getElementById('att-date').value;
+    if(!empId||!date){showToast('Employee and date required','error');return;}
+    const {error}=await sb.from('attendance').upsert({employee_id:empId,work_date:date,status:document.getElementById('att-status').value,check_in:document.getElementById('att-in').value||null,check_out:document.getElementById('att-out').value||null,created_by:currentProfile?.id},{onConflict:'employee_id,work_date'});
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Attendance recorded');closeModal();loadHR('attendance');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Record';}}
+}
+
+function openRunPayrollModal(){
+  const empSel=window._cachedEmployees||[];
+  const period=new Date().toISOString().slice(0,7);
+  openModal('Run Payroll',`
+    <div class="form-row"><div class="form-field"><label>Period *</label><input id="pay-period" type="month" value="${period}"/></div><div class="form-field"><label>Employee (blank = all)</label><select id="pay-emp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="">— All Active —</option>${empSel.map(e=>`<option value="${e.id}">${e.full_name}</option>`).join('')}</select></div></div>
+    <div class="form-field" style="padding:10px;background:#1E3A5F;border-radius:8px;font-size:11px;color:var(--muted)">Pulls Basic + Allowances from active contracts. NSSF deduction: 5% of basic.</div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="runPayroll(event)">Process Payroll</button></div>
+  `);
+}
+
+async function runPayroll(e){
+  const btn=e?.target;if(btn){btn.disabled=true;btn.textContent='Processing...';}
+  try{
+    const period=document.getElementById('pay-period').value;
+    const empId=document.getElementById('pay-emp').value||null;
+    if(!period){showToast('Period required','error');return;}
+    let q=sb.from('employees').select('id,full_name,employee_no,department,employee_contracts!inner(basic_salary,allowances,status)').eq('status','active').eq('employee_contracts.status','active');
+    if(empId) q=q.eq('id',empId);
+    const {data:emps}=await q;
+    if(!emps||emps.length===0){showToast('No employees with active contracts','error');return;}
+    const {data:existing}=await sb.from('payroll_runs').select('employee_id').eq('period_month',period).in('employee_id',emps.map(e=>e.id));
+    const existIds=new Set((existing||[]).map(r=>r.employee_id));
+    const toProcess=emps.filter(e=>!existIds.has(e.id));
+    if(toProcess.length===0){showToast('All employees already processed for this period','error');return;}
+    const rows=toProcess.map(emp=>{
+      const c=emp.employee_contracts?.[0]||{};
+      const basic=Number(c.basic_salary||0),allow=Number(c.allowances||0);
+      const gross=basic+allow,nssf=Math.round(basic*0.05*1000)/1000,net=Math.round((gross-nssf)*1000)/1000;
+      return{employee_id:emp.id,period_month:period,working_days:22,basic_salary:basic,allowances:allow,gross_salary:gross,nssf_deduction:nssf,tax_deduction:0,other_deductions:0,total_deductions:nssf,net_salary:net,status:'processed',processed_by:currentProfile?.id};
+    });
+    const {error}=await sb.from('payroll_runs').insert(rows);
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Payroll processed for '+toProcess.length+' employees');closeModal();loadHR('payroll');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Process Payroll';}}
+}
+
+function openNewInspectionModal(){
+  const projSel=window._cachedProjects||[];
+  const today=new Date().toISOString().split('T')[0];
+  openModal('New HSE Inspection',`
+    <div class="form-row"><div class="form-field"><label>Type *</label><select id="ins-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="site">Site</option><option value="equipment">Equipment</option><option value="fire">Fire & Emergency</option><option value="housekeeping">Housekeeping</option><option value="electrical">Electrical</option></select></div><div class="form-field"><label>Date *</label><input id="ins-date" type="date" value="${today}"/></div></div>
+    <div class="form-row"><div class="form-field"><label>Project</label><select id="ins-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="">— Select —</option>${projSel.map(p=>`<option value="${p.id}">${p.project_no}</option>`).join('')}</select></div><div class="form-field"><label>Location</label><input id="ins-loc" placeholder="e.g. Site A - Block 3"/></div></div>
+    <div class="form-field"><label>Findings</label><textarea id="ins-findings" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
+    <div class="form-row"><div class="form-field"><label>Result *</label><select id="ins-result" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="pass">Pass</option><option value="fail">Fail</option><option value="conditional">Conditional</option></select></div><div class="form-field"><label>Action Required</label><input id="ins-action" placeholder="Corrective action..."/></div></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveInspection(event)">Save</button></div>
+  `);
+}
+
+async function saveInspection(e){
+  const btn=e?.target;if(btn){btn.disabled=true;btn.textContent='Saving...';}
+  try{
+    const date=document.getElementById('ins-date').value;
+    if(!date){showToast('Date required','error');return;}
+    const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'INS'});
+    const {error}=await sb.from('hse_inspections').insert({inspection_no:no,inspection_type:document.getElementById('ins-type').value,inspection_date:date,project_id:document.getElementById('ins-proj').value||null,location:document.getElementById('ins-loc').value.trim()||null,findings:document.getElementById('ins-findings').value.trim()||null,result:document.getElementById('ins-result').value,action_required:document.getElementById('ins-action').value.trim()||null,status:'open',created_by:currentProfile?.id});
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Inspection '+no+' recorded');closeModal();loadQHSE('inspections');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save';}}
+}
+
+function openNewPTWModal(){
+  const projSel=window._cachedProjects||[];
+  const today=new Date().toISOString().split('T')[0];
+  const tomorrow=new Date(Date.now()+86400000).toISOString().split('T')[0];
+  openModal('New Permit to Work',`
+    <div class="form-row"><div class="form-field"><label>Type *</label><select id="ptw-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="hot_work">Hot Work</option><option value="confined_space">Confined Space</option><option value="electrical">Electrical</option><option value="excavation">Excavation</option><option value="working_at_height">Working at Height</option><option value="general">General</option></select></div><div class="form-field"><label>Project *</label><select id="ptw-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="">— Select —</option>${projSel.map(p=>`<option value="${p.id}">${p.project_no}</option>`).join('')}</select></div></div>
+    <div class="form-field"><label>Work Description *</label><textarea id="ptw-desc" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
+    <div class="form-row"><div class="form-field"><label>Valid From *</label><input id="ptw-from" type="date" value="${today}"/></div><div class="form-field"><label>Valid To *</label><input id="ptw-to" type="date" value="${tomorrow}"/></div></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="savePTW(event)">Issue Permit</button></div>
+  `);
+}
+
+async function savePTW(e){
+  const btn=e?.target;if(btn){btn.disabled=true;btn.textContent='Issuing...';}
+  try{
+    const projId=document.getElementById('ptw-proj').value;
+    const desc=document.getElementById('ptw-desc').value.trim();
+    const from=document.getElementById('ptw-from').value;
+    const to=document.getElementById('ptw-to').value;
+    if(!projId||!desc||!from||!to){showToast('All fields required','error');return;}
+    const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'PTW'});
+    const {error}=await sb.from('permits_to_work').insert({permit_no:no,permit_type:document.getElementById('ptw-type').value,project_id:projId,work_description:desc,valid_from:from,valid_to:to,status:'active',permit_date:from,issued_by:currentProfile?.id,created_by:currentProfile?.id});
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Permit '+no+' issued');closeModal();loadQHSE('ptw');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Issue Permit';}}
+}
+
 function openNewTransmittalModal(){
   const projSel=window._cachedProjects||[];
   const today=new Date().toISOString().split('T')[0];
-  openModal(`
-    <h2 style="margin:0 0 16px">New Transmittal</h2>
-    <div class="form-row">
-      <div class="form-field"><label>Project *</label>
-        <select id="tr-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="">— Select Project —</option>
-          ${projSel.map(p=>`<option value="${p.id}">${p.project_no} — ${p.name}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-field"><label>Date *</label><input id="tr-date" type="date" value="${today}"/></div>
-    </div>
-    <div class="form-field"><label>Subject *</label><input id="tr-subj" placeholder="e.g. Submission of Shop Drawings — Phase 1"/></div>
-    <div class="form-row">
-      <div class="form-field"><label>To (Organization) *</label><input id="tr-to" placeholder="e.g. Client Engineering Dept."/></div>
-      <div class="form-field"><label>Attention</label><input id="tr-attn" placeholder="Contact person name"/></div>
-    </div>
-    <div class="form-row">
-      <div class="form-field"><label>Purpose</label>
-        <select id="tr-purpose" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="for_approval">For Approval</option>
-          <option value="for_review">For Review</option>
-          <option value="for_information">For Information</option>
-          <option value="for_record">For Record</option>
-          <option value="approved_returned">Approved / Returned</option>
-        </select>
-      </div>
-      <div class="form-field"><label>No. of Documents</label><input id="tr-doccount" type="number" min="1" value="1"/></div>
-    </div>
-    <div class="form-row">
-      <div class="form-field"><label>Response Required</label>
-        <select id="tr-resp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="false">No</option>
-          <option value="true">Yes</option>
-        </select>
-      </div>
-      <div class="form-field"><label>Response Due</label><input id="tr-duedate" type="date"/></div>
-    </div>
-    <div class="form-field"><label>Remarks</label><textarea id="tr-remarks" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveTransmittal(event)">Issue Transmittal</button>
-    </div>
+  openModal('New Transmittal',`
+    <div class="form-row"><div class="form-field"><label>Project *</label><select id="tr-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="">— Select —</option>${projSel.map(p=>`<option value="${p.id}">${p.project_no}</option>`).join('')}</select></div><div class="form-field"><label>Date *</label><input id="tr-date" type="date" value="${today}"/></div></div>
+    <div class="form-field"><label>Subject *</label><input id="tr-subj" placeholder="e.g. Submission of Shop Drawings"/></div>
+    <div class="form-row"><div class="form-field"><label>To (Organization) *</label><input id="tr-to" placeholder="Client Engineering Dept."/></div><div class="form-field"><label>Purpose</label><select id="tr-purpose" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="for_approval">For Approval</option><option value="for_review">For Review</option><option value="for_information">For Information</option><option value="for_record">For Record</option></select></div></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveTransmittal(event)">Issue</button></div>
   `);
 }
 
 async function saveTransmittal(e){
-  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  const btn=e?.target;if(btn){btn.disabled=true;btn.textContent='Saving...';}
   try{
     const projId=document.getElementById('tr-proj').value;
     const subj=document.getElementById('tr-subj').value.trim();
     const to=document.getElementById('tr-to').value.trim();
     const date=document.getElementById('tr-date').value;
-    if(!projId||!subj||!to||!date){showToast('Project, Subject, To, and Date are required','error');return;}
-    const {data:trNo}=await sb.rpc('next_ref_no',{p_prefix:'TR'});
-    const respRequired=document.getElementById('tr-resp').value==='true';
-    const {data,error}=await sb.from('transmittals').insert({
-      transmittal_no:trNo,
-      project_id:projId,
-      subject:subj,
-      to_organization:to,
-      attention:document.getElementById('tr-attn').value.trim()||null,
-      transmittal_date:date,
-      purpose:document.getElementById('tr-purpose').value,
-      document_count:Number(document.getElementById('tr-doccount').value)||1,
-      response_required:respRequired,
-      response_due:respRequired&&document.getElementById('tr-duedate').value?document.getElementById('tr-duedate').value:null,
-      remarks:document.getElementById('tr-remarks').value.trim()||null,
-      sent_by:currentProfile?.id,
-      created_by:currentProfile?.id
-    }).select('id').single();
+    if(!projId||!subj||!to||!date){showToast('All fields required','error');return;}
+    const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'TR'});
+    const {error}=await sb.from('transmittals').insert({transmittal_no:no,project_id:projId,subject:subj,to_organization:to,transmittal_date:date,purpose:document.getElementById('tr-purpose').value,sent_by:currentProfile?.id,created_by:currentProfile?.id});
     if(error){showToast('Error: '+error.message,'error');return;}
-    await writeAudit('transmittals',data.id,'CREATED',null,{transmittal_no:trNo,subject:subj},'Transmittal issued');
-    showToast(`Transmittal ${trNo} issued ✓`);
-    closeModal(); loadDocs('transmittals');
+    showToast('Transmittal '+no+' issued');closeModal();loadDocs('transmittals');
   }catch(e2){showToast('Error: '+e2.message,'error');}
-  finally{if(btn){btn.disabled=false;btn.textContent='Issue Transmittal';}}
+  finally{if(btn){btn.disabled=false;btn.textContent='Issue';}}
 }
 
 function openNewRevisionModal(){
   const projSel=window._cachedProjects||[];
-  const userSel=window._cachedUsers||[];
   const today=new Date().toISOString().split('T')[0];
-  openModal(`
-    <h2 style="margin:0 0 16px">New Document Revision</h2>
-    <div class="form-row">
-      <div class="form-field"><label>Document No *</label><input id="rev-docno" placeholder="e.g. SP360-CV-DWG-001"/></div>
-      <div class="form-field"><label>Revision *</label><input id="rev-no" placeholder="e.g. B, C, 02"/></div>
-    </div>
-    <div class="form-field"><label>Document Title</label><input id="rev-title" placeholder="Full document title"/></div>
-    <div class="form-row">
-      <div class="form-field"><label>Project</label>
-        <select id="rev-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="">— Select Project —</option>
-          ${projSel.map(p=>`<option value="${p.id}">${p.project_no} — ${p.name}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-field"><label>Revised Date *</label><input id="rev-date" type="date" value="${today}"/></div>
-    </div>
-    <div class="form-row">
-      <div class="form-field"><label>Revised By</label>
-        <select id="rev-by" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="">— Select —</option>
-          ${userSel.map(u=>`<option value="${u.id}">${u.full_name}</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-field"><label>Status</label>
-        <select id="rev-status" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
-          <option value="draft">Draft</option>
-          <option value="under_review">Under Review</option>
-          <option value="approved">Approved</option>
-          <option value="superseded">Superseded</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-field"><label>Change Description *</label>
-      <textarea id="rev-change" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical" placeholder="What changed in this revision?"></textarea>
-    </div>
-    <div class="form-field">
-      <label>File Upload (Supabase Storage)</label>
-      <div style="border:1px dashed var(--bdr);border-radius:8px;padding:16px;text-align:center;color:var(--muted);font-size:11px">
-        📎 File storage via Supabase Storage bucket — connect <b>sp360-documents</b> bucket.<br>
-        Use the Supabase dashboard to upload files until the storage connector is configured.
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveRevision(event)">Save Revision</button>
-    </div>
+  openModal('New Document Revision',`
+    <div class="form-row"><div class="form-field"><label>Document No *</label><input id="rev-docno" placeholder="e.g. SP360-CV-DWG-001"/></div><div class="form-field"><label>Revision *</label><input id="rev-no" placeholder="e.g. B, C, 02"/></div></div>
+    <div class="form-field"><label>Title</label><input id="rev-title" placeholder="Document title"/></div>
+    <div class="form-row"><div class="form-field"><label>Project</label><select id="rev-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="">— Select —</option>${projSel.map(p=>`<option value="${p.id}">${p.project_no}</option>`).join('')}</select></div><div class="form-field"><label>Date *</label><input id="rev-date" type="date" value="${today}"/></div></div>
+    <div class="form-field"><label>Change Description *</label><textarea id="rev-change" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea></div>
+    <div class="form-row"><div class="form-field"><label>Status</label><select id="rev-status" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="draft">Draft</option><option value="under_review">Under Review</option><option value="approved">Approved</option></select></div></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveRevision(event)">Save</button></div>
   `);
 }
 
 async function saveRevision(e){
-  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  const btn=e?.target;if(btn){btn.disabled=true;btn.textContent='Saving...';}
   try{
     const docNo=document.getElementById('rev-docno').value.trim();
     const revNo=document.getElementById('rev-no').value.trim();
     const date=document.getElementById('rev-date').value;
     const change=document.getElementById('rev-change').value.trim();
-    if(!docNo||!revNo||!date||!change){showToast('Doc No, Revision, Date, and Change Description are required','error');return;}
-
-    // Find or create document record
+    if(!docNo||!revNo||!date||!change){showToast('Doc No, Revision, Date and Change required','error');return;}
     let {data:doc}=await sb.from('documents').select('id').eq('doc_no',docNo).maybeSingle();
     if(!doc){
-      const title=document.getElementById('rev-title').value.trim()||docNo;
-      const projId=document.getElementById('rev-proj').value||null;
-      const {data:newDoc,error:docErr}=await sb.from('documents').insert({
-        doc_no:docNo, title, project_id:projId,
-        category:'General', revision:revNo,
-        status:'draft', created_by:currentProfile?.id
-      }).select('id').single();
-      if(docErr){showToast('Error creating document: '+docErr.message,'error');return;}
-      doc=newDoc;
+      const {data:nd,error:de}=await sb.from('documents').insert({doc_no:docNo,title:document.getElementById('rev-title').value.trim()||docNo,project_id:document.getElementById('rev-proj').value||null,category:'General',revision:revNo,status:'draft',created_by:currentProfile?.id}).select('id').single();
+      if(de){showToast('Error: '+de.message,'error');return;}
+      doc=nd;
     }
-
-    // Mark previous revisions as superseded
-    await sb.from('document_revisions').update({status:'superseded',updated_at:new Date().toISOString()})
-      .eq('document_id',doc.id).neq('status','superseded');
-
-    // Insert new revision
-    const {data:rev,error}=await sb.from('document_revisions').insert({
-      document_id:doc.id,
-      project_id:document.getElementById('rev-proj').value||null,
-      revision_no:revNo,
-      revised_date:date,
-      revised_by:document.getElementById('rev-by').value||null,
-      change_description:change,
-      status:document.getElementById('rev-status').value,
-      created_by:currentProfile?.id
-    }).select('id').single();
+    await sb.from('document_revisions').update({status:'superseded',updated_at:new Date().toISOString()}).eq('document_id',doc.id).neq('status','superseded');
+    const {error}=await sb.from('document_revisions').insert({document_id:doc.id,project_id:document.getElementById('rev-proj').value||null,revision_no:revNo,revised_date:date,change_description:change,status:document.getElementById('rev-status').value,created_by:currentProfile?.id});
     if(error){showToast('Error: '+error.message,'error');return;}
-
-    // Update document revision to latest
-    await sb.from('documents').update({revision:revNo,status:document.getElementById('rev-status').value,updated_at:new Date().toISOString()}).eq('id',doc.id);
-    await writeAudit('documents',doc.id,'REVISION_ADDED',null,{doc_no:docNo,revision:revNo,status:document.getElementById('rev-status').value},'Document revision added');
-    showToast(`Revision ${revNo} saved for ${docNo} ✓`);
-    closeModal(); loadDocs('revisions');
+    await sb.from('documents').update({revision:revNo,status:document.getElementById('rev-status').value}).eq('id',doc.id);
+    showToast('Revision '+revNo+' saved for '+docNo);closeModal();loadDocs('revisions');
   }catch(e2){showToast('Error: '+e2.message,'error');}
-  finally{if(btn){btn.disabled=false;btn.textContent='Save Revision';}}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save';}}
+}
+
+function openNewItemModal(){
+  openModal('New Material Item',`
+    <div class="form-row"><div class="form-field"><label>Item Code *</label><input id="itm-code" placeholder="e.g. UPS-001"/></div><div class="form-field"><label>UOM</label><select id="itm-uom" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option>EA</option><option>M</option><option>M2</option><option>KG</option><option>TON</option><option>L</option><option>SET</option></select></div></div>
+    <div class="form-field"><label>Item Name *</label><input id="itm-name" placeholder="Full item description"/></div>
+    <div class="form-row"><div class="form-field"><label>Category</label><input id="itm-cat" placeholder="e.g. UPS, Cables"/></div><div class="form-field"><label>Standard Cost (KWD)</label><input id="itm-cost" type="number" min="0" step="0.001" placeholder="0.000"/></div></div>
+    <div class="form-row"><div class="form-field"><label>Initial Stock</label><input id="itm-stock" type="number" min="0" step="0.01" placeholder="0"/></div><div class="form-field"><label>Reorder Level</label><input id="itm-reorder" type="number" min="0" step="0.01" placeholder="0"/></div></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveNewItem(event)">Add Item</button></div>
+  `);
+}
+
+async function saveNewItem(e){
+  const btn=e?.target;if(btn){btn.disabled=true;btn.textContent='Saving...';}
+  try{
+    const code=document.getElementById('itm-code').value.trim();
+    const name=document.getElementById('itm-name').value.trim();
+    if(!code||!name){showToast('Code and Name required','error');return;}
+    const {error}=await sb.from('material_master').insert({item_code:code,item_name:name,category:document.getElementById('itm-cat').value.trim()||null,unit_of_measure:document.getElementById('itm-uom').value,standard_cost:Number(document.getElementById('itm-cost').value)||0,current_stock:Number(document.getElementById('itm-stock').value)||0,reorder_level:Number(document.getElementById('itm-reorder').value)||0,is_active:true,created_by:currentProfile?.id});
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Item '+code+' added');closeModal();loadInventory('items');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Add Item';}}
+}
+
+function openStockMovementModal(){
+  const items=window._cachedItems||[];
+  const today=new Date().toISOString().split('T')[0];
+  openModal('Record Stock Movement',`
+    <div class="form-row"><div class="form-field"><label>Type *</label><select id="st-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="GRN">GRN - Goods Received</option><option value="ISSUE">ISSUE - Issue to Project</option><option value="RETURN">RETURN - Return to Stock</option><option value="ADJUSTMENT">ADJUSTMENT</option></select></div><div class="form-field"><label>Date *</label><input id="st-date" type="date" value="${today}"/></div></div>
+    <div class="form-field"><label>Item *</label><select id="st-item" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="">— Select Item —</option>${items.map(i=>`<option value="${i.id}">${i.item_code} — ${i.item_name}</option>`).join('')}</select></div>
+    <div class="form-row"><div class="form-field"><label>Quantity *</label><input id="st-qty" type="number" min="0" step="0.01" placeholder="0.00"/></div><div class="form-field"><label>Unit Cost (KWD)</label><input id="st-cost" type="number" min="0" step="0.001" placeholder="0.000"/></div></div>
+    <div class="form-field"><label>Reference</label><input id="st-ref" placeholder="PO No, MRV No..."/></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveStockMovement(event)">Record</button></div>
+  `);
+}
+
+async function saveStockMovement(e){
+  const btn=e?.target;if(btn){btn.disabled=true;btn.textContent='Saving...';}
+  try{
+    const type=document.getElementById('st-type').value;
+    const itemId=document.getElementById('st-item').value;
+    const qty=Number(document.getElementById('st-qty').value)||0;
+    const date=document.getElementById('st-date').value;
+    if(!itemId||qty<=0||!date){showToast('Item, quantity and date required','error');return;}
+    const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'STK'});
+    const signedQty=type==='ISSUE'?-qty:qty;
+    const {error}=await sb.from('stock_ledger').insert({transaction_no:no,transaction_type:type,transaction_date:date,item_id:itemId,quantity:signedQty,unit_cost:Number(document.getElementById('st-cost').value)||null,reference:document.getElementById('st-ref').value.trim()||null,created_by:currentProfile?.id});
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await sb.rpc('adjust_item_stock',{p_item_id:itemId,p_qty_change:signedQty});
+    showToast(type+' '+no+' recorded');closeModal();loadInventory('ledger');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Record';}}
+}
+
+function openNewCOAModal(){
+  openModal('Add Account',`
+    <div class="form-row"><div class="form-field"><label>Account Code *</label><input id="coa-code" placeholder="e.g. 1100"/></div><div class="form-field"><label>Type *</label><select id="coa-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="Asset">Asset</option><option value="Liability">Liability</option><option value="Equity">Equity</option><option value="Revenue">Revenue</option><option value="Expense">Expense</option><option value="COGS">COGS</option></select></div></div>
+    <div class="form-field"><label>Account Name *</label><input id="coa-name" placeholder="e.g. Accounts Receivable"/></div>
+    <div class="form-row"><div class="form-field"><label>Normal Balance</label><select id="coa-bal" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="Debit">Debit</option><option value="Credit">Credit</option></select></div><div class="form-field"><label>Sub-Type</label><input id="coa-sub" placeholder="e.g. Current Asset"/></div></div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveCOA(event)">Add Account</button></div>
+  `);
+}
+
+async function saveCOA(e){
+  const btn=e?.target;if(btn){btn.disabled=true;btn.textContent='Saving...';}
+  try{
+    const code=document.getElementById('coa-code').value.trim();
+    const name=document.getElementById('coa-name').value.trim();
+    if(!code||!name){showToast('Code and Name required','error');return;}
+    const {error}=await sb.from('chart_of_accounts').insert({account_code:code,account_name:name,account_type:document.getElementById('coa-type').value,normal_balance:document.getElementById('coa-bal').value,sub_type:document.getElementById('coa-sub').value.trim()||null,is_active:true,created_by:currentProfile?.id});
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Account '+code+' added');closeModal();loadFinance('coa');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Add Account';}}
+}
+
+function openNewJournalModal(){
+  const projSel=window._cachedProjects||[];
+  const today=new Date().toISOString().split('T')[0];
+  openModal('New Journal Entry',`
+    <div class="form-row"><div class="form-field"><label>Date *</label><input id="je-date" type="date" value="${today}"/></div><div class="form-field"><label>Reference</label><input id="je-ref" placeholder="e.g. INV-001"/></div></div>
+    <div class="form-field"><label>Description *</label><input id="je-desc" placeholder="Journal entry description"/></div>
+    <div class="form-field"><label>Project</label><select id="je-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="">— Select —</option>${projSel.map(p=>`<option value="${p.id}">${p.project_no}</option>`).join('')}</select></div>
+    <div style="padding:10px;background:#1E3A5F;border-radius:8px;font-size:11px;color:var(--muted);margin-bottom:8px">Journal lines (debit/credit) are added after creation via Supabase or the lines editor.</div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveJournalEntry(event)">Create Entry</button></div>
+  `);
+}
+
+async function saveJournalEntry(e){
+  const btn=e?.target;if(btn){btn.disabled=true;btn.textContent='Saving...';}
+  try{
+    const desc=document.getElementById('je-desc').value.trim();
+    const date=document.getElementById('je-date').value;
+    if(!desc||!date){showToast('Description and date required','error');return;}
+    const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'JE'});
+    const {error}=await sb.from('journal_entries').insert({entry_no:no,entry_date:date,description:desc,reference:document.getElementById('je-ref').value.trim()||null,project_id:document.getElementById('je-proj').value||null,status:'draft',total_debit:0,total_credit:0,created_by:currentProfile?.id});
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Journal Entry '+no+' created (draft)');closeModal();loadFinance('journal');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Create Entry';}}
 }
 
 // ── WORKFLOW ─────────────────────────────────────────────────
@@ -4724,104 +3862,6 @@ async function wfReturn(wfId,entityType,entityId){
 
 // USER MANAGEMENT
 // UI gate only — backend RLS + Edge Function must enforce PMO-only access server-side
-// ── MFA Functions ─────────────────────────────────────────
-async function openMFASetupModal(){
-  const {data:{totp},error}=await sb.auth.mfa.listFactors();
-  const enrolled=totp&&totp.length>0;
-  if(enrolled){
-    openModal(`
-      <h2 style="margin:0 0 16px">🔐 MFA Status</h2>
-      <div style="padding:14px;background:#10B98122;border:1px solid #10B98144;border-radius:8px;margin-bottom:16px">
-        ✅ MFA is <b>active</b> on your account.<br>
-        <span style="font-size:11px;color:var(--muted)">Factor: ${totp[0]?.friendly_name||'Authenticator App'}</span>
-      </div>
-      <p style="color:var(--muted);font-size:12px">To disable MFA contact your PMO Manager.</p>
-      <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>
-    `);
-    return;
-  }
-  showToast('Starting MFA enrollment…');
-  try{
-    const {data,error}=await sb.auth.mfa.enroll({factorType:'totp',friendlyName:'SP360 Authenticator'});
-    if(error){showToast('MFA enrollment error: '+error.message,'error');return;}
-    const {qr_code:qr,secret}=data.totp;
-    const factorId=data.id;
-    openModal(`
-      <h2 style="margin:0 0 8px">🔐 Enable Two-Factor Authentication</h2>
-      <p style="color:var(--muted);font-size:12px;margin:0 0 14px">Scan with Google Authenticator, Authy, or any TOTP app — then enter the 6-digit code.</p>
-      <div style="text-align:center;margin:12px 0">
-        <img src="${qr}" style="width:180px;height:180px;border:4px solid var(--gold);border-radius:8px;background:#fff;padding:4px" alt="MFA QR"/>
-      </div>
-      <div style="font-size:10px;color:var(--muted);text-align:center;margin-bottom:12px;font-family:monospace">
-        Manual: <b style="color:var(--gold)">${secret}</b>
-      </div>
-      <div class="form-field"><label>Verification Code *</label>
-        <input id="mfa-code" type="text" placeholder="000000" maxlength="6" inputmode="numeric"
-          style="font-size:22px;text-align:center;letter-spacing:6px;font-family:monospace;width:100%"/>
-      </div>
-      <div class="modal-foot">
-        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="verifyMFAEnrollment('${factorId}',event)">Verify & Enable</button>
-      </div>
-    `);
-  }catch(e){showToast('Error: '+e.message,'error');}
-}
-
-async function verifyMFAEnrollment(factorId,e){
-  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Verifying…';}
-  try{
-    const code=document.getElementById('mfa-code').value.trim();
-    if(code.length!==6){showToast('Enter the 6-digit code','error');return;}
-    const {data:ch}=await sb.auth.mfa.challenge({factorId});
-    const {error}=await sb.auth.mfa.verify({factorId,challengeId:ch.id,code});
-    if(error){showToast('Invalid code: '+error.message,'error');return;}
-    await writeAudit('user_profiles',currentProfile?.id,'MFA_ENABLED',null,{factor_id:factorId},'MFA TOTP enabled');
-    showToast('✅ MFA enabled — account is now more secure!');
-    closeModal();
-  }catch(e2){showToast('Error: '+e2.message,'error');}
-  finally{if(btn){btn.disabled=false;btn.textContent='Verify & Enable';}}
-}
-
-async function handleMFAChallenge(){
-  const {data:{currentLevel,nextLevel}}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-  if(currentLevel==='aal1'&&nextLevel==='aal2'){
-    const {data:factors}=await sb.auth.mfa.listFactors();
-    const factor=factors?.totp?.[0];
-    if(!factor) return;
-    await new Promise(resolve=>{
-      openModal(`
-        <h2 style="margin:0 0 12px">🔐 Two-Factor Authentication</h2>
-        <p style="color:var(--muted);font-size:12px;margin:0 0 14px">Enter the 6-digit code from your authenticator app.</p>
-        <input id="mfa-login-code" type="text" placeholder="000000" maxlength="6" inputmode="numeric" autofocus
-          style="font-size:24px;text-align:center;letter-spacing:8px;font-family:monospace;width:100%;margin-bottom:12px"/>
-        <div class="modal-foot">
-          <button class="btn btn-primary" style="width:100%" onclick="submitMFALogin('${factor.id}',window._mfaResolve,event)">Verify</button>
-        </div>
-      `);
-      window._mfaResolve=resolve;
-      setTimeout(()=>{
-        document.getElementById('mfa-login-code')?.addEventListener('keydown',ev=>{
-          if(ev.key==='Enter') submitMFALogin('${factor.id}',window._mfaResolve,{target:ev.target});
-        });
-      },300);
-    });
-  }
-}
-
-async function submitMFALogin(factorId,resolve,e){
-  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Verifying…';}
-  try{
-    const code=document.getElementById('mfa-login-code').value.trim();
-    if(code.length!==6){showToast('Enter the 6-digit code','error');return;}
-    const {data:ch}=await sb.auth.mfa.challenge({factorId});
-    const {error}=await sb.auth.mfa.verify({factorId,challengeId:ch.id,code});
-    if(error){showToast('Invalid code: '+error.message,'error');return;}
-    closeModal();
-    if(resolve) resolve();
-  }catch(e2){showToast('Error: '+e2.message,'error');}
-  finally{if(btn){btn.disabled=false;btn.textContent='Verify';}}
-}
-
 async function loadUsers(){
   if(currentProfile?.role!=='PMO Manager'){
     document.getElementById('page-users').innerHTML='<div class="empty">Access restricted — PMO Manager only.</div>';
@@ -4890,9 +3930,9 @@ async function loadUsers(){
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm" onclick="openEditUserModal('${u.id}')">✏️ Edit</button>
-          <button class="btn btn-ghost btn-sm" onclick="openResetPasswordModal('${u.id}','${esc(u.full_name||'')}')">🔑 Reset PWD</button>
-          <button class="btn btn-ghost btn-sm" onclick="openEmailUserModal('${esc(u.email||'')}','${esc(u.full_name||'')}')">📧 Email</button>
-          ${isActive?`<button class="btn btn-danger btn-sm" onclick="toggleUserActive('${u.id}',false,'${esc(u.full_name||'')}')">Deactivate</button>`:`<button class="btn btn-primary btn-sm" style="font-size:9px" onclick="toggleUserActive('${u.id}',true,'${esc(u.full_name||'')}')">Activate</button>`}
+          <button class="btn btn-ghost btn-sm" onclick="openResetPasswordModal(${jsArg(u.id)},${jsArg(u.full_name||'')})">🔑 Reset PWD</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEmailUserModal(${jsArg(u.email||'')},${jsArg(u.full_name||'')})">📧 Email</button>
+          ${isActive?`<button class="btn btn-danger btn-sm" onclick="toggleUserActive(${jsArg(u.id)},false,${jsArg(u.full_name||'')})">Deactivate</button>`:`<button class="btn btn-primary btn-sm" style="font-size:9px" onclick="toggleUserActive(${jsArg(u.id)},true,${jsArg(u.full_name||'')})">Activate</button>`}
         </div>
       </div>`;
     }).join('')}
@@ -5547,7 +4587,7 @@ async function saveCO(){
   if(!proj||!desc){showToast('Project and Description required','error');return;}
   // Generate CO number — atomic DB sequence, concurrency-safe
   const year=new Date().getFullYear();
-  const {data:coSeq,error:seqErr}=await sb.rpc('next_ref_no',{p_type:'co',p_prefix:`CO-${year}`});
+  const {data:coSeq,error:seqErr}=await sb.rpc('next_ref_no',{p_prefix:`CO-${year}`});
   if(seqErr){showToast('Error generating CO number: '+seqErr.message,'error');return;}
   const co_no=coSeq;
   // FIX: Use .select().single() to get back the inserted CO id for Audit Trail
@@ -6046,7 +5086,7 @@ async function saveOpp(){
   const btn=event?.target;
   if(btn){btn.disabled=true;btn.textContent='Creating…';}
   try{
-    const {data:opp_no}=await sb.rpc('next_ref_no',{p_type:'project',p_prefix:'BD'});
+    const {data:opp_no}=await sb.rpc('next_ref_no',{p_prefix:'BD'});
     const {data:oppData,error}=await sb.from('opportunities').insert({
       opp_no, title, client,
       department:document.getElementById('f-dept').value,
@@ -6242,7 +5282,7 @@ async function saveInvoice(){
   // ── End 3-Way Match ─────────────────────────────────────────────────────────
 
   const prefix=type==='client'?'INV-C':type==='supplier'?'INV-S':'INV-SC';
-  const {data:invoice_no}=await sb.rpc('next_ref_no',{p_type:'invoice',p_prefix:prefix});
+  const {data:invoice_no}=await sb.rpc('next_ref_no',{p_prefix:prefix});
   // FIX v2.3: store po_id from PO-specific 3-way match
   const linkedPoId=(type==='supplier'||type==='subcontractor')?window._matchedPoId||null:null;
   const {data:inv,error}=await sb.from('invoices').insert({
@@ -7109,11 +6149,6 @@ function openAboutModal(){
   <div style="margin-bottom:14px">
     <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📋 Changelog</div>
     ${[
-      ['v2.5','v2.6','v2.7','v2.8','v2.9','v3.0','Phase 17 — Enterprise Security','Session Guard (30min idle + 8hr absolute) · MFA TOTP enrollment + verification · MFA login challenge · Security meta headers · Password strength enforcement','#EF4444'],
-      ['v2.9','Phase 16 — Document Control Complete','Transmittals · Document Revisions + History · Access Log · v_document_register view · approve_document_revision() RPC · Supabase Storage instructions','#C9A84C'],
-      ['v2.8','Phase 15 — HR Payroll + QHSE Complete','Payroll processing (NSSF/Tax) · HSE Inspections · Permit to Work · v_qhse_kpis view · v_payroll_summary view · adjust_item_stock RPC','#8B5CF6'],
-      ['v2.7','Phase 14 — Inventory + Procurement Lines','Material Master · Warehouse · Stock Ledger · PO Lines · MRV Lines · Invoice Lines · 3-Way Match by line · v_three_way_match view · v_stock_balance view','#10B981'],
-      ['v2.6','Phase 13 — Financial Core + GL','Chart of Accounts (36 accounts seeded) · Journal Entries + Lines · Trial Balance view · P&L view · advance_project_lifecycle() RPC · Health Check fixed','#3B82F6'],
       ['v2.5','Phase 12 — Atomic Operations Complete','saveProject/savePO/saveVendor → Atomic RPCs · saveOpp audit entity_id fixed · CSP header added · PO-specific 3-Way Match (invoice↔PO↔MRV) · po_id linked on invoice insert · Invoice audit strict mode · SPI HTML rendering fix (2 <td> template literals) · convertToProject MAX+1 → next_ref_no() atomic RPC · CO Audit entity_id=null fixed (INSERT .select().single()) · CO dual-state unified (status=draft / workflow_status=submitted) · Version bumped to v2.3','#10B981'],
       ['v2.2','Phase 10 — Stabilization','SPI HTML fix (4 locations) · EV Method engine (Percent/Milestone/Manual) · null RAG guard · Excel Sheet 2 column alignment · Lifecycle on_hold consistency · CO/Vendor atomic sequences · MRV+PO compensating rollback · Audit critical action surfacing · Health Check read-only · Email XSS protection · Bulk email privacy guard · Idle/Absolute session timeout · Branding unified to v2.2 · 3-Way Match invoice validation','#C9A84C'],
       ['v2.1','Phase 9','CEO Cash Flow · Vendor Approval · HR Leave Requests · CEO bvData fix','#10B981'],
@@ -7142,7 +6177,7 @@ function openAboutModal(){
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
     ${[
-      ['Version','v3.0 (Production — Enterprise Security)'],
+      ['Version','v3.0 (Production)'],
       ['Database','Supabase (PostgreSQL)'],
       ['Migrations','020 migrations applied'],
       ['Security','RLS + Server-side RPCs'],
@@ -7164,39 +6199,59 @@ function openAboutModal(){
 
 // ── SESSION RESTORE ─────────────────────────────────────────
 // Session security policy:
-// - Supabase session persists across tabs/refreshes (standard behavior)
+// - Restore a valid Supabase session after refresh/PWA resume
 // - Idle timeout: auto-logout after 4 hours of inactivity
-// - Absolute timeout: force re-login every 12 hours regardless
-// Note: clearing localStorage on every page load breaks PWA, multi-tab, and refresh continuity
+// - Absolute timeout: force re-login every 12 hours
 (()=>{
-  const IDLE_MS    = 4  * 60 * 60 * 1000; // 4h idle
-  const ABS_MS     = 12 * 60 * 60 * 1000; // 12h absolute
+  const IDLE_MS = 4 * 60 * 60 * 1000;
+  const ABS_MS = 12 * 60 * 60 * 1000;
   const SESSION_START_KEY = 'sp360_session_start';
-
   let _idleTimer;
+
   function resetIdleTimer(){
     clearTimeout(_idleTimer);
-    _idleTimer = setTimeout(()=>{
+    _idleTimer=setTimeout(()=>{
       if(typeof doLogout==='function') doLogout();
-      showToast && showToast('Session expired due to inactivity — please sign in again','error');
-    }, IDLE_MS);
+      if(typeof showToast==='function') showToast('Session expired due to inactivity — please sign in again','error');
+    },IDLE_MS);
   }
   ['click','keydown','mousemove','touchstart'].forEach(ev=>
-    document.addEventListener(ev, resetIdleTimer, {passive:true})
+    document.addEventListener(ev,resetIdleTimer,{passive:true})
   );
 
-  // Absolute session timeout
-  const sessionStart = Number(localStorage.getItem(SESSION_START_KEY)||0);
-  if(sessionStart && Date.now()-sessionStart > ABS_MS){
-    // Force clear only when absolute timeout exceeded
-    Object.keys(localStorage).forEach(k=>{
-      if(k.startsWith('sb-')||k.includes('supabase')) localStorage.removeItem(k);
-    });
-    localStorage.removeItem(SESSION_START_KEY);
+  async function bootstrapSession(){
+    const app=document.getElementById('app');
+    const auth=document.getElementById('auth-screen');
+    if(!app||!auth) return;
+    app.style.display='none';
+    auth.style.display='flex';
+
+    try{
+      const started=Number(localStorage.getItem(SESSION_START_KEY)||0);
+      if(started && Date.now()-started>ABS_MS){
+        await sb.auth.signOut().catch(()=>{});
+        localStorage.removeItem(SESSION_START_KEY);
+        return;
+      }
+
+      const {data,error}=await sb.auth.getSession();
+      if(error || !data?.session) return;
+
+      currentUser=data.session.user;
+      await loadProfile();
+      if(!localStorage.getItem(SESSION_START_KEY))
+        localStorage.setItem(SESSION_START_KEY,String(Date.now()));
+      enterApp();
+      resetIdleTimer();
+    }catch(e){
+      currentUser=null;
+      currentProfile=null;
+      await sb.auth.signOut().catch(()=>{});
+      console.warn('Session restore failed:',e?.message||e);
+    }
   }
 
-  document.getElementById('app').style.display='none';
-  document.getElementById('auth-screen').style.display='flex';
+  bootstrapSession();
   resetIdleTimer();
 })();
 
@@ -7247,17 +6302,9 @@ async function runHealthCheck(){
     return error?false:'Accessible';
   });
   await check('Audit Log Access', async()=>{
-    // Read access check (write happens via atomic RPCs — not client-side)
-    const {data,error}=await sb.from('audit_log').select('id',{count:'exact'}).limit(1);
-    if(error) return false;
-    return `Read OK (${data?.length??0} recent)`;
-  });
-  await check('Atomic RPC Available', async()=>{
-    // Verify next_ref_no RPC exists (required for all atomic operations)
-    const {data,error}=await sb.rpc('next_ref_no',{p_prefix:'HEALTH-TEST'});
-    if(error) return false;
-    // Clean up test sequence is not possible from client — that's OK
-    return data?'RPC OK':'RPC no response';
+    // Read-access check only; this does not verify an actual write
+    const {error}=await sb.from('audit_log').select('id').limit(1);
+    return error?false:'Read OK';
   });
   await check('PWA Service Worker', async()=>{
     if(!('serviceWorker' in navigator)) return 'Not supported';
