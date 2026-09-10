@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-<title>SP360 ERP v3.0 — Smart Projects 360</title>
+<title>SP360 ERP v3.1 — Smart Projects 360</title>
 <!-- PWA -->
 <meta name="theme-color" content="#1E3A5F"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -359,7 +359,7 @@ tr:hover td{background:#1A366010}
     <div class="auth-logo">
       <div class="auth-logo-sq">SP</div>
       <div>
-        <div class="auth-title">SP360 ERP v3.0</div>
+        <div class="auth-title">SP360 ERP v3.1</div>
         <div class="auth-sub">Smart Projects 360 · Kuwait · Production System</div>
       </div>
     </div>
@@ -382,7 +382,7 @@ tr:hover td{background:#1A366010}
     <button onclick="toggleSide()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 6px;border-radius:5px">☰</button>
     <div class="logo-sq">SP</div>
     <div class="logo-txt"><div class="t1">SP360 ERP</div><div class="t2">Smart Projects 360 · Kuwait</div></div>
-    <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v3.0</span>
+    <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v3.1</span>
     <div style="display:flex;align-items:center;gap:4px;flex-shrink:0" title="Realtime connection status">
       <div id="realtime-dot" style="width:7px;height:7px;border-radius:50%;background:#94A3B8;transition:background .3s"></div>
       <span style="font-size:9px;color:var(--faint)">live</span>
@@ -422,7 +422,7 @@ tr:hover td{background:#1A366010}
         <button class="nav-btn" id="nav-users" onclick="navTo('users',this)"><span class="nav-icon">👤</span>Users</button>
         <button class="nav-btn" id="nav-ceo" onclick="navTo('ceo',this)"><span class="nav-icon">👔</span>CEO Report</button>
       </nav>
-      <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v3.0 · Production<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
+      <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v3.1 · Production<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
     </aside>
 
     <main>
@@ -456,10 +456,10 @@ tr:hover td{background:#1A366010}
 <script>
 
 // ═══════════════════════════════════════════════════════════
-//  SP360 ERP v3.0 — Supabase Production System
+//  SP360 ERP v3.1 — Supabase Production System
 // ═══════════════════════════════════════════════════════════
 /* ═══════════════════════════════════════════════════════════════════════
-   SP360 ERP v3.0 — Bug Fixes (September 2026) — Management Review Response
+   SP360 ERP v3.1 — Bug Fixes (September 2026) — Management Review Response
    ═══════════════════════════════════════════════════════════════════════
    FIX-1 P0: SPI HTML rendering — fixed missing > in 2 <td> literals
              Locations: Monthly Report table, CEO Report EVM table
@@ -483,9 +483,9 @@ var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── ROLE-BASED ACCESS ────────────────────────────────────────
 const ROLE_PAGES = {
-  'PMO Manager':       ['dashboard','bizdev','projects','procurement','finance','hr','qhse','documents','workflow','audit','users','ceo'],
-  'Finance Manager':   ['dashboard','projects','procurement','finance','workflow','audit','ceo'],
-  'Procurement Lead':  ['dashboard','projects','procurement','workflow'],
+  'PMO Manager':       ['dashboard','bizdev','projects','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo'],
+  'Finance Manager':   ['dashboard','projects','procurement','finance','inventory','workflow','audit','ceo'],
+  'Procurement Lead':  ['dashboard','projects','procurement','inventory','workflow'],
   'BD Manager':        ['dashboard','bizdev','projects'],
   'QHSE Engineer':     ['dashboard','projects','qhse','documents']
 };
@@ -510,6 +510,17 @@ let curDocTab = 'documents';
 
 // ── GLOBAL ERROR HANDLING ─────────────────────────────────────
 // Catch unhandled promise rejections (Supabase, network errors)
+async function logError(module,action,error,context={}){
+  try{
+    await sb.from('audit_log').insert({
+      entity_type:'system',entity_id:null,action:'ERROR',
+      performed_by:currentProfile?.id||null,
+      new_values:JSON.stringify({module,action,error:error?.message||String(error),context}),
+      notes:'['+module+'] '+action+': '+(error?.message||error)
+    }).catch(()=>{});
+  }catch(e){}
+}
+
 window.addEventListener('unhandledrejection', e=>{
   const msg = e.reason?.message||String(e.reason||'');
   // Session expired — force logout
@@ -669,6 +680,36 @@ async function doLogin(){
     }
     currentUser=data.user;
     await loadProfile(); // throws if profile missing/error → stops here
+    // Mandatory MFA check for sensitive roles (non-blocking on error)
+    if(SESSION_CONFIG.MFA_REQUIRED_ROLES.includes(currentProfile?.role)){
+      try{
+        const {data:aal}=await sb.auth.mfa.getAuthenticatorAssuranceLevel().catch(()=>({data:{currentLevel:'aal1'}}));
+        if((aal?.currentLevel||'aal1')!=='aal2'){
+          const {data:fdata}=await sb.auth.mfa.listFactors().catch(()=>({data:{totp:[]}}));
+          if(fdata?.totp?.length>0){
+            showToast('MFA required for '+currentProfile.role,'error');
+            await new Promise(function(resolve){
+              window._mfaResolve=resolve;
+              window._mfaFactorId=fdata.totp[0].id;
+              openModal('MFA Required',
+                '<p style="font-size:12px;color:var(--muted);margin:0 0 12px">Role <b>'+currentProfile.role+'</b> requires 2FA.</p>'+
+                '<input id="mfa-login-code" type="text" placeholder="000000" maxlength="6" inputmode="numeric" autofocus '+
+                'style="font-size:22px;text-align:center;letter-spacing:6px;font-family:monospace;width:100%;margin-bottom:12px"/>'+
+                '<div class="modal-foot"><button class="btn btn-primary" style="width:100%" '+
+                'onclick="submitMFAChallenge(window._mfaFactorId,window._mfaResolve,event)">Verify</button></div>'
+              );
+            });
+          } else {
+            showToast('MFA enrollment required for your role','error');
+            if(!localStorage.getItem('sp360_session_start'))
+              localStorage.setItem('sp360_session_start',String(Date.now()));
+            enterApp();
+            setTimeout(openMFASetupModal,800);
+            return;
+          }
+        }
+      }catch(mfaErr){console.warn('MFA check:',mfaErr);}
+    }
     if(!localStorage.getItem('sp360_session_start'))
       localStorage.setItem('sp360_session_start',String(Date.now()));
     enterApp();
@@ -748,7 +789,14 @@ function enterApp(){
   initSessionGuard();
 }
 
-const SESSION_IDLE_MS=30*60*1000,SESSION_ABS_MS=8*60*60*1000;
+// ── Session Configuration (single source of truth) ──────────
+const SESSION_CONFIG = {
+  IDLE_MS:     30 * 60 * 1000,   // 30 minutes idle → logout
+  ABSOLUTE_MS:  8 * 60 * 60 * 1000,   //  8 hours absolute → logout
+  MFA_REQUIRED_ROLES: ['PMO Manager','Finance Manager'], // Mandatory MFA
+};
+const SESSION_IDLE_MS = SESSION_CONFIG.IDLE_MS;
+const SESSION_ABS_MS  = SESSION_CONFIG.ABSOLUTE_MS;
 let _idleTimer=null,_absTimer=null;
 function resetIdleTimer(){clearTimeout(_idleTimer);_idleTimer=setTimeout(()=>{showToast('Session expired','error');setTimeout(doLogout,2000);},SESSION_IDLE_MS);}
 function initSessionGuard(){['mousemove','keydown','click','touchstart'].forEach(e=>document.addEventListener(e,resetIdleTimer,{passive:true}));resetIdleTimer();clearTimeout(_absTimer);_absTimer=setTimeout(()=>{showToast('Session exceeded 8 hours','error');setTimeout(doLogout,2000);},SESSION_ABS_MS);}
@@ -1898,7 +1946,7 @@ async function loadProjects(tab){
     }).join('')}
     </tbody></table>
     <div style="margin-top:14px;padding:10px;background:var(--n3);border-radius:8px;font-size:10px;color:var(--faint);text-align:center">
-      SP360 ERP v3.0 · Monthly Progress Report · ${monthStr} · Confidential
+      SP360 ERP v3.1 · Monthly Progress Report · ${monthStr} · Confidential
     </div>`;
   }
 
@@ -2060,11 +2108,13 @@ async function advanceProject(projId, newStatus, event){
     loadProjects('lifecycle'); // reset dropdown
     return;
   }
-  const {error}=await sb.from('projects').update({status:newStatus}).eq('id',projId);
+  const {data:rpcData,error}=await sb.rpc('advance_project_lifecycle',{
+    p_project_id:   projId,
+    p_new_status:   newStatus,
+    p_performed_by: currentProfile?.id
+  });
   if(error){showToast('Error: '+error.message,'error');return;}
-  await writeAudit('projects',projId,'LIFECYCLE_ADVANCE',
-    {status:currentStatus},{status:newStatus},
-    `Phase: ${currentStatus} → ${newStatus}`);
+  if(!rpcData?.ok){showToast('Transition not allowed: '+(rpcData?.error||'Unknown'),'error');loadProjects('lifecycle');return;}
   showToast(`${proj?.name?.split('—')[0]?.trim()||'Project'} → ${PROJ_LIFECYCLE_LABELS[newStatus]||newStatus} ✓`);
   loadProjects('lifecycle');
 }
@@ -3537,9 +3587,17 @@ async function runPayroll(e){
       const gross=basic+allow,nssf=Math.round(basic*0.05*1000)/1000,net=Math.round((gross-nssf)*1000)/1000;
       return{employee_id:emp.id,period_month:period,working_days:22,basic_salary:basic,allowances:allow,gross_salary:gross,nssf_deduction:nssf,tax_deduction:0,other_deductions:0,total_deductions:nssf,net_salary:net,status:'processed',processed_by:currentProfile?.id};
     });
-    const {error}=await sb.from('payroll_runs').insert(rows);
+    // ATOMIC: use server-side RPC for payroll processing
+    const {data:payResult,error}=await sb.rpc('process_payroll_atomic',{
+      p_period_month: period,
+      p_employee_id:  empId||null,
+      p_working_days: 22,
+      p_processed_by: currentProfile?.id
+    });
     if(error){showToast('Error: '+error.message,'error');return;}
-    showToast('Payroll processed for '+toProcess.length+' employees');closeModal();loadHR('payroll');
+    if(!payResult?.ok){showToast('Error: '+(payResult?.error||'Unknown'),'error');return;}
+    showToast('Payroll processed for '+payResult.processed+' employees ✓ ('+payResult.skipped+' skipped)');
+    closeModal();loadHR('payroll');
   }catch(e2){showToast('Error: '+e2.message,'error');}
   finally{if(btn){btn.disabled=false;btn.textContent='Process Payroll';}}
 }
@@ -3651,10 +3709,20 @@ async function saveRevision(e){
       if(de){showToast('Error: '+de.message,'error');return;}
       doc=nd;
     }
-    await sb.from('document_revisions').update({status:'superseded',updated_at:new Date().toISOString()}).eq('document_id',doc.id).neq('status','superseded');
-    const {error}=await sb.from('document_revisions').insert({document_id:doc.id,project_id:document.getElementById('rev-proj').value||null,revision_no:revNo,revised_date:date,change_description:change,status:document.getElementById('rev-status').value,created_by:currentProfile?.id});
+    // ATOMIC: supersede old + insert new + update master in ONE transaction
+    const {data:revResult,error}=await sb.rpc('save_document_revision_atomic',{
+      p_doc_no:   docNo,
+      p_doc_title:document.getElementById('rev-title').value.trim()||docNo,
+      p_project_id:document.getElementById('rev-proj').value||null,
+      p_revision_no:revNo,
+      p_revised_date:date,
+      p_revised_by:currentProfile?.id||null,
+      p_change_description:change,
+      p_status:document.getElementById('rev-status').value,
+      p_created_by:currentProfile?.id
+    });
     if(error){showToast('Error: '+error.message,'error');return;}
-    await sb.from('documents').update({revision:revNo,status:document.getElementById('rev-status').value}).eq('id',doc.id);
+    if(!revResult?.ok){showToast('Error: '+(revResult?.error||'Unknown'),'error');return;}
     showToast('Revision '+revNo+' saved for '+docNo);closeModal();loadDocs('revisions');
   }catch(e2){showToast('Error: '+e2.message,'error');}
   finally{if(btn){btn.disabled=false;btn.textContent='Save';}}
@@ -3703,11 +3771,18 @@ async function saveStockMovement(e){
     const qty=Number(document.getElementById('st-qty').value)||0;
     const date=document.getElementById('st-date').value;
     if(!itemId||qty<=0||!date){showToast('Item, quantity and date required','error');return;}
-    const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'STK'});
-    const signedQty=type==='ISSUE'?-qty:qty;
-    const {error}=await sb.from('stock_ledger').insert({transaction_no:no,transaction_type:type,transaction_date:date,item_id:itemId,quantity:signedQty,unit_cost:Number(document.getElementById('st-cost').value)||null,reference:document.getElementById('st-ref').value.trim()||null,created_by:currentProfile?.id});
+    // ATOMIC: ledger + stock update + audit in ONE transaction
+    const {data:stockResult,error}=await sb.rpc('record_stock_movement_atomic',{
+      p_transaction_type: type,
+      p_transaction_date: date,
+      p_item_id:          itemId,
+      p_quantity:         qty,
+      p_unit_cost:        Number(document.getElementById('st-cost').value)||null,
+      p_reference:        document.getElementById('st-ref').value.trim()||null,
+      p_created_by:       currentProfile?.id
+    });
     if(error){showToast('Error: '+error.message,'error');return;}
-    await sb.rpc('adjust_item_stock',{p_item_id:itemId,p_qty_change:signedQty});
+    if(!stockResult?.ok){showToast('Error: '+(stockResult?.error||'Unknown'),'error');return;}
     showToast(type+' '+no+' recorded');closeModal();loadInventory('ledger');
   }catch(e2){showToast('Error: '+e2.message,'error');}
   finally{if(btn){btn.disabled=false;btn.textContent='Record';}}
@@ -3862,6 +3937,49 @@ async function wfReturn(wfId,entityType,entityId){
 
 // USER MANAGEMENT
 // UI gate only — backend RLS + Edge Function must enforce PMO-only access server-side
+async function submitMFAChallenge(factorId,resolve,e){
+  const btn=e?.target;if(btn){btn.disabled=true;btn.textContent='Verifying...';}
+  try{
+    const code=(document.getElementById('mfa-login-code').value||'').trim();
+    if(code.length!==6){showToast('Enter 6-digit code','error');return;}
+    const {data:ch,error:ce}=await sb.auth.mfa.challenge({factorId});
+    if(ce){showToast('Challenge error: '+ce.message,'error');return;}
+    const {error:ve}=await sb.auth.mfa.verify({factorId,challengeId:ch.id,code});
+    if(ve){showToast('Invalid code: '+ve.message,'error');return;}
+    closeModal();
+    if(resolve){resolve();window._mfaResolve=null;}
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Verify';}}
+}
+
+async function openMFASetupModal(){
+  try{
+    const {data:f}=await sb.auth.mfa.listFactors();
+    if(f?.totp?.length){
+      openModal('MFA Status','<div style="padding:14px;background:#10B98122;border:1px solid #10B98144;border-radius:8px;margin-bottom:16px">✅ MFA is <b>active</b> on your account.</div><div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Close</button></div>');
+      return;
+    }
+    const {data:en,error:er}=await sb.auth.mfa.enroll({factorType:'totp',friendlyName:'SP360'});
+    if(er){showToast('MFA error: '+er.message,'error');return;}
+    window._mfaFactorId=en.id;
+    openModal('Enable MFA','<p style="color:var(--muted);font-size:12px;margin:0 0 12px">Scan with Google Authenticator or Authy, then enter the 6-digit code.</p><div style="text-align:center;margin:10px 0"><img src="'+en.totp.qr_code+'" style="width:150px;height:150px;border:3px solid var(--gold);border-radius:8px;background:#fff;padding:4px"/></div><p style="font-size:10px;color:var(--muted);text-align:center;font-family:monospace;margin-bottom:10px">'+en.totp.secret+'</p><div class="form-field"><label>6-Digit Code</label><input id="mfa-code" type="text" placeholder="000000" maxlength="6" inputmode="numeric" style="font-size:20px;text-align:center;letter-spacing:6px;font-family:monospace"/></div><div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="verifyMFA(event)">Verify</button></div>');
+  }catch(e){showToast('Error: '+e.message,'error');}
+}
+
+async function verifyMFA(e){
+  const btn=e?.target;if(btn){btn.disabled=true;btn.textContent='Verifying...';}
+  try{
+    const code=(document.getElementById('mfa-code').value||'').trim();
+    if(code.length!==6){showToast('Enter 6-digit code','error');return;}
+    const {data:ch,error:ce}=await sb.auth.mfa.challenge({factorId:window._mfaFactorId});
+    if(ce){showToast('Challenge error: '+ce.message,'error');return;}
+    const {error:ve}=await sb.auth.mfa.verify({factorId:window._mfaFactorId,challengeId:ch.id,code});
+    if(ve){showToast('Wrong code: '+ve.message,'error');return;}
+    showToast('✅ MFA enabled!');closeModal();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Verify';}}
+}
+
 async function loadUsers(){
   if(currentProfile?.role!=='PMO Manager'){
     document.getElementById('page-users').innerHTML='<div class="empty">Access restricted — PMO Manager only.</div>';
@@ -4216,12 +4334,12 @@ function buildEmailHTML(subject, bodyText){
       <div style="width:44px;height:44px;background:#C9A84C;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#0D1B2A;font-size:18px">SP</div>
       <div>
         <div style="color:#C9A84C;font-size:18px;font-weight:800">${safeSubject}</div>
-        <div style="color:#94A3B8;font-size:11px;margin-top:2px">SP360 ERP v3.0 · Smart Projects 360 · Kuwait</div>
+        <div style="color:#94A3B8;font-size:11px;margin-top:2px">SP360 ERP v3.1 · Smart Projects 360 · Kuwait</div>
       </div>
     </div>
     <div style="padding:24px 28px">${htmlLines}</div>
     <div style="background:#F1F5F9;padding:14px 28px;text-align:center;font-size:11px;color:#94A3B8;border-top:1px solid #E2E8F0">
-      SP360 ERP v3.0 · Confidential — For Internal Use Only<br>
+      SP360 ERP v3.1 · Confidential — For Internal Use Only<br>
       <a href="https://falconbold1999-ops.github.io/sp360-erp/" style="color:#C9A84C">Open SP360 ERP</a>
     </div>
   </div></body></html>`;
@@ -4304,7 +4422,7 @@ function openEmailAllModal(){
       <input id="eall-subject" value="SP360 ERP — Team Notification"/>
     </div>
     <div class="form-field"><label>Message</label>
-      <textarea id="eall-body" rows="6">Dear SP360 Team,\n\nThis is a notification from SP360 ERP v3.0.\n\nPlease log in to review your pending items.\n\nRegards,\nSP360 PMO Team</textarea>
+      <textarea id="eall-body" rows="6">Dear SP360 Team,\n\nThis is a notification from SP360 ERP v3.1.\n\nPlease log in to review your pending items.\n\nRegards,\nSP360 PMO Team</textarea>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -4342,7 +4460,7 @@ async function sendEmailNotification(type){
   if(type==='pending_approvals'){
     const pending=wfs.filter(w=>w.status==='pending'||w.status==='overdue');
     subject=`⚡ ${pending.length} Pending Approvals — SP360 ERP — ${today}`;
-    body=`Dear SP360 Team,\n\nThis is an automated notification from SP360 ERP v3.0.\n\nYou have ${pending.length} item(s) awaiting approval:\n\n`
+    body=`Dear SP360 Team,\n\nThis is an automated notification from SP360 ERP v3.1.\n\nYou have ${pending.length} item(s) awaiting approval:\n\n`
       +pending.slice(0,10).map(w=>`  • ${w.ref_no} — ${w.current_step} [${w.status.toUpperCase()}]`).join('\n')
       +`\n\nPlease log in to SP360 ERP to take action:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   } else if(type==='weekly_evm'){
@@ -4356,7 +4474,7 @@ async function sendEmailNotification(type){
       +`\n\nFull report: https://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   } else if(type==='ceo_report'){
     subject=`👔 CEO Flash Report Ready — SP360 ERP — ${today}`;
-    body=`Dear Team,\n\nThe CEO Flash Report for ${today} has been updated in SP360 ERP v3.0.\n\nLog in → CEO Report → Export PDF:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
+    body=`Dear Team,\n\nThe CEO Flash Report for ${today} has been updated in SP360 ERP v3.1.\n\nLog in → CEO Report → Export PDF:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   }
 
   if(recipients.length===0){ showToast('No active users found','error'); return; }
@@ -4710,7 +4828,7 @@ async function loadCEO(){
   <div class="print-header" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div>
-        <div style="font-size:18pt;font-weight:900;color:#1E3A5F">SP360 ERP v3.0 — CEO Flash Report</div>
+        <div style="font-size:18pt;font-weight:900;color:#1E3A5F">SP360 ERP v3.1 — CEO Flash Report</div>
         <div style="font-size:9pt;color:#475569">${monthStr} · Smart Projects 360 · Kuwait · Confidential</div>
       </div>
       <div style="font-size:8pt;color:#94A3B8">Generated: ${new Date().toLocaleDateString('en-GB')}</div>
@@ -4718,7 +4836,7 @@ async function loadCEO(){
   </div>
   <!-- PRINT FOOTER -->
   <div class="print-footer" style="display:none">
-    SP360 ERP v3.0 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only &nbsp;|&nbsp; Smart Projects 360 · Kuwait
+    SP360 ERP v3.1 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only &nbsp;|&nbsp; Smart Projects 360 · Kuwait
   </div>
 
   <div class="page-head">
@@ -4937,7 +5055,7 @@ async function loadCEO(){
   </div>
 
   <div style="margin-top:12px;padding:10px 14px;background:var(--n3);border-radius:8px;font-size:10px;color:var(--faint);text-align:center">
-    SP360 ERP v3.0 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only
+    SP360 ERP v3.1 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only
   </div>`;
 
   // Render Portfolio S-Curve
@@ -5496,7 +5614,7 @@ async function exportPortfolioExcel(){
   const today = new Date().toLocaleDateString('en-GB');
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'SP360 ERP v3.0';
+  wb.creator = 'SP360 ERP v3.1';
   wb.created = new Date();
 
   // ── SHEET 1: Portfolio EVM ──────────────────────────────────
@@ -5525,7 +5643,7 @@ async function exportPortfolioExcel(){
   ];
 
   xlTitleBlock(ws1,
-    'SP360 ERP v3.0 — Portfolio EVM Report',
+    'SP360 ERP v3.1 — Portfolio EVM Report',
     `${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential  ·  Generated: ${today}`, 17);
 
   // KPI band
@@ -5679,7 +5797,7 @@ async function exportPortfolioExcel(){
     {key:'spi',     width:10},{key:'cv',     width:14},
     {key:'pct',     width:12},{key:'status', width:16}
   ];
-  xlTitleBlock(ws2,'SP360 ERP v3.0 — EVM Variance Summary',
+  xlTitleBlock(ws2,'SP360 ERP v3.1 — EVM Variance Summary',
     `${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential`,10);
   const hdr2=ws2.addRow(['Project No','Project Name','BAC (KWD)','EV (KWD)',
     'AC (KWD)','CPI','SPI','CV (KWD)','% Complete','Phase']);
@@ -5720,7 +5838,7 @@ async function exportPortfolioExcel(){
     {key:'ac',    width:14},{key:'spi',   width:10},
     {key:'cpi',   width:10}
   ];
-  xlTitleBlock(ws3,'SP360 ERP v3.0 — S-Curve EVM Snapshots',
+  xlTitleBlock(ws3,'SP360 ERP v3.1 — S-Curve EVM Snapshots',
     `${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential`,9);
   const hdr3=ws3.addRow(['Project No','Project Name','Period','Date',
     'PV (KWD)','EV (KWD)','AC (KWD)','SPI','CPI']);
@@ -5761,7 +5879,7 @@ async function exportPortfolioExcel(){
     {key:'vac',   width:16},{key:'tcpi',  width:11},
     {key:'trend', width:18},{key:'rag',   width:10}
   ];
-  xlTitleBlock(ws4,'SP360 ERP v3.0 — Trend Analysis & Forecasting',
+  xlTitleBlock(ws4,'SP360 ERP v3.1 — Trend Analysis & Forecasting',
     `${month}  ·  ETC = EAC−AC  ·  TCPI = (BAC−EV)÷(BAC−AC)  ·  ${today}`,12);
   const hdr4=ws4.addRow(['Project No','Project Name','Phase','%','CPI','SPI',
     'EAC (KWD)','ETC (KWD)','VAC (KWD)','TCPI','Performance Forecast','RAG']);
@@ -5823,7 +5941,7 @@ async function exportMonthlyExcel(){
   const today=new Date().toLocaleDateString('en-GB');
 
   const wb=new ExcelJS.Workbook();
-  wb.creator='SP360 ERP v3.0'; wb.created=new Date();
+  wb.creator='SP360 ERP v3.1'; wb.created=new Date();
   const ws=wb.addWorksheet('Monthly Report',{
     views:[{state:'frozen',xSplit:0,ySplit:5}],
     pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1}
@@ -5838,7 +5956,7 @@ async function exportMonthlyExcel(){
   ];
 
   xlTitleBlock(ws,
-    `SP360 ERP v3.0 — Monthly Progress Report — ${month}`,
+    `SP360 ERP v3.1 — Monthly Progress Report — ${month}`,
     `Smart Projects 360  ·  Kuwait  ·  Confidential  ·  Generated: ${today}`,12);
 
   const hdr=ws.addRow(['Project','Client','Phase','Plan %','Actual %',
@@ -5905,7 +6023,7 @@ async function exportCOExcel(){
   const today=new Date().toLocaleDateString('en-GB');
 
   const wb=new ExcelJS.Workbook();
-  wb.creator='SP360 ERP v3.0'; wb.created=new Date();
+  wb.creator='SP360 ERP v3.1'; wb.created=new Date();
   const ws=wb.addWorksheet('Change Orders',{
     views:[{state:'frozen',xSplit:0,ySplit:5}]
   });
@@ -5918,7 +6036,7 @@ async function exportCOExcel(){
   ];
 
   xlTitleBlock(ws,
-    `SP360 ERP v3.0 — Change Order Register — ${month}`,
+    `SP360 ERP v3.1 — Change Order Register — ${month}`,
     `Smart Projects 360  ·  Kuwait  ·  Confidential  ·  Generated: ${today}`,10);
 
   // Summary KPIs
@@ -5991,7 +6109,7 @@ async function exportCEOPDF(){
   // Header
   doc.setFillColor(...navy); doc.rect(0,0,297,22,'F');
   doc.setTextColor(...gold); doc.setFontSize(16); doc.setFont('helvetica','bold');
-  doc.text('SP360 ERP v3.0 — CEO Flash Report',14,10);
+  doc.text('SP360 ERP v3.1 — CEO Flash Report',14,10);
   doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(...white);
   doc.text(`${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential`,14,17);
   doc.text(`Generated: ${today}`,250,17);
@@ -6126,7 +6244,7 @@ async function exportCEOPDF(){
     doc.setPage(i);
     doc.setFillColor(...navy); doc.rect(0,200,297,10,'F');
     doc.setTextColor(...white); doc.setFontSize(6); doc.setFont('helvetica','normal');
-    doc.text(`SP360 ERP v3.0  ·  CEO Flash Report  ·  ${month}  ·  Confidential — For Internal Use Only`,14,206);
+    doc.text(`SP360 ERP v3.1  ·  CEO Flash Report  ·  ${month}  ·  Confidential — For Internal Use Only`,14,206);
     doc.text(`Page ${i} of ${pageCount}`,283,206,{align:'right'});
   }
 
@@ -6136,11 +6254,11 @@ async function exportCEOPDF(){
 
 // ── ABOUT & CHANGELOG ────────────────────────────────────────
 function openAboutModal(){
-  openModal('SP360 ERP v3.0 — About & Changelog',`
+  openModal('SP360 ERP v3.1 — About & Changelog',`
   <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:12px 14px;background:#1E3A5F18;border-radius:8px">
     <div style="width:48px;height:48px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#0D1B2A;font-size:20px;flex-shrink:0">SP</div>
     <div>
-      <div style="font-size:16px;font-weight:800;color:var(--gold)">SP360 ERP v3.0</div>
+      <div style="font-size:16px;font-weight:800;color:var(--gold)">SP360 ERP v3.1</div>
       <div style="font-size:11px;color:var(--muted)">Smart Projects 360 · Kuwait · Production System</div>
       <div style="font-size:10px;color:var(--faint);margin-top:2px">Supabase · GitHub Pages · PWA · Single-file Architecture</div>
     </div>
@@ -6177,7 +6295,7 @@ function openAboutModal(){
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
     ${[
-      ['Version','v3.0 (Production)'],
+      ['Version','v3.1 (Production Hardening)'],
       ['Database','Supabase (PostgreSQL)'],
       ['Migrations','020 migrations applied'],
       ['Security','RLS + Server-side RPCs'],
@@ -6203,8 +6321,8 @@ function openAboutModal(){
 // - Idle timeout: auto-logout after 4 hours of inactivity
 // - Absolute timeout: force re-login every 12 hours
 (()=>{
-  const IDLE_MS = 4 * 60 * 60 * 1000;
-  const ABS_MS = 12 * 60 * 60 * 1000;
+  const IDLE_MS = SESSION_CONFIG.IDLE_MS; // unified
+  const ABS_MS = SESSION_CONFIG.ABSOLUTE_MS; // unified
   const SESSION_START_KEY = 'sp360_session_start';
   let _idleTimer;
 
@@ -6234,10 +6352,17 @@ function openAboutModal(){
         return;
       }
 
-      const {data,error}=await sb.auth.getSession();
-      if(error || !data?.session) return;
+      const {data:sessionData,error:sessionError}=await sb.auth.getSession();
+      if(sessionError || !sessionData?.session) return;
 
-      currentUser=data.session.user;
+      // Verify session is still valid with server (not just localStorage)
+      const {data:userData,error:userError}=await sb.auth.getUser();
+      if(userError || !userData?.user) {
+        await sb.auth.signOut().catch(()=>{});
+        return;
+      }
+
+      currentUser=userData.user;
       await loadProfile();
       if(!localStorage.getItem(SESSION_START_KEY))
         localStorage.setItem(SESSION_START_KEY,String(Date.now()));
@@ -6251,8 +6376,34 @@ function openAboutModal(){
     }
   }
 
-  bootstrapSession();
-  resetIdleTimer();
+  // Proper session restore: validate with server, require login if invalid
+  async function bootstrapApp(){
+    const auth=document.getElementById('auth-screen');
+    const app=document.getElementById('app');
+    if(!auth||!app) return;
+    auth.style.display='flex';
+    app.style.display='none';
+    try{
+      const {data,error}=await sb.auth.getUser(); // server-side validation
+      if(error||!data?.user) return; // no valid session → show login
+      // Check absolute session age
+      const started=Number(localStorage.getItem(SESSION_START_KEY)||0);
+      if(started&&Date.now()-started>SESSION_CONFIG.ABSOLUTE_MS){
+        await sb.auth.signOut().catch(()=>{});
+        localStorage.removeItem(SESSION_START_KEY);
+        return;
+      }
+      currentUser=data.user;
+      await loadProfile();
+      if(!localStorage.getItem(SESSION_START_KEY))
+        localStorage.setItem(SESSION_START_KEY,String(Date.now()));
+      enterApp();
+    }catch(e){
+      currentUser=null; currentProfile=null;
+      await sb.auth.signOut().catch(()=>{});
+    }
+  }
+  bootstrapApp();
 })();
 
 document.addEventListener('keydown',e=>{
