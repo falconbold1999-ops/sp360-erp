@@ -426,7 +426,7 @@ tr:hover td{background:#1A366010}
         <button class="nav-btn" id="nav-users" onclick="navTo('users',this)"><span class="nav-icon">👤</span>Users</button>
         <button class="nav-btn" id="nav-ceo" onclick="navTo('ceo',this)"><span class="nav-icon">👔</span>CEO Report</button>
       </nav>
-      <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v3.0 · Production<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
+      <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v3.0 · Production · Modular Ready<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
     </aside>
 
     <main>
@@ -480,6 +480,26 @@ tr:hover td{background:#1A366010}
        RETURNING last_seq INTO v_seq;
        RETURN p_prefix||'-'||LPAD(v_seq::text,3,'0'); END; $$;
    ═══════════════════════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════════════════════
+   SP360 ERP v3.0 — Application JavaScript
+   ════════════════════════════════════════════════════════════════════
+   Architecture: Single-file (Monolithic) — Production Deployment
+   Future: Modular (see /js/module-index.js for split plan)
+
+   Module boundaries are marked with // ── SECTION ── comments
+   Run: node scripts/split-modules.js to extract into separate files
+
+   Load order (when split):
+   1. services/supabase.js  → Supabase client
+   2. core/config.js        → ROLE_PAGES, constants
+   3. core/auth.js          → Auth + login flow
+   4. core/session.js       → Session guard
+   5. core/realtime.js      → Realtime subscriptions
+   6. core/nav.js           → Navigation + modal + toast
+   7. core/mfa.js           → MFA enrollment + challenge
+   8. modules/*.js          → Feature modules (dashboard, projects…)
+   ════════════════════════════════════════════════════════════════════ */
+
 const SUPABASE_URL = 'https://sqizirpsatofcoqshwer.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxaXppcnBzYXRvZmNvcXNod2VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxNTM5MTAsImV4cCI6MjEwMjcyOTkxMH0.LnfA4pGIbv30uQVNHa7MeFioP9OF2ukNTol_cDUF8mk';
 // ── SUPABASE INIT (safe, non-blocking) ───────────────────────
