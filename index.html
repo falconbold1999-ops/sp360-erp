@@ -383,6 +383,7 @@ tr:hover td{background:#1A366010}
     <div class="logo-sq">SP</div>
     <div class="logo-txt"><div class="t1">SP360 ERP</div><div class="t2">Smart Projects 360 · Kuwait</div></div>
     <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v3.1</span>
+    <span id="mfa-btn" onclick="openMFASetupModal()" style="display:none;font-size:9px;color:#10B981;background:#10B98118;border:1px solid #10B98133;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">🔐 MFA</span>
     <div style="display:flex;align-items:center;gap:4px;flex-shrink:0" title="Realtime connection status">
       <div id="realtime-dot" style="width:7px;height:7px;border-radius:50%;background:#94A3B8;transition:background .3s"></div>
       <span style="font-size:9px;color:var(--faint)">live</span>
@@ -680,35 +681,39 @@ async function doLogin(){
     }
     currentUser=data.user;
     await loadProfile(); // throws if profile missing/error → stops here
-    // Mandatory MFA check for sensitive roles (non-blocking on error)
+    // Mandatory MFA — blocks entry until enrolled AND verified
     if(SESSION_CONFIG.MFA_REQUIRED_ROLES.includes(currentProfile?.role)){
-      try{
-        const {data:aal}=await sb.auth.mfa.getAuthenticatorAssuranceLevel().catch(()=>({data:{currentLevel:'aal1'}}));
-        if((aal?.currentLevel||'aal1')!=='aal2'){
-          const {data:fdata}=await sb.auth.mfa.listFactors().catch(()=>({data:{totp:[]}}));
-          if(fdata?.totp?.length>0){
-            showToast('MFA required for '+currentProfile.role,'error');
-            await new Promise(function(resolve){
-              window._mfaResolve=resolve;
-              window._mfaFactorId=fdata.totp[0].id;
-              openModal('MFA Required',
-                '<p style="font-size:12px;color:var(--muted);margin:0 0 12px">Role <b>'+currentProfile.role+'</b> requires 2FA.</p>'+
-                '<input id="mfa-login-code" type="text" placeholder="000000" maxlength="6" inputmode="numeric" autofocus '+
-                'style="font-size:22px;text-align:center;letter-spacing:6px;font-family:monospace;width:100%;margin-bottom:12px"/>'+
-                '<div class="modal-foot"><button class="btn btn-primary" style="width:100%" '+
-                'onclick="submitMFAChallenge(window._mfaFactorId,window._mfaResolve,event)">Verify</button></div>'
-              );
-            });
-          } else {
-            showToast('MFA enrollment required for your role','error');
-            if(!localStorage.getItem('sp360_session_start'))
-              localStorage.setItem('sp360_session_start',String(Date.now()));
-            enterApp();
-            setTimeout(openMFASetupModal,800);
-            return;
-          }
-        }
-      }catch(mfaErr){console.warn('MFA check:',mfaErr);}
+      const mfaResp=await sb.auth.mfa.listFactors().catch(e=>{console.error('MFA listFactors error:',e);return {data:{all:[],totp:[]}};});
+      const fdata=mfaResp?.data||{all:[],totp:[]};
+      // Supabase returns factors in 'all' array — totp may be separate
+      const totpFactors=(fdata?.totp?.length?fdata.totp:(fdata?.all||[]).filter(f=>f.factor_type==='totp'||f.totp));
+      console.log('MFA check — role:',currentProfile?.role,'totp factors:',totpFactors.length);
+      if(!totpFactors.length){
+        // Not enrolled yet — force enrollment before entry
+        if(!localStorage.getItem('sp360_session_start'))
+          localStorage.setItem('sp360_session_start',String(Date.now()));
+        enterApp();
+        await new Promise(r=>setTimeout(r,500));
+        showToast('⚠️ Your role requires MFA — enrolling now...','error');
+        openMFASetupModal();
+        return;
+      }
+      // Enrolled — check if already verified this session (aal2)
+      const {data:aal}=await sb.auth.mfa.getAuthenticatorAssuranceLevel().catch(()=>({data:{currentLevel:'aal1'}}));
+      if((aal?.currentLevel||'aal1')!=='aal2'){
+        // Need to challenge
+        await new Promise(function(resolve){
+          window._mfaResolve=resolve;
+          window._mfaFactorId=totpFactors[0].id;
+          openModal('MFA Required',
+            '<p style="font-size:12px;color:var(--muted);margin:0 0 12px">Role <b>'+currentProfile.role+'</b> requires Two-Factor Authentication.</p>'+
+            '<input id="mfa-login-code" type="text" placeholder="000000" maxlength="6" inputmode="numeric" autofocus '+
+            'style="font-size:22px;text-align:center;letter-spacing:6px;font-family:monospace;width:100%;margin-bottom:12px"/>'+
+            '<div class="modal-foot"><button class="btn btn-primary" style="width:100%" '+
+            'onclick="submitMFAChallenge(window._mfaFactorId,window._mfaResolve,event)">Verify</button></div>'
+          );
+        });
+      }
     }
     if(!localStorage.getItem('sp360_session_start'))
       localStorage.setItem('sp360_session_start',String(Date.now()));
@@ -787,13 +792,18 @@ function enterApp(){
   loadWfBadge();
   initRealtime();
   initSessionGuard();
+  // Show MFA button for roles that require it
+  if(SESSION_CONFIG.MFA_REQUIRED_ROLES.includes(currentProfile?.role)){
+    const mfaBtn=document.getElementById('mfa-btn');
+    if(mfaBtn) mfaBtn.style.display='inline-block';
+  }
 }
 
 // ── Session Configuration (single source of truth) ──────────
 const SESSION_CONFIG = {
   IDLE_MS:     30 * 60 * 1000,   // 30 minutes idle → logout
   ABSOLUTE_MS:  8 * 60 * 60 * 1000,   //  8 hours absolute → logout
-  MFA_REQUIRED_ROLES: ['PMO Manager','Finance Manager'], // Mandatory MFA
+  MFA_REQUIRED_ROLES: [], // MFA optional — enable when ready (add roles here)
 };
 const SESSION_IDLE_MS = SESSION_CONFIG.IDLE_MS;
 const SESSION_ABS_MS  = SESSION_CONFIG.ABSOLUTE_MS;
@@ -3962,7 +3972,19 @@ async function openMFASetupModal(){
     const {data:en,error:er}=await sb.auth.mfa.enroll({factorType:'totp',friendlyName:'SP360'});
     if(er){showToast('MFA error: '+er.message,'error');return;}
     window._mfaFactorId=en.id;
-    openModal('Enable MFA','<p style="color:var(--muted);font-size:12px;margin:0 0 12px">Scan with Google Authenticator or Authy, then enter the 6-digit code.</p><div style="text-align:center;margin:10px 0"><img src="'+en.totp.qr_code+'" style="width:150px;height:150px;border:3px solid var(--gold);border-radius:8px;background:#fff;padding:4px"/></div><p style="font-size:10px;color:var(--muted);text-align:center;font-family:monospace;margin-bottom:10px">'+en.totp.secret+'</p><div class="form-field"><label>6-Digit Code</label><input id="mfa-code" type="text" placeholder="000000" maxlength="6" inputmode="numeric" style="font-size:20px;text-align:center;letter-spacing:6px;font-family:monospace"/></div><div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="verifyMFA(event)">Verify</button></div>');
+    const qrHtml=`<p style="color:var(--muted);font-size:12px;margin:0 0 12px">Scan with Google Authenticator or Authy, then enter the 6-digit code.</p>
+      <div style="text-align:center;margin:10px 0">
+        <img src="${en.totp.qr_code}" style="width:160px;height:160px;border:3px solid var(--gold);border-radius:8px;background:#fff;padding:4px"/>
+      </div>
+      <p style="font-size:10px;color:var(--muted);text-align:center;font-family:monospace;margin-bottom:10px">${en.totp.secret}</p>
+      <div class="form-field"><label>6-Digit Code</label>
+        <input id="mfa-code" type="text" placeholder="000000" maxlength="6" inputmode="numeric" style="font-size:20px;text-align:center;letter-spacing:6px;font-family:monospace"/>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="verifyMFA(event)">Verify</button>
+      </div>`;
+    openModal('Enable MFA',qrHtml);
   }catch(e){showToast('Error: '+e.message,'error');}
 }
 
@@ -6377,33 +6399,8 @@ function openAboutModal(){
   }
 
   // Proper session restore: validate with server, require login if invalid
-  async function bootstrapApp(){
-    const auth=document.getElementById('auth-screen');
-    const app=document.getElementById('app');
-    if(!auth||!app) return;
-    auth.style.display='flex';
-    app.style.display='none';
-    try{
-      const {data,error}=await sb.auth.getUser(); // server-side validation
-      if(error||!data?.user) return; // no valid session → show login
-      // Check absolute session age
-      const started=Number(localStorage.getItem(SESSION_START_KEY)||0);
-      if(started&&Date.now()-started>SESSION_CONFIG.ABSOLUTE_MS){
-        await sb.auth.signOut().catch(()=>{});
-        localStorage.removeItem(SESSION_START_KEY);
-        return;
-      }
-      currentUser=data.user;
-      await loadProfile();
-      if(!localStorage.getItem(SESSION_START_KEY))
-        localStorage.setItem(SESSION_START_KEY,String(Date.now()));
-      enterApp();
-    }catch(e){
-      currentUser=null; currentProfile=null;
-      await sb.auth.signOut().catch(()=>{});
-    }
-  }
-  bootstrapApp();
+  // Force fresh login on every page load — clears any stored session
+  (async()=>{ await sb.auth.signOut().catch(()=>{}); })();
 })();
 
 document.addEventListener('keydown',e=>{
