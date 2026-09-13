@@ -361,8 +361,18 @@ tr:hover td{background:#1A366010}
 </head>
 <body>
 
+<!-- LOADING SCREEN — shown while session check runs -->
+<div id="app-loading" style="position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:14px">
+  <div style="width:44px;height:44px;background:#1E3A5F;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#C9A84C">SP</div>
+  <div style="font-size:12px;color:var(--muted)">Loading SP360 ERP…</div>
+  <div style="width:120px;height:3px;background:var(--bdr);border-radius:2px;overflow:hidden">
+    <div style="height:100%;background:var(--gold);border-radius:2px;animation:ldbar 1.4s ease-in-out infinite"></div>
+  </div>
+</div>
+<style>@keyframes ldbar{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:120px}}</style>
+
 <!-- AUTH SCREEN -->
-<div id="auth-screen">
+<div id="auth-screen" style="display:none">
   <div class="auth-box">
     <div class="auth-logo">
       <div class="auth-logo-sq">SP</div>
@@ -385,7 +395,7 @@ tr:hover td{background:#1A366010}
 </div>
 
 <!-- APP -->
-<div id="app">
+<div id="app" style="display:none">
   <header>
     <button onclick="toggleSide()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 6px;border-radius:5px">☰</button>
     <div class="logo-sq">SP</div>
@@ -6811,6 +6821,38 @@ if('serviceWorker' in navigator){
     });
   });
 }
+
+// SESSION RESTORE ON PAGE LOAD
+window.addEventListener('load', async ()=>{
+  const loader  = document.getElementById('app-loading');
+  const authScr = document.getElementById('auth-screen');
+  const showLogin = ()=>{
+    if(loader)  loader.style.display  = 'none';
+    if(authScr) authScr.style.display = 'flex';
+  };
+  try{
+    const {data:{session}} = await sb.auth.getSession();
+    if(!session){ showLogin(); return; }
+    currentUser = session.user;
+    const {data:profileData, error:profileErr} = await sb.from('user_profiles')
+      .select('*').eq('id', currentUser.id).single();
+    if(profileErr || !profileData){
+      await sb.auth.signOut().catch(()=>{});
+      showLogin(); return;
+    }
+    currentProfile = profileData;
+    document.getElementById('user-av').textContent      = profileData.initials||profileData.full_name?.substring(0,2)||'?';
+    document.getElementById('user-av').style.background = (profileData.color||'#C9A84C')+'33';
+    document.getElementById('user-av').style.color      = profileData.color||'#C9A84C';
+    document.getElementById('user-name').textContent    = profileData.full_name||'—';
+    document.getElementById('user-role').textContent    = profileData.role||'—';
+    if(loader) loader.style.display = 'none';
+    enterApp();
+  }catch(e){
+    console.warn('Session restore error:', e);
+    showLogin();
+  }
+})
 
 // PWA Install
 let _pwaPrompt=null;
