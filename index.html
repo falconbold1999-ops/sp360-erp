@@ -503,8 +503,9 @@ tr:hover td{background:#1A366010}
 
   <div id="bi-list" style="flex:1;overflow-y:auto;padding:12px 16px"></div>
 
-  <div style="padding:12px 16px;border-top:1px solid var(--bdr)">
-    <button onclick="generateAllBI()" style="width:100%;background:#3B82F6;border:none;color:#fff;border-radius:8px;padding:10px;font-size:12px;font-weight:700;cursor:pointer">⚡ Generate All Snapshots</button>
+  <div style="padding:12px 16px;border-top:1px solid var(--bdr);display:flex;gap:8px">
+    <button onclick="generateAllBI()" style="flex:1;background:#3B82F622;border:1px solid #3B82F644;color:#3B82F6;border-radius:8px;padding:9px;font-size:11px;font-weight:700;cursor:pointer">⬇ All JSON</button>
+    <button onclick="generateAllBIExcel()" style="flex:1;background:#10B98122;border:1px solid #10B98144;color:#10B981;border-radius:8px;padding:9px;font-size:11px;font-weight:700;cursor:pointer">📊 All Excel</button>
   </div>
 </div>
 
@@ -7441,12 +7442,16 @@ function renderBIList(){
       </div>
       <div style="display:flex;gap:6px;margin-top:8px">
         <button onclick="generateBI('${ds.id}')"
-          style="flex:1;background:${ds.color}22;border:1px solid ${ds.color}44;color:${ds.color};border-radius:6px;padding:6px 10px;font-size:10px;font-weight:700;cursor:pointer">
-          ⬇ Download JSON
+          style="background:${ds.color}22;border:1px solid ${ds.color}44;color:${ds.color};border-radius:6px;padding:6px 10px;font-size:10px;font-weight:700;cursor:pointer">
+          ⬇ JSON
+        </button>
+        <button onclick="generateBIExcel('${ds.id}')"
+          style="flex:1;background:#10B98122;border:1px solid #10B98144;color:#10B981;border-radius:6px;padding:6px 10px;font-size:10px;font-weight:700;cursor:pointer">
+          📊 Excel (.xlsx)
         </button>
         <button onclick="previewBI('${ds.id}')"
           style="background:var(--n4);border:1px solid var(--bdr);color:var(--muted);border-radius:6px;padding:6px 10px;font-size:10px;font-weight:600;cursor:pointer">
-          👁 Preview
+          👁
         </button>
       </div>
       <div id="bi-status-${ds.id}" style="font-size:9px;color:var(--faint);margin-top:4px"></div>
@@ -7512,18 +7517,235 @@ async function previewBI(id){
 }
 
 async function generateAllBI(){
-  showToast('Generating all snapshots…');
+  showToast('Generating all JSON snapshots…');
   for(const ds of BI_DATASETS){
     biStatus(ds.id, '⏳ Generating…');
     try{
       const data = await ds.fetch();
       const ts   = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
       biDownload(`SP360_${ds.id}_${ts}.json`, data);
-      biStatus(ds.id, `✓ Downloaded`);
+      biStatus(ds.id, `✓ JSON downloaded`);
       await new Promise(r=>setTimeout(r,400));
     }catch(e){ biStatus(ds.id, `✗ ${e.message}`, false); }
   }
-  showToast('All snapshots downloaded ✓');
+  showToast('All JSON snapshots downloaded ✓');
+}
+
+async function generateAllBIExcel(){
+  showToast('Generating all Excel files…');
+  for(const ds of BI_DATASETS){
+    biStatus(ds.id, '⏳ Building Excel…');
+    try{
+      await generateBIExcel(ds.id);
+      await new Promise(r=>setTimeout(r,500));
+    }catch(e){ biStatus(ds.id, `✗ ${e.message}`, false); }
+  }
+  showToast('All Excel files downloaded ✓');
+}
+
+// ── Excel Export per dataset ──────────────────────────────────
+async function generateBIExcel(id){
+  const ds = BI_DATASETS.find(d=>d.id===id);
+  if(!ds) return;
+  biStatus(id, '⏳ Building Excel…');
+  try{
+    const payload = await ds.fetch();
+    const ts = new Date().toISOString().split('T')[0];
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'SP360 ERP v3.2 — Smart Projects 360 Kuwait';
+    wb.created = new Date();
+
+    // ── Route to correct formatter ──
+    if(id==='portfolio_kpis')   await biExcelPortfolioKPIs(wb, payload);
+    if(id==='project_evm')      await biExcelProjectEVM(wb, payload);
+    if(id==='financial_summary') await biExcelFinancial(wb, payload);
+    if(id==='workflow_status')  await biExcelWorkflow(wb, payload);
+    if(id==='qhse_hr')          await biExcelQHSEHR(wb, payload);
+
+    await xlSave(wb, `SP360_${id}_${ts}.xlsx`);
+    biStatus(id, `✓ Excel downloaded · ${ts}`);
+  }catch(e){
+    biStatus(id, `✗ ${e.message}`, false);
+    console.error('biExcel error:',e);
+  }
+}
+
+// helper: auto-width columns
+function biAutoWidth(ws, minW=10, maxW=40){
+  ws.columns.forEach(col=>{
+    let max=minW;
+    col.eachCell({includeEmpty:false},cell=>{
+      const v=cell.value!=null?String(cell.value).length:0;
+      if(v>max)max=v;
+    });
+    col.width=Math.min(max+2,maxW);
+  });
+}
+
+// helper: styled header row
+function biHeaderRow(ws, headers, colW){
+  const hdr = ws.addRow(headers);
+  hdr.eachCell(cell=>{
+    cell.fill   = {type:'pattern',pattern:'solid',fgColor:{argb:'FF1E3A5F'}};
+    cell.font   = {name:'Calibri',size:10,bold:true,color:{argb:'FFC9A84C'}};
+    cell.border = XL.thinBorder;
+    cell.alignment = {horizontal:'center',vertical:'middle',wrapText:false};
+  });
+  hdr.height = 18;
+  if(colW) ws.columns = colW.map((w,i)=>({key:i+'',width:w}));
+}
+
+// helper: data row
+function biDataRow(ws, values, numCols=[]){
+  const row = ws.addRow(values);
+  row.eachCell({includeEmpty:true},(cell,colNum)=>{
+    cell.border = XL.thinBorder;
+    cell.font   = {name:'Calibri',size:10};
+    if(numCols.includes(colNum)){
+      cell.alignment = {horizontal:'right'};
+      cell.numFmt = '#,##0';
+    }
+  });
+  return row;
+}
+
+// ── Portfolio KPIs Excel ──────────────────────────────────────
+async function biExcelPortfolioKPIs(wb, payload){
+  const ws = wb.addWorksheet('Portfolio KPIs');
+  const d  = payload.data[0];
+  xlTitleBlock(ws,'SP360 ERP v3.2 — Portfolio KPIs Snapshot',`Generated: ${payload.report_date} · Smart Projects 360 Kuwait`,2);
+  xlKPIBand(ws,[
+    ['Active Projects', d.active_projects, XL.gold],
+    ['Portfolio CPI',   d.portfolio_cpi,   d.portfolio_cpi>=1?XL.green:XL.red],
+    ['Portfolio SPI',   d.portfolio_spi??'N/A', d.portfolio_spi>=1?XL.green:XL.amber],
+    ['CPI Status',      d.cpi_status,      d.portfolio_cpi>=1?XL.green:XL.red]
+  ],4);
+  biHeaderRow(ws,['Metric','Value','Unit'],[20,20,15]);
+  const rows=[
+    ['Active Projects',      d.active_projects,     'count'],
+    ['Total BAC',            d.total_bac_kwd,        'KWD'],
+    ['Total EV',             d.total_ev_kwd,         'KWD'],
+    ['Total AC',             d.total_ac_kwd,         'KWD'],
+    ['Total PV',             d.total_pv_kwd,         'KWD'],
+    ['Total EAC',            d.total_eac_kwd,        'KWD'],
+    ['Total ETC',            d.total_etc_kwd,        'KWD'],
+    ['Total VAC',            d.total_vac_kwd,        'KWD'],
+    ['Portfolio CPI',        d.portfolio_cpi,        'ratio'],
+    ['Portfolio SPI',        d.portfolio_spi??'N/A', 'ratio'],
+    ['Portfolio TCPI',       d.portfolio_tcpi??'N/A','ratio'],
+    ['CPI Status',           d.cpi_status,           'label'],
+    ['Overall % Complete',   d.overall_pct,          '%'],
+    ['RAG Green',            d.rag_green,            'projects'],
+    ['RAG Amber',            d.rag_amber,            'projects'],
+    ['RAG Red',              d.rag_red,              'projects']
+  ];
+  rows.forEach(r=>biDataRow(ws,r,[2]));
+  biAutoWidth(ws);
+}
+
+// ── Project EVM Excel ─────────────────────────────────────────
+async function biExcelProjectEVM(wb, payload){
+  const ws = wb.addWorksheet('Project EVM');
+  const cols = ['project_no','name','client','department','status','pct_complete','rag_status',
+    'bac','ev','ac','pv','cpi','spi','eac','etc','vac','cv','sv','tcpi','cpi_status','start_date','end_date'];
+  const labels = ['Proj No','Name','Client','Dept','Status','%','RAG',
+    'BAC','EV','AC','PV','CPI','SPI','EAC','ETC','VAC','CV','SV','TCPI','CPI Status','Start','End'];
+  const numCols = [8,9,10,11,12,13,14,15,16,17,18,19]; // 1-indexed
+
+  xlTitleBlock(ws,'SP360 ERP v3.2 — Project EVM Detail',`Generated: ${new Date().toLocaleDateString('en-GB')} · ${payload.data.length} projects`,cols.length);
+  biHeaderRow(ws, labels);
+  payload.data.forEach(p=>{
+    const vals = cols.map(c=>p[c]!=null?p[c]:'—');
+    const row  = biDataRow(ws, vals, numCols);
+    // RAG color
+    const ragCell = row.getCell(7);
+    const ragColor = p.rag_status==='green'?'FF10B981':p.rag_status==='red'?'FFEF4444':'FFF97316';
+    ragCell.fill = {type:'pattern',pattern:'solid',fgColor:{argb:ragColor+'33'}};
+    ragCell.font = {...ragCell.font, color:{argb:ragColor}, bold:true};
+    // CPI color
+    const cpiCell = row.getCell(12);
+    const cpiCol = Number(p.cpi)>=1?'FF10B981':Number(p.cpi)>=0.9?'FFF97316':'FFEF4444';
+    cpiCell.font = {...cpiCell.font, color:{argb:cpiCol}, bold:true};
+    cpiCell.alignment = {horizontal:'right'};
+    cpiCell.numFmt = '0.000';
+    if(p.spi!=null){ row.getCell(13).numFmt='0.000'; row.getCell(13).alignment={horizontal:'right'}; }
+  });
+  // Freeze header
+  ws.views = [{state:'frozen',ySplit:5,xSplit:0}];
+  // Auto-filter
+  ws.autoFilter = {from:{row:5,column:1},to:{row:5,column:cols.length}};
+  biAutoWidth(ws,8,35);
+}
+
+// ── Financial Summary Excel ───────────────────────────────────
+async function biExcelFinancial(wb, payload){
+  // Sheet 1 — Summary
+  const ws1 = wb.addWorksheet('Financial Summary');
+  xlTitleBlock(ws1,'SP360 ERP v3.2 — Financial Summary',`Generated: ${new Date().toLocaleDateString('en-GB')} · Smart Projects 360 Kuwait`,2);
+  const s = payload.summary;
+  biHeaderRow(ws1,['Metric','Amount (KWD)'],[35,20]);
+  [
+    ['Revenue Collected',    s.revenue_collected_kwd],
+    ['Cost Paid',            s.cost_paid_kwd],
+    ['Gross Profit',         s.gross_profit_kwd],
+    ['GP Margin %',          s.gp_margin_pct],
+    ['AR Outstanding',       s.ar_outstanding_kwd],
+    ['AP Outstanding',       s.ap_outstanding_kwd],
+    ['Overdue Total',        s.overdue_total_kwd],
+    ['Total Invoices',       s.total_invoices],
+    ['Paid Invoices',        s.paid_invoices],
+    ['Pending Invoices',     s.pending_invoices]
+  ].forEach(r=>biDataRow(ws1,r,[2]));
+  biAutoWidth(ws1);
+
+  // Sheet 2 — Cash Flow
+  const ws2 = wb.addWorksheet('Cash Flow 6M');
+  xlTitleBlock(ws2,'SP360 ERP v3.2 — Cash Flow (Last 6 Months)',`Generated: ${new Date().toLocaleDateString('en-GB')}`,4);
+  biHeaderRow(ws2,['Month','Inflow (KWD)','Outflow (KWD)','Net (KWD)'],[14,16,16,14]);
+  payload.cash_flow_6m.forEach(r=>{
+    const row=biDataRow(ws2,[r.month,r.inflow,r.outflow,r.net],[2,3,4]);
+    const netCell=row.getCell(4);
+    netCell.font={...netCell.font,bold:true,color:{argb:r.net>=0?'FF10B981':'FFEF4444'}};
+  });
+  biAutoWidth(ws2);
+}
+
+// ── Workflow Excel ────────────────────────────────────────────
+async function biExcelWorkflow(wb, payload){
+  const ws1 = wb.addWorksheet('Workflow Summary');
+  xlTitleBlock(ws1,'SP360 ERP v3.2 — Workflow Status',`Generated: ${new Date().toLocaleDateString('en-GB')}`,4);
+  const s=payload.summary;
+  xlKPIBand(ws1,[
+    ['Total',   s.total_items, XL.gold],
+    ['Pending', s.pending,     XL.amber],
+    ['Overdue', s.overdue,     XL.red],
+    ['Approved',s.approved,    XL.green]
+  ],4);
+  biHeaderRow(ws1,['Entity Type','Total','Pending','Overdue'],[20,10,10,10]);
+  payload.by_type.forEach(r=>biDataRow(ws1,[r.entity_type,r.total,r.pending,r.overdue],[2,3,4]));
+  biAutoWidth(ws1);
+
+  const ws2 = wb.addWorksheet('Aging Detail');
+  xlTitleBlock(ws2,'SP360 ERP v3.2 — Workflow Aging',`Pending & Overdue items`,5);
+  biHeaderRow(ws2,['ID','Title','Type','Status','Age (days)','Due Date','Bucket'],[8,35,16,12,12,14,10]);
+  payload.aging_detail.forEach(r=>biDataRow(ws2,[r.id,r.title,r.entity_type,r.status,r.age_days,r.due_date||'—',r.bucket],[5]));
+  ws2.views=[{state:'frozen',ySplit:5}];
+  biAutoWidth(ws2,8,35);
+}
+
+// ── QHSE & HR Excel ──────────────────────────────────────────
+async function biExcelQHSEHR(wb, payload){
+  const ws1 = wb.addWorksheet('NCR Summary');
+  xlTitleBlock(ws1,'SP360 ERP v3.2 — QHSE NCR Summary',`Generated: ${new Date().toLocaleDateString('en-GB')}`,4);
+  biHeaderRow(ws1,['Severity','Total','Open','Closed'],[14,10,10,10]);
+  payload.ncr_by_severity.forEach(r=>biDataRow(ws1,[r.severity,r.total,r.open,r.closed],[2,3,4]));
+  biAutoWidth(ws1);
+
+  const ws2 = wb.addWorksheet('Headcount by Dept');
+  xlTitleBlock(ws2,'SP360 ERP v3.2 — Headcount by Department',`Generated: ${new Date().toLocaleDateString('en-GB')}`,5);
+  biHeaderRow(ws2,['Department','Total','Active','Permanent','Contract'],[20,10,10,12,10]);
+  payload.headcount_by_dept.forEach(r=>biDataRow(ws2,[r.department,r.total,r.active,r.permanent,r.contract],[2,3,4,5]));
+  biAutoWidth(ws2);
 }
 
 // ══════════════════════════════════════════════════════════════
