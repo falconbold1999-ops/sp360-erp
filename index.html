@@ -384,6 +384,7 @@ tr:hover td{background:#1A366010}
     <div class="logo-txt"><div class="t1">SP360 ERP</div><div class="t2">Smart Projects 360 · Kuwait</div></div>
     <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v3.1</span>
     <span id="mfa-btn" onclick="openMFASetupModal()" style="display:none;font-size:9px;color:#10B981;background:#10B98118;border:1px solid #10B98133;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">🔐 MFA</span>
+    <span id="notif-bell" onclick="navTo('workflow',document.getElementById('nav-workflow'))" style="display:none;font-size:9px;color:#F97316;background:#F9731618;border:1px solid #F9731633;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">🔔 <span id="notif-count">0</span> Pending</span>
     <div style="display:flex;align-items:center;gap:4px;flex-shrink:0" title="Realtime connection status">
       <div id="realtime-dot" style="width:7px;height:7px;border-radius:50%;background:#94A3B8;transition:background .3s"></div>
       <span style="font-size:9px;color:var(--faint)">live</span>
@@ -914,6 +915,21 @@ async function doLogout(){
 }
 
 async function loadWfBadge(){
+  // Update notification bell in header
+  try{
+    const {data:pending}=await sb.from('workflow_items')
+      .select('id',{count:'exact'})
+      .in('status',['pending','overdue'])
+      .limit(1);
+    const count=pending?.length||0;
+    const bell=document.getElementById('notif-bell');
+    const countEl=document.getElementById('notif-count');
+    if(bell&&countEl){
+      countEl.textContent=count;
+      bell.style.display=count>0?'inline-block':'none';
+    }
+  }catch{}
+  // Also update page title with pending count for awareness
   const {data}=await sb.from('workflow_items').select('id').in('status',['pending','overdue']);
   const count=(data||[]).length;
   document.getElementById('pending-badge').textContent=`⚡ ${count} pending`;
@@ -2314,7 +2330,7 @@ async function savePO(e){
     if(!data?.ok){showToast('Error: '+(data?.error||'Unknown error'),'error');return;}
     showToast(`PO ${data.po_no} created — click Submit to start approval ✓`);
     closeModal(); loadProc('pos');
-  }catch(e){showToast('Error: '+e.message,'error');}
+  }catch(e){showToast('Error: '+e.message,'error');logError('Procurement','savePO',e);}
   finally{if(btn){btn.disabled=false;btn.textContent='Create PO (Draft)';}}
 }
 
@@ -5315,7 +5331,7 @@ async function saveProject(e){
     if(!data?.ok){showToast('Error: '+(data?.error||'Unknown error'),'error');return;}
     showToast(`Project ${data.project_no} created ✓`);
     closeModal(); loadProjects();
-  }catch(e2){showToast('Error: '+e2.message,'error');}
+  }catch(e2){showToast('Error: '+e2.message,'error');logError('Projects','saveProject',e2);}
   finally{if(btn){btn.disabled=false;btn.textContent='Create Project';}}
 }
 
