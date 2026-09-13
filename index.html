@@ -605,11 +605,17 @@ window.addEventListener('unhandledrejection', e=>{
 // Handled via unhandledrejection + Supabase auth state
 
 // ── BUTTON PROTECTION ────────────────────────────────────────
-// Prevent double-clicks on any .btn-primary or .btn-danger
+// Prevent double-clicks on btn-primary/btn-danger — EXCLUDES auth buttons
 document.addEventListener('click', e=>{
   const btn = e.target.closest('button');
   if(!btn) return;
-  if(btn.dataset.protected) return; // already protected
+  // Never protect auth-screen buttons (login, MFA verify)
+  if(btn.id==='btn-login'||btn.closest('#auth-screen')) return;
+  if(btn.dataset.protected){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    return;
+  }
   if(btn.classList.contains('btn-primary')||btn.classList.contains('btn-danger')){
     btn.dataset.protected = '1';
     setTimeout(()=>{ delete btn.dataset.protected; }, 3000);
