@@ -377,7 +377,7 @@ tr:hover td{background:#1A366010}
     <div class="auth-logo">
       <div class="auth-logo-sq">SP</div>
       <div>
-        <div class="auth-title">SP360 ERP v3.1</div>
+        <div class="auth-title">SP360 ERP v3.2</div>
         <div class="auth-sub">Smart Projects 360 · Kuwait · Production System</div>
       </div>
     </div>
@@ -400,7 +400,7 @@ tr:hover td{background:#1A366010}
     <button onclick="toggleSide()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 6px;border-radius:5px">☰</button>
     <div class="logo-sq">SP</div>
     <div class="logo-txt"><div class="t1">SP360 ERP</div><div class="t2">Smart Projects 360 · Kuwait</div></div>
-    <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v3.1</span>
+    <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v3.2</span>
     <span id="mfa-btn" onclick="openMFASetupModal()" style="display:none;font-size:9px;color:#10B981;background:#10B98118;border:1px solid #10B98133;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">🔐 MFA</span>
     <button id="notif-bell" onclick="openNotifDrawer()" style="position:relative;background:none;border:1px solid transparent;border-radius:8px;padding:5px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;color:var(--muted);font-size:13px;transition:all .15s" title="Notifications">
       🔔
@@ -445,7 +445,7 @@ tr:hover td{background:#1A366010}
         <button class="nav-btn" id="nav-users" onclick="navTo('users',this)"><span class="nav-icon">👤</span>Users</button>
         <button class="nav-btn" id="nav-ceo" onclick="navTo('ceo',this)"><span class="nav-icon">👔</span>CEO Report</button>
       </nav>
-      <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v3.1 · Production<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
+      <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v3.2 · Production<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
     </aside>
 
     <main>
@@ -505,10 +505,10 @@ tr:hover td{background:#1A366010}
 <script>
 
 // ═══════════════════════════════════════════════════════════
-//  SP360 ERP v3.1 — Supabase Production System
+//  SP360 ERP v3.2 — Supabase Production System
 // ═══════════════════════════════════════════════════════════
 /* ═══════════════════════════════════════════════════════════════════════
-   SP360 ERP v3.1 — Bug Fixes (September 2026) — Management Review Response
+   SP360 ERP v3.2 — P2: Notifications Center + Advanced CEO Report
    ═══════════════════════════════════════════════════════════════════════
    FIX-1 P0: SPI HTML rendering — fixed missing > in 2 <td> literals
              Locations: Monthly Report table, CEO Report EVM table
@@ -2098,7 +2098,7 @@ async function loadProjects(tab){
     }).join('')}
     </tbody></table>
     <div style="margin-top:14px;padding:10px;background:var(--n3);border-radius:8px;font-size:10px;color:var(--faint);text-align:center">
-      SP360 ERP v3.1 · Monthly Progress Report · ${monthStr} · Confidential
+      SP360 ERP v3.2 · Monthly Progress Report · ${monthStr} · Confidential
     </div>`;
   }
 
@@ -4611,12 +4611,12 @@ function buildEmailHTML(subject, bodyText){
       <div style="width:44px;height:44px;background:#C9A84C;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#0D1B2A;font-size:18px">SP</div>
       <div>
         <div style="color:#C9A84C;font-size:18px;font-weight:800">${safeSubject}</div>
-        <div style="color:#94A3B8;font-size:11px;margin-top:2px">SP360 ERP v3.1 · Smart Projects 360 · Kuwait</div>
+        <div style="color:#94A3B8;font-size:11px;margin-top:2px">SP360 ERP v3.2 · Smart Projects 360 · Kuwait</div>
       </div>
     </div>
     <div style="padding:24px 28px">${htmlLines}</div>
     <div style="background:#F1F5F9;padding:14px 28px;text-align:center;font-size:11px;color:#94A3B8;border-top:1px solid #E2E8F0">
-      SP360 ERP v3.1 · Confidential — For Internal Use Only<br>
+      SP360 ERP v3.2 · Confidential — For Internal Use Only<br>
       <a href="https://falconbold1999-ops.github.io/sp360-erp/" style="color:#C9A84C">Open SP360 ERP</a>
     </div>
   </div></body></html>`;
@@ -4699,7 +4699,7 @@ function openEmailAllModal(){
       <input id="eall-subject" value="SP360 ERP — Team Notification"/>
     </div>
     <div class="form-field"><label>Message</label>
-      <textarea id="eall-body" rows="6">Dear SP360 Team,\n\nThis is a notification from SP360 ERP v3.1.\n\nPlease log in to review your pending items.\n\nRegards,\nSP360 PMO Team</textarea>
+      <textarea id="eall-body" rows="6">Dear SP360 Team,\n\nThis is a notification from SP360 ERP v3.2.\n\nPlease log in to review your pending items.\n\nRegards,\nSP360 PMO Team</textarea>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -4737,7 +4737,7 @@ async function sendEmailNotification(type){
   if(type==='pending_approvals'){
     const pending=wfs.filter(w=>w.status==='pending'||w.status==='overdue');
     subject=`⚡ ${pending.length} Pending Approvals — SP360 ERP — ${today}`;
-    body=`Dear SP360 Team,\n\nThis is an automated notification from SP360 ERP v3.1.\n\nYou have ${pending.length} item(s) awaiting approval:\n\n`
+    body=`Dear SP360 Team,\n\nThis is an automated notification from SP360 ERP v3.2.\n\nYou have ${pending.length} item(s) awaiting approval:\n\n`
       +pending.slice(0,10).map(w=>`  • ${w.ref_no} — ${w.current_step} [${w.status.toUpperCase()}]`).join('\n')
       +`\n\nPlease log in to SP360 ERP to take action:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   } else if(type==='weekly_evm'){
@@ -4751,7 +4751,7 @@ async function sendEmailNotification(type){
       +`\n\nFull report: https://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   } else if(type==='ceo_report'){
     subject=`👔 CEO Flash Report Ready — SP360 ERP — ${today}`;
-    body=`Dear Team,\n\nThe CEO Flash Report for ${today} has been updated in SP360 ERP v3.1.\n\nLog in → CEO Report → Export PDF:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
+    body=`Dear Team,\n\nThe CEO Flash Report for ${today} has been updated in SP360 ERP v3.2.\n\nLog in → CEO Report → Export PDF:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   }
 
   if(recipients.length===0){ showToast('No active users found','error'); return; }
@@ -5105,7 +5105,7 @@ async function loadCEO(){
   <div class="print-header" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div>
-        <div style="font-size:18pt;font-weight:900;color:#1E3A5F">SP360 ERP v3.1 — CEO Flash Report</div>
+        <div style="font-size:18pt;font-weight:900;color:#1E3A5F">SP360 ERP v3.2 — CEO Flash Report</div>
         <div style="font-size:9pt;color:#475569">${monthStr} · Smart Projects 360 · Kuwait · Confidential</div>
       </div>
       <div style="font-size:8pt;color:#94A3B8">Generated: ${new Date().toLocaleDateString('en-GB')}</div>
@@ -5113,7 +5113,7 @@ async function loadCEO(){
   </div>
   <!-- PRINT FOOTER -->
   <div class="print-footer" style="display:none">
-    SP360 ERP v3.1 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only &nbsp;|&nbsp; Smart Projects 360 · Kuwait
+    SP360 ERP v3.2 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only &nbsp;|&nbsp; Smart Projects 360 · Kuwait
   </div>
 
   <div class="page-head">
@@ -5332,7 +5332,126 @@ async function loadCEO(){
   </div>
 
   <div style="margin-top:12px;padding:10px 14px;background:var(--n3);border-radius:8px;font-size:10px;color:var(--faint);text-align:center">
-    SP360 ERP v3.1 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only
+    SP360 ERP v3.2 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only
+  </div>
+
+  <!-- ── P2-2: UPCOMING MILESTONES ──────────────────────── -->
+  <div class="card" style="margin-bottom:12px;margin-top:12px">
+    <div class="sec-head"><div class="sec-title"><span>🎯</span>Upcoming Project Deadlines</div></div>
+    ${(()=>{
+      const upcoming = projs
+        .filter(p=>p.end_date && !['completed','cancelled'].includes(p.status))
+        .map(p=>({
+          name: (p.name||'').split('—')[0].trim().substring(0,40),
+          no:   p.project_no||'',
+          end:  new Date(p.end_date),
+          pct:  Number(p.pct)||0,
+          rag:  ragScore(p)
+        }))
+        .sort((a,b)=>a.end-b.end)
+        .slice(0,6);
+      if(!upcoming.length) return '<div class="empty">No project end dates set</div>';
+      return '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">' +
+        upcoming.map(p=>{
+          const daysLeft = Math.ceil((p.end - today) / 86400000);
+          const col = daysLeft < 0 ? '#EF4444' : daysLeft <= 14 ? '#F97316' : daysLeft <= 30 ? '#C9A84C' : '#10B981';
+          const label = daysLeft < 0 ? Math.abs(daysLeft)+'d overdue' : daysLeft === 0 ? 'Today!' : daysLeft+'d left';
+          return '<div style="background:'+col+'11;border:1px solid '+col+'33;border-radius:8px;padding:10px 12px">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
+              '<span style="font-size:9px;font-weight:700;color:var(--gold)">'+(p.no||'')+'</span>' +
+              '<span style="font-size:9px;font-weight:800;color:'+col+'">'+label+'</span>' +
+            '</div>' +
+            '<div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:4px">'+p.name+'</div>' +
+            '<div style="background:var(--bdr);border-radius:4px;height:4px;overflow:hidden">' +
+              '<div style="height:100%;width:'+p.pct+'%;background:'+col+';border-radius:4px"></div>' +
+            '</div>' +
+            '<div style="font-size:9px;color:var(--muted);margin-top:3px">'+p.pct+'% complete · '+p.end.toLocaleDateString('en-GB')+'</div>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+    })()}
+  </div>
+
+  <!-- ── P2-2: INVOICE AGING + AR RISK ──────────────────── -->
+  <div class="grid2" style="margin-bottom:12px">
+    <div class="card">
+      <div class="sec-head"><div class="sec-title"><span>📅</span>AR Invoice Aging</div></div>
+      ${(()=>{
+        const arInvs = invs.filter(i=>i.invoice_type==='client'&&!['paid','cancelled'].includes(i.status));
+        const buckets = [
+          {lbl:'Current',  col:'#10B981', items: arInvs.filter(i=>!i.due_date||new Date(i.due_date)>=today)},
+          {lbl:'1–30d',    col:'#C9A84C', items: arInvs.filter(i=>i.due_date&&(today-new Date(i.due_date))>0&&(today-new Date(i.due_date))<=30*86400000)},
+          {lbl:'31–60d',   col:'#F97316', items: arInvs.filter(i=>i.due_date&&(today-new Date(i.due_date))>30*86400000&&(today-new Date(i.due_date))<=60*86400000)},
+          {lbl:'60d+',     col:'#EF4444', items: arInvs.filter(i=>i.due_date&&(today-new Date(i.due_date))>60*86400000)}
+        ];
+        const total = arInvs.reduce((s,i)=>s+Number(i.net_amount),0)||1;
+        if(!arInvs.length) return '<div class="empty">No outstanding AR invoices</div>';
+        return '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px">' +
+          buckets.map(b=>{
+            const amt = b.items.reduce((s,i)=>s+Number(i.net_amount),0);
+            return '<div style="background:'+b.col+'11;border:1px solid '+b.col+'33;border-radius:7px;padding:8px 10px;text-align:center">' +
+              '<div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase">'+b.lbl+'</div>' +
+              '<div style="font-size:14px;font-weight:800;color:'+b.col+';margin:3px 0">'+b.items.length+'</div>' +
+              '<div style="font-size:9px;color:var(--faint)">'+fmtKWD(amt)+'</div>' +
+            '</div>';
+          }).join('') +
+        '</div>' +
+        '<div style="background:var(--bdr);border-radius:4px;height:8px;overflow:hidden;display:flex">' +
+          buckets.map(b=>{
+            const amt = b.items.reduce((s,i)=>s+Number(i.net_amount),0);
+            const pct = Math.round((amt/total)*100);
+            return pct>0 ? '<div style="height:100%;width:'+pct+'%;background:'+b.col+'" title="'+b.lbl+': '+fmtKWD(amt)+'"></div>' : '';
+          }).join('') +
+        '</div>' +
+        '<div style="font-size:9px;color:var(--faint);margin-top:4px;text-align:right">Total AR Outstanding: '+fmtKWD(total)+'</div>';
+      })()}
+    </div>
+    <div class="card">
+      <div class="sec-head"><div class="sec-title"><span>⚠️</span>Executive Alerts</div></div>
+      ${(()=>{
+        const alerts = [];
+        // CPI alert
+        if(Number(portCPI)<0.9) alerts.push({icon:'🔴',sev:'critical',msg:'Portfolio CPI '+portCPI+' — Cost overrun risk',mod:'Projects'});
+        else if(Number(portCPI)<1) alerts.push({icon:'🟡',sev:'warning',msg:'Portfolio CPI '+portCPI+' — Monitor cost',mod:'Projects'});
+        // Overdue AR
+        if(overdueAR.length>0) alerts.push({icon:'🔴',sev:'critical',msg:overdueAR.length+' overdue AR invoices — '+fmtKWD(overdueAR.reduce((s,i)=>s+Number(i.net_amount),0))+' at risk',mod:'Finance'});
+        // Critical NCRs
+        if(critNCR>0) alerts.push({icon:'🔴',sev:'critical',msg:critNCR+' critical open NCR(s) require immediate action',mod:'QHSE'});
+        // Pending workflow
+        if(overdueWF>0) alerts.push({icon:'🟡',sev:'warning',msg:overdueWF+' workflow item(s) SLA breached',mod:'Workflow'});
+        // Red RAG projects
+        const redProjs = activeProjs.filter(p=>ragScore(p)<0.9);
+        if(redProjs.length>0) alerts.push({icon:'🔴',sev:'critical',msg:redProjs.length+' project(s) RAG Red: '+redProjs.map(p=>p.project_no).join(', '),mod:'Projects'});
+        // Gross profit
+        if(gp<0) alerts.push({icon:'🔴',sev:'critical',msg:'Negative gross profit — Review cost structure',mod:'Finance'});
+        if(!alerts.length) return '<div style="text-align:center;padding:20px;color:#10B981;font-size:13px">✅ No critical alerts</div>';
+        const cols = {critical:'#EF4444',warning:'#F97316'};
+        return alerts.slice(0,5).map(a=>'<div style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--bdr)">' +
+          '<span style="font-size:14px;flex-shrink:0">'+a.icon+'</span>' +
+          '<div style="flex:1">' +
+            '<div style="font-size:11px;color:var(--text)">'+a.msg+'</div>' +
+            '<div style="font-size:9px;color:var(--muted);margin-top:1px">'+a.mod+'</div>' +
+          '</div>' +
+        '</div>').join('');
+      })()}
+    </div>
+  </div>
+
+  <!-- ── P2-2: CASH FLOW CHART (Chart.js) ───────────────── -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="sec-head"><div class="sec-title"><span>💹</span>Cash Flow — Last 6 Months</div></div>
+    <div style="position:relative;height:200px">
+      <canvas id="ceo-cashflow-chart"></canvas>
+    </div>
+    <div style="display:flex;gap:16px;font-size:9px;color:var(--faint);margin-top:6px;padding-left:8px">
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#10B981;border-radius:2px;display:inline-block"></span>Inflow</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#EF4444;border-radius:2px;display:inline-block"></span>Outflow</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#C9A84C;border-radius:2px;display:inline-block"></span>Net</span>
+    </div>
+  </div>
+
+  <div style="margin-top:12px;padding:10px 14px;background:var(--n3);border-radius:8px;font-size:10px;color:var(--faint);text-align:center">
+    SP360 ERP v3.2 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only
   </div>`;
 
   // Render Portfolio S-Curve
@@ -5362,6 +5481,57 @@ async function loadCEO(){
       });
     },100);
   }
+
+  // ── P2-2: Render Cash Flow Chart ──────────────────────────
+  setTimeout(()=>{
+    const cfCtx = document.getElementById('ceo-cashflow-chart');
+    if(!cfCtx || !cfMonths.length) return;
+    if(window._ceoCFChart){ try{ window._ceoCFChart.destroy(); }catch(e){} }
+    window._ceoCFChart = new Chart(cfCtx,{
+      type:'bar',
+      data:{
+        labels: cfMonths.map(c=>c.m),
+        datasets:[
+          {
+            label:'Inflow',
+            data: cfMonths.map(c=>c.inflow),
+            backgroundColor:'#10B98166',
+            borderColor:'#10B981',
+            borderWidth:1,
+            borderRadius:4
+          },
+          {
+            label:'Outflow',
+            data: cfMonths.map(c=>c.outflow),
+            backgroundColor:'#EF444466',
+            borderColor:'#EF4444',
+            borderWidth:1,
+            borderRadius:4
+          },
+          {
+            label:'Net',
+            data: cfMonths.map(c=>c.net),
+            type:'line',
+            borderColor:'#C9A84C',
+            backgroundColor:'transparent',
+            borderWidth:2,
+            pointRadius:4,
+            pointBackgroundColor:'#C9A84C',
+            tension:0.3,
+            yAxisID:'y'
+          }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{color:'#94A3B8',font:{size:11}}}},
+        scales:{
+          x:{ticks:{color:'#94A3B8',font:{size:10}}, grid:{color:'#1E3A5F33'}},
+          y:{ticks:{color:'#94A3B8',font:{size:10},callback:v=>'KD '+Number(v).toLocaleString()}, grid:{color:'#1E3A5F33'}}
+        }
+      }
+    });
+  }, 150);
 
   }catch(err){
     if(el)el.innerHTML=`<div class="empty">Error loading CEO Report: ${err.message}</div>`;
@@ -5947,7 +6117,7 @@ async function exportPortfolioExcel(){
   const today = new Date().toLocaleDateString('en-GB');
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'SP360 ERP v3.1';
+  wb.creator = 'SP360 ERP v3.2';
   wb.created = new Date();
 
   // ── SHEET 1: Portfolio EVM ──────────────────────────────────
@@ -5976,7 +6146,7 @@ async function exportPortfolioExcel(){
   ];
 
   xlTitleBlock(ws1,
-    'SP360 ERP v3.1 — Portfolio EVM Report',
+    'SP360 ERP v3.2 — Portfolio EVM Report',
     `${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential  ·  Generated: ${today}`, 17);
 
   // KPI band
@@ -6130,7 +6300,7 @@ async function exportPortfolioExcel(){
     {key:'spi',     width:10},{key:'cv',     width:14},
     {key:'pct',     width:12},{key:'status', width:16}
   ];
-  xlTitleBlock(ws2,'SP360 ERP v3.1 — EVM Variance Summary',
+  xlTitleBlock(ws2,'SP360 ERP v3.2 — EVM Variance Summary',
     `${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential`,10);
   const hdr2=ws2.addRow(['Project No','Project Name','BAC (KWD)','EV (KWD)',
     'AC (KWD)','CPI','SPI','CV (KWD)','% Complete','Phase']);
@@ -6171,7 +6341,7 @@ async function exportPortfolioExcel(){
     {key:'ac',    width:14},{key:'spi',   width:10},
     {key:'cpi',   width:10}
   ];
-  xlTitleBlock(ws3,'SP360 ERP v3.1 — S-Curve EVM Snapshots',
+  xlTitleBlock(ws3,'SP360 ERP v3.2 — S-Curve EVM Snapshots',
     `${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential`,9);
   const hdr3=ws3.addRow(['Project No','Project Name','Period','Date',
     'PV (KWD)','EV (KWD)','AC (KWD)','SPI','CPI']);
@@ -6212,7 +6382,7 @@ async function exportPortfolioExcel(){
     {key:'vac',   width:16},{key:'tcpi',  width:11},
     {key:'trend', width:18},{key:'rag',   width:10}
   ];
-  xlTitleBlock(ws4,'SP360 ERP v3.1 — Trend Analysis & Forecasting',
+  xlTitleBlock(ws4,'SP360 ERP v3.2 — Trend Analysis & Forecasting',
     `${month}  ·  ETC = EAC−AC  ·  TCPI = (BAC−EV)÷(BAC−AC)  ·  ${today}`,12);
   const hdr4=ws4.addRow(['Project No','Project Name','Phase','%','CPI','SPI',
     'EAC (KWD)','ETC (KWD)','VAC (KWD)','TCPI','Performance Forecast','RAG']);
@@ -6274,7 +6444,7 @@ async function exportMonthlyExcel(){
   const today=new Date().toLocaleDateString('en-GB');
 
   const wb=new ExcelJS.Workbook();
-  wb.creator='SP360 ERP v3.1'; wb.created=new Date();
+  wb.creator='SP360 ERP v3.2'; wb.created=new Date();
   const ws=wb.addWorksheet('Monthly Report',{
     views:[{state:'frozen',xSplit:0,ySplit:5}],
     pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1}
@@ -6289,7 +6459,7 @@ async function exportMonthlyExcel(){
   ];
 
   xlTitleBlock(ws,
-    `SP360 ERP v3.1 — Monthly Progress Report — ${month}`,
+    `SP360 ERP v3.2 — Monthly Progress Report — ${month}`,
     `Smart Projects 360  ·  Kuwait  ·  Confidential  ·  Generated: ${today}`,12);
 
   const hdr=ws.addRow(['Project','Client','Phase','Plan %','Actual %',
@@ -6356,7 +6526,7 @@ async function exportCOExcel(){
   const today=new Date().toLocaleDateString('en-GB');
 
   const wb=new ExcelJS.Workbook();
-  wb.creator='SP360 ERP v3.1'; wb.created=new Date();
+  wb.creator='SP360 ERP v3.2'; wb.created=new Date();
   const ws=wb.addWorksheet('Change Orders',{
     views:[{state:'frozen',xSplit:0,ySplit:5}]
   });
@@ -6369,7 +6539,7 @@ async function exportCOExcel(){
   ];
 
   xlTitleBlock(ws,
-    `SP360 ERP v3.1 — Change Order Register — ${month}`,
+    `SP360 ERP v3.2 — Change Order Register — ${month}`,
     `Smart Projects 360  ·  Kuwait  ·  Confidential  ·  Generated: ${today}`,10);
 
   // Summary KPIs
@@ -6442,7 +6612,7 @@ async function exportCEOPDF(){
   // Header
   doc.setFillColor(...navy); doc.rect(0,0,297,22,'F');
   doc.setTextColor(...gold); doc.setFontSize(16); doc.setFont('helvetica','bold');
-  doc.text('SP360 ERP v3.1 — CEO Flash Report',14,10);
+  doc.text('SP360 ERP v3.2 — CEO Flash Report',14,10);
   doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(...white);
   doc.text(`${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential`,14,17);
   doc.text(`Generated: ${today}`,250,17);
@@ -6577,7 +6747,7 @@ async function exportCEOPDF(){
     doc.setPage(i);
     doc.setFillColor(...navy); doc.rect(0,200,297,10,'F');
     doc.setTextColor(...white); doc.setFontSize(6); doc.setFont('helvetica','normal');
-    doc.text(`SP360 ERP v3.1  ·  CEO Flash Report  ·  ${month}  ·  Confidential — For Internal Use Only`,14,206);
+    doc.text(`SP360 ERP v3.2  ·  CEO Flash Report  ·  ${month}  ·  Confidential — For Internal Use Only`,14,206);
     doc.text(`Page ${i} of ${pageCount}`,283,206,{align:'right'});
   }
 
@@ -6587,11 +6757,11 @@ async function exportCEOPDF(){
 
 // ── ABOUT & CHANGELOG ────────────────────────────────────────
 function openAboutModal(){
-  openModal('SP360 ERP v3.1 — About & Changelog',`
+  openModal('SP360 ERP v3.2 — About & Changelog',`
   <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:12px 14px;background:#1E3A5F18;border-radius:8px">
     <div style="width:48px;height:48px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#0D1B2A;font-size:20px;flex-shrink:0">SP</div>
     <div>
-      <div style="font-size:16px;font-weight:800;color:var(--gold)">SP360 ERP v3.1</div>
+      <div style="font-size:16px;font-weight:800;color:var(--gold)">SP360 ERP v3.2</div>
       <div style="font-size:11px;color:var(--muted)">Smart Projects 360 · Kuwait · Production System</div>
       <div style="font-size:10px;color:var(--faint);margin-top:2px">Supabase · GitHub Pages · PWA · Single-file Architecture</div>
     </div>
@@ -6628,7 +6798,7 @@ function openAboutModal(){
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
     ${[
-      ['Version','v3.1 (Production Hardening)'],
+      ['Version','v3.2 (P2: Notifications + CEO Advanced)'],
       ['Database','Supabase (PostgreSQL)'],
       ['Migrations','020 migrations applied'],
       ['Security','RLS + Server-side RPCs'],
