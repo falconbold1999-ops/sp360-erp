@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-<title>SP360 ERP v3.1 — Smart Projects 360</title>
+<title>SP360 ERP v3.2 — Smart Projects 360</title>
 <!-- PWA -->
 <meta name="theme-color" content="#1E3A5F"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -68,6 +68,14 @@ header{background:var(--n2);border-bottom:1px solid var(--bdr);height:56px;displ
 #layout{display:flex;flex:1;overflow:hidden;min-height:0}
 aside{width:192px;flex-shrink:0;background:var(--n2);border-right:1px solid var(--bdr);display:flex;flex-direction:column;transition:width .2s;overflow:hidden}
 aside.collapsed{width:0}
+/* ── P2-1 Notifications ── */
+#notif-bell{transition:all .2s}
+#notif-bell:hover{background:#F9731618!important;border-color:#F9731644!important;color:#F97316!important}
+#notif-drawer{transition:transform .25s cubic-bezier(.4,0,.2,1)}
+@keyframes notif-pulse{0%,100%{box-shadow:0 0 0 0 #EF444455}50%{box-shadow:0 0 0 6px #EF444400}}
+.notif-pulse{animation:notif-pulse 1.5s ease-in-out 3}
+#notif-list .notif-item:hover{background:var(--n4)!important}
+@media(max-width:480px){#notif-drawer{width:100vw!important}}
 nav{padding:10px 7px;flex:1;overflow-y:auto}
 .nav-section{color:var(--faint);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:12px 10px 5px}
 .nav-btn{width:100%;display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;border:none;cursor:pointer;background:none;color:var(--muted);font-size:12px;text-align:left;font-family:inherit;border-left:3px solid transparent;margin-bottom:1px;white-space:nowrap;overflow:hidden;transition:all .1s}
@@ -384,7 +392,10 @@ tr:hover td{background:#1A366010}
     <div class="logo-txt"><div class="t1">SP360 ERP</div><div class="t2">Smart Projects 360 · Kuwait</div></div>
     <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v3.1</span>
     <span id="mfa-btn" onclick="openMFASetupModal()" style="display:none;font-size:9px;color:#10B981;background:#10B98118;border:1px solid #10B98133;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">🔐 MFA</span>
-    <span id="notif-bell" onclick="navTo('workflow',document.getElementById('nav-workflow'))" style="display:none;font-size:9px;color:#F97316;background:#F9731618;border:1px solid #F9731633;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">🔔 <span id="notif-count">0</span> Pending</span>
+    <button id="notif-bell" onclick="openNotifDrawer()" style="position:relative;background:none;border:1px solid transparent;border-radius:8px;padding:5px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;color:var(--muted);font-size:13px;transition:all .15s" title="Notifications">
+      🔔
+      <span id="notif-count-badge" style="display:none;position:absolute;top:2px;right:2px;background:#EF4444;color:#fff;border-radius:8px;min-width:16px;height:16px;font-size:9px;font-weight:800;line-height:16px;text-align:center;padding:0 3px">0</span>
+    </button>
     <div style="display:flex;align-items:center;gap:4px;flex-shrink:0" title="Realtime connection status">
       <div id="realtime-dot" style="width:7px;height:7px;border-radius:50%;background:#94A3B8;transition:background .3s"></div>
       <span style="font-size:9px;color:var(--faint)">live</span>
@@ -454,6 +465,32 @@ tr:hover td{background:#1A366010}
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- ── NOTIFICATIONS DRAWER ─────────────────────────────── -->
+<div id="notif-overlay" onclick="if(event.target===this)closeNotifDrawer()" style="display:none;position:fixed;inset:0;background:#00000055;z-index:1100;backdrop-filter:blur(2px)"></div>
+<div id="notif-drawer" style="display:none;position:fixed;top:0;right:0;width:360px;max-width:95vw;height:100vh;background:var(--card);border-left:1px solid var(--bdr);z-index:1101;flex-direction:column;box-shadow:-8px 0 32px #0008;transition:transform .25s">
+  <div style="padding:16px 18px 12px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px">
+    <span style="font-size:18px">🔔</span>
+    <div style="flex:1">
+      <div style="font-size:14px;font-weight:800;color:var(--text)">Notifications</div>
+      <div id="notif-drawer-sub" style="font-size:10px;color:var(--muted)">Loading…</div>
+    </div>
+    <button onclick="markAllNotifsRead()" style="background:#C9A84C18;border:1px solid #C9A84C44;color:var(--gold);border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer">✓ All Read</button>
+    <button onclick="closeNotifDrawer()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1">✕</button>
+  </div>
+  <!-- Filter tabs -->
+  <div style="display:flex;gap:0;border-bottom:1px solid var(--bdr);padding:0 14px">
+    <button id="nf-tab-all"      onclick="setNotifTab('all')"      style="background:none;border:none;border-bottom:2px solid var(--gold);color:var(--gold);padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer">All</button>
+    <button id="nf-tab-workflow" onclick="setNotifTab('workflow')" style="background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);padding:8px 12px;font-size:11px;font-weight:600;cursor:pointer">⚡ Workflow</button>
+    <button id="nf-tab-finance"  onclick="setNotifTab('finance')"  style="background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);padding:8px 12px;font-size:11px;font-weight:600;cursor:pointer">💰 Finance</button>
+    <button id="nf-tab-projects" onclick="setNotifTab('projects')" style="background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);padding:8px 12px;font-size:11px;font-weight:600;cursor:pointer">🏗 Projects</button>
+  </div>
+  <div id="notif-list" style="flex:1;overflow-y:auto;padding:10px 0"></div>
+  <div style="padding:10px 14px;border-top:1px solid var(--bdr);display:flex;gap:8px">
+    <button onclick="clearReadNotifs()" style="flex:1;background:var(--n4);border:1px solid var(--bdr);color:var(--muted);border-radius:7px;padding:7px;font-size:11px;font-weight:600;cursor:pointer">🗑 Clear Read</button>
+    <button onclick="navTo('workflow',document.getElementById('nav-workflow'));closeNotifDrawer()" style="flex:1;background:#C9A84C18;border:1px solid #C9A84C44;color:var(--gold);border-radius:7px;padding:7px;font-size:11px;font-weight:700;cursor:pointer">⚡ View Workflow</button>
+  </div>
+</div>
 
 <script>
 
@@ -852,6 +889,8 @@ function enterApp(){
     window._cachedItems=_i||[];
   });
   navTo('dashboard',document.querySelector('.nav-btn.active'));
+  // P2-1: Init Notifications Center
+  setTimeout(()=>{ initNotifRealtime(); _silentRefreshNotifs(); }, 1200);
   loadWfBadge();
   initRealtime();
   initSessionGuard();
@@ -887,7 +926,7 @@ const SESSION_IDLE_MS = SESSION_CONFIG.IDLE_MS;
 const SESSION_ABS_MS  = SESSION_CONFIG.ABSOLUTE_MS;
 let _idleTimer=null,_absTimer=null;
 function resetIdleTimer(){clearTimeout(_idleTimer);_idleTimer=setTimeout(()=>{showToast('Session expired','error');setTimeout(doLogout,2000);},SESSION_IDLE_MS);}
-function initSessionGuard(){['mousemove','keydown','click','touchstart'].forEach(e=>document.addEventListener(e,resetIdleTimer,{passive:true}));resetIdleTimer();clearTimeout(_absTimer);_absTimer=setTimeout(()=>{showToast('Session exceeded 8 hours','error');setTimeout(doLogout,2000);},SESSION_ABS_MS);}
+function initSessionGuard(){['mousemove','keydown','click','touchstart'].forEach(e=>document.addEventListener(e,resetIdleTimer,{passive:true}));resetIdleTimer();clearTimeout(_absTimer);_absTimer=setTimeout(()=>{showToast('Session exceeded 8 hours','error');setTimeout(doLogout,2000);},SESSION_ABS_MS);document.addEventListener('keydown',e=>{if(e.key==='Escape'&&_notifDrawerOpen)closeNotifDrawer();},{passive:true});}
 function clearSessionGuard(){clearTimeout(_idleTimer);clearTimeout(_absTimer);}
 
 // ── REALTIME ─────────────────────────────────────────────────
@@ -6789,6 +6828,292 @@ window.addEventListener('appinstalled',()=>{
   if(btn) btn.style.display='none';
   showToast('SP360 ERP installed ✓');
 });
+
+// ══════════════════════════════════════════════════════════════
+//  P2-1 · NOTIFICATIONS CENTER
+//  Types: workflow_pending | invoice_overdue | co_approval |
+//         project_rag | budget_alert | general
+// ══════════════════════════════════════════════════════════════
+
+let _notifData       = [];   // full list (in-memory)
+let _notifReadSet    = new Set(JSON.parse(localStorage.getItem('sp360_notif_read')||'[]'));
+let _notifTab        = 'all';
+let _notifDrawerOpen = false;
+let _notifChannel    = null;
+
+// ── Persist read state ────────────────────────────────────────
+function _saveNotifRead(){
+  localStorage.setItem('sp360_notif_read', JSON.stringify([..._notifReadSet]));
+}
+
+// ── Fetch & build notifications from live data ────────────────
+async function fetchNotifications(){
+  const notifs = [];
+  const now    = Date.now();
+
+  try{
+    // 1. Workflow — pending / overdue items
+    const {data:wf} = await sb.from('workflow_items')
+      .select('id,title,entity_type,status,created_at,assigned_to')
+      .in('status',['pending','overdue'])
+      .order('created_at',{ascending:false})
+      .limit(30);
+
+    (wf||[]).forEach(w=>{
+      const age = Math.floor((now - new Date(w.created_at))/86400000);
+      const isOverdue = w.status==='overdue' || age>3;
+      notifs.push({
+        id:        'wf_'+w.id,
+        type:      'workflow',
+        icon:      isOverdue ? '🔴' : '⚡',
+        title:     isOverdue ? 'Overdue Approval' : 'Pending Approval',
+        body:      w.title || w.entity_type,
+        sub:       age===0 ? 'Today' : `${age}d ago`,
+        severity:  isOverdue ? 'critical' : 'warning',
+        action:    ()=>{ navTo('workflow',document.getElementById('nav-workflow')); closeNotifDrawer(); },
+        ts:        new Date(w.created_at).getTime()
+      });
+    });
+
+    // 2. Finance — overdue invoices
+    const {data:inv} = await sb.from('invoices')
+      .select('id,invoice_number,vendor_name,amount,due_date,status')
+      .in('status',['pending','overdue'])
+      .order('due_date',{ascending:true})
+      .limit(20);
+
+    (inv||[]).forEach(i=>{
+      const due  = new Date(i.due_date);
+      const days = Math.floor((now - due)/86400000);
+      if(days > 0 || i.status==='overdue'){
+        notifs.push({
+          id:        'inv_'+i.id,
+          type:      'finance',
+          icon:      '💰',
+          title:     'Invoice Overdue',
+          body:      `${i.invoice_number||'Invoice'} — ${i.vendor_name||'Vendor'}`,
+          sub:       `${days}d overdue · KWD ${Number(i.amount||0).toLocaleString()}`,
+          severity:  days>7 ? 'critical' : 'warning',
+          action:    ()=>{ navTo('finance',document.getElementById('nav-finance')); closeNotifDrawer(); },
+          ts:        due.getTime()
+        });
+      }
+    });
+
+    // 3. Projects — RAG Red alerts
+    const {data:proj} = await sb.from('projects')
+      .select('id,name,rag_status,cpi,spi')
+      .eq('status','active')
+      .eq('rag_status','red')
+      .limit(15);
+
+    (proj||[]).forEach(p=>{
+      const cpi = Number(p.cpi||1).toFixed(2);
+      const spi = Number(p.spi||1).toFixed(2);
+      notifs.push({
+        id:        'rag_'+p.id,
+        type:      'projects',
+        icon:      '🔴',
+        title:     'Project RAG: Red',
+        body:      p.name,
+        sub:       `CPI ${cpi} · SPI ${spi}`,
+        severity:  'critical',
+        action:    ()=>{ navTo('projects',document.getElementById('nav-projects')); closeNotifDrawer(); },
+        ts:        now - 1000
+      });
+    });
+
+    // 4. Change Orders pending approval
+    const {data:cos} = await sb.from('change_orders')
+      .select('id,co_number,project_id,status,amount,created_at')
+      .eq('workflow_status','submitted')
+      .limit(15);
+
+    (cos||[]).forEach(c=>{
+      notifs.push({
+        id:        'co_'+c.id,
+        type:      'workflow',
+        icon:      '📋',
+        title:     'CO Awaiting Approval',
+        body:      `${c.co_number||'Change Order'} · KWD ${Number(c.amount||0).toLocaleString()}`,
+        sub:       'Submitted for approval',
+        severity:  'info',
+        action:    ()=>{ navTo('workflow',document.getElementById('nav-workflow')); closeNotifDrawer(); },
+        ts:        new Date(c.created_at||now).getTime()
+      });
+    });
+
+  }catch(e){ console.warn('fetchNotifications:',e); }
+
+  // Sort: critical first, then by timestamp desc
+  notifs.sort((a,b)=>{
+    const sp = {critical:0,warning:1,info:2};
+    const sd = (sp[a.severity]||2)-(sp[b.severity]||2);
+    return sd!==0 ? sd : b.ts-a.ts;
+  });
+
+  _notifData = notifs;
+  return notifs;
+}
+
+// ── Render drawer list ────────────────────────────────────────
+function renderNotifList(){
+  const list = document.getElementById('notif-list');
+  if(!list) return;
+
+  const filtered = _notifTab==='all'
+    ? _notifData
+    : _notifData.filter(n=>n.type===_notifTab);
+
+  if(filtered.length===0){
+    list.innerHTML=`<div style="padding:40px 20px;text-align:center;color:var(--muted);font-size:12px">
+      <div style="font-size:32px;margin-bottom:8px">✅</div>
+      No notifications${_notifTab!=='all'?' in this category':''}
+    </div>`;
+    return;
+  }
+
+  const sevColor = {critical:'#EF4444',warning:'#F97316',info:'#06B6D4'};
+
+  list.innerHTML = filtered.map(n=>{
+    const read    = _notifReadSet.has(n.id);
+    const col     = sevColor[n.severity]||'#94A3B8';
+    return `<div onclick="_notifClick('${n.id}')"
+      style="display:flex;align-items:flex-start;gap:10px;padding:11px 16px;cursor:pointer;
+             border-bottom:1px solid var(--bdr);transition:background .1s;
+             background:${read?'transparent':'var(--card2)'};
+             border-left:3px solid ${read?'transparent':col}">
+      <span style="font-size:18px;line-height:1.3;flex-shrink:0">${n.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+          <span style="font-size:11px;font-weight:700;color:${read?'var(--muted)':col}">${n.title}</span>
+          ${!read?`<span style="width:6px;height:6px;border-radius:50%;background:${col};flex-shrink:0"></span>`:''}
+        </div>
+        <div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n.body}</div>
+        <div style="font-size:10px;color:var(--faint);margin-top:2px">${n.sub}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function _notifClick(id){
+  _notifReadSet.add(id);
+  _saveNotifRead();
+  const n = _notifData.find(x=>x.id===id);
+  if(n?.action) n.action();
+  renderNotifList();
+  _updateNotifBell();
+}
+
+// ── Tab switching ─────────────────────────────────────────────
+function setNotifTab(tab){
+  _notifTab = tab;
+  ['all','workflow','finance','projects'].forEach(t=>{
+    const btn = document.getElementById('nf-tab-'+t);
+    if(!btn) return;
+    const active = t===tab;
+    btn.style.borderBottomColor = active ? 'var(--gold)' : 'transparent';
+    btn.style.color = active ? 'var(--gold)' : 'var(--muted)';
+    btn.style.fontWeight = active ? '700' : '600';
+  });
+  renderNotifList();
+}
+
+// ── Open / Close ──────────────────────────────────────────────
+async function openNotifDrawer(){
+  _notifDrawerOpen = true;
+  const overlay = document.getElementById('notif-overlay');
+  const drawer  = document.getElementById('notif-drawer');
+  overlay.style.display = 'block';
+  drawer.style.display  = 'flex';
+  drawer.style.transform = 'translateX(100%)';
+  requestAnimationFrame(()=>{ drawer.style.transform='translateX(0)'; });
+
+  const sub = document.getElementById('notif-drawer-sub');
+  if(sub) sub.textContent = 'Refreshing…';
+
+  await fetchNotifications();
+  renderNotifList();
+
+  const unread = _notifData.filter(n=>!_notifReadSet.has(n.id)).length;
+  if(sub) sub.textContent = `${_notifData.length} alerts · ${unread} unread`;
+  _updateNotifBell();
+}
+
+function closeNotifDrawer(){
+  _notifDrawerOpen = false;
+  const drawer  = document.getElementById('notif-drawer');
+  const overlay = document.getElementById('notif-overlay');
+  if(drawer){ drawer.style.transform='translateX(100%)'; setTimeout(()=>{ drawer.style.display='none'; },250); }
+  if(overlay) overlay.style.display='none';
+}
+
+// ── Mark all read / Clear read ────────────────────────────────
+function markAllNotifsRead(){
+  _notifData.forEach(n=>_notifReadSet.add(n.id));
+  _saveNotifRead();
+  renderNotifList();
+  _updateNotifBell();
+  const sub = document.getElementById('notif-drawer-sub');
+  if(sub) sub.textContent = `${_notifData.length} alerts · 0 unread`;
+  showToast('All notifications marked as read');
+}
+
+function clearReadNotifs(){
+  _notifData = _notifData.filter(n=>!_notifReadSet.has(n.id));
+  renderNotifList();
+  showToast('Read notifications cleared');
+}
+
+// ── Update header bell badge ──────────────────────────────────
+function _updateNotifBell(){
+  const unread = _notifData.filter(n=>!_notifReadSet.has(n.id)).length;
+  const badge  = document.getElementById('notif-count-badge');
+  const bell   = document.getElementById('notif-bell');
+  if(!badge||!bell) return;
+  if(unread>0){
+    badge.style.display = 'block';
+    badge.textContent   = unread>99?'99+':unread;
+    bell.style.color    = '#F97316';
+    bell.style.borderColor = '#F9731633';
+    bell.style.background  = '#F9731610';
+  } else {
+    badge.style.display = 'none';
+    bell.style.color    = 'var(--muted)';
+    bell.style.borderColor = 'transparent';
+    bell.style.background  = 'none';
+  }
+}
+
+// ── Realtime push integration ─────────────────────────────────
+function initNotifRealtime(){
+  if(_notifChannel) try{ sb.removeChannel(_notifChannel); }catch(e){}
+
+  _notifChannel = sb.channel('notif-center')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'workflow_items'},
+      async ()=>{ await _silentRefreshNotifs(); })
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'workflow_items'},
+      async ()=>{ await _silentRefreshNotifs(); })
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'invoices'},
+      async ()=>{ await _silentRefreshNotifs(); })
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'change_orders'},
+      async ()=>{ await _silentRefreshNotifs(); })
+    .subscribe();
+}
+
+async function _silentRefreshNotifs(){
+  await fetchNotifications();
+  _updateNotifBell();
+  if(_notifDrawerOpen) renderNotifList();
+}
+
+// ── loadWfBadge upgrade — also updates notif bell ─────────────
+const _origLoadWfBadge = loadWfBadge;
+loadWfBadge = async function(){
+  await _origLoadWfBadge();
+  // Silently refresh notif counts in background
+  try{ await _silentRefreshNotifs(); }catch(e){}
+};
 
 async function installPWA(){
   if(!_pwaPrompt){
