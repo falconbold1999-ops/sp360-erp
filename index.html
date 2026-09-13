@@ -518,17 +518,68 @@ let curHRTab = 'employees';
 let curQHSETab = 'ncrs';
 let curDocTab = 'documents';
 
-// ── GLOBAL ERROR HANDLING ─────────────────────────────────────
-// Catch unhandled promise rejections (Supabase, network errors)
-async function logError(module,action,error,context={}){
+// ── CENTRAL ERROR LOGGING ─────────────────────────────────────
+// Generates unique error ID for support tracking
+function generateErrorId(){
+  return 'ERR-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).substr(2,4).toUpperCase();
+}
+
+// Determine severity from error content
+function getErrorSeverity(msg='',module=''){
+  if(!msg) return 'error';
+  const m=msg.toLowerCase();
+  if(m.includes('jwt expired')||m.includes('session')||m.includes('unauthorized'))return 'warning';
+  if(m.includes('payment')||m.includes('invoice')||m.includes('payroll')||m.includes('finance'))return 'critical';
+  if(m.includes('network')||m.includes('failed to fetch'))return 'warning';
+  if(m.includes('insufficient')||m.includes('not found'))return 'warning';
+  return 'error';
+}
+
+// Central error logger — writes to error_logs table
+async function logError(module, action, error, context={}){
   try{
-    await sb.from('audit_log').insert({
-      entity_type:'system',entity_id:null,action:'ERROR',
-      performed_by:currentProfile?.id||null,
-      new_values:JSON.stringify({module,action,error:error?.message||String(error),context}),
-      notes:'['+module+'] '+action+': '+(error?.message||error)
+    const errId  = generateErrorId();
+    const errMsg = error?.message || String(error||'Unknown error');
+    const severity = getErrorSeverity(errMsg, module);
+
+    // Log to console with error ID (for support)
+    console.error(`[${errId}] ${module}/${action}:`, errMsg, context);
+
+    // Skip logging auth errors (not meaningful to store)
+    if(errMsg.includes('JWT expired')||errMsg.includes('Invalid JWT')) return errId;
+
+    // Write to error_logs (non-blocking — never throws)
+    sb.from('error_logs').insert({
+      error_id:    errId,
+      user_id:     currentProfile?.id || null,
+      user_role:   currentProfile?.role || null,
+      module:      module,
+      action:      action,
+      error_msg:   errMsg.substring(0, 1000),
+      error_code:  error?.code || error?.status || null,
+      stack:       error?.stack?.substring(0,500) || null,
+      url:         window.location.pathname,
+      user_agent:  navigator.userAgent.substring(0,200),
+      severity:    severity,
+      created_at:  new Date().toISOString()
+    }).then(({error:dbErr})=>{
+      if(dbErr) console.warn('Error log write failed (non-critical):',dbErr.message);
     }).catch(()=>{});
-  }catch(e){}
+
+    return errId;
+  }catch(e){
+    console.warn('logError itself failed:',e);
+    return null;
+  }
+}
+
+// Show user-friendly error toast with error ID
+async function showErrorWithId(module, action, error, userMessage=''){
+  const errId = await logError(module, action, error);
+  const msg = userMessage || error?.message || 'An error occurred';
+  const display = errId ? `${msg} [${errId}]` : msg;
+  showToast(display, 'error');
+  return errId;
 }
 
 window.addEventListener('unhandledrejection', e=>{
@@ -542,8 +593,11 @@ window.addEventListener('unhandledrejection', e=>{
   // Network error
   if(msg.includes('Failed to fetch')||msg.includes('NetworkError')){
     showToast('Network error — check your connection','error');
+    logError('Network','unhandled_rejection',e.reason);
     e.preventDefault(); return;
   }
+  // Log everything else
+  logError('Unknown','unhandled_rejection',e.reason);
   console.warn('Unhandled rejection:', msg);
 });
 
@@ -5208,11 +5262,13 @@ async function loadAudit(filterAction=''){
   // Unique actions for filter
   const actions=[...new Set(L.map(a=>a.action))].sort();
 
+  const isPMO=['PMO Manager','Admin'].includes(currentProfile?.role);
   el.innerHTML=`
   <div class="page-head">
     <div class="page-head-left"><span style="font-size:22px">📋</span>
       <div><h1>Audit Trail</h1><div class="sub">Last 200 system actions — Who · What · When</div></div>
     </div>
+    ${isPMO?`<div class="page-head-right"><button class="btn btn-ghost btn-sm" onclick="loadErrorLogs()" style="font-size:11px">🔴 Error Logs</button></div>`:''}
   </div>
   <div class="card">
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
@@ -5247,6 +5303,60 @@ async function loadAudit(filterAction=''){
           ${a.notes?`<div style="margin-bottom:2px;color:var(--text);font-size:11px">${esc(a.notes)}</div>`:''}
           ${a.new_values?`<div style="font-size:10px">${fmtVals(a.new_values)}</div>`:''}
         </td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`}
+  </div>`;
+}
+
+// ── ERROR LOG VIEWER (PMO/Admin only) ────────────────────────
+async function loadErrorLogs(severity=''){
+  const el=document.getElementById('page-audit');
+  el.innerHTML='<div class="loading">Loading error logs…</div>';
+  let q=sb.from('error_logs').select('*').order('created_at',{ascending:false}).limit(200);
+  if(severity) q=q.eq('severity',severity);
+  const {data:logs,error}=await q;
+  if(error){showToast('Error loading logs: '+error.message,'error');return;}
+  const L=logs||[];
+  const sevColor={'info':'#3B82F6','warning':'#F59E0B','error':'#EF4444','critical':'#7C3AED'};
+  el.innerHTML=`
+  <div class="page-head">
+    <div class="page-head-left"><span style="font-size:22px">🔴</span>
+      <div><h1>Error Logs</h1><div class="sub">Central error tracking — ${L.length} records</div></div>
+    </div>
+    <div class="page-head-right">
+      <button class="btn btn-ghost btn-sm" onclick="loadAudit()" style="font-size:11px">← Audit Trail</button>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+      <button class="btn btn-sm ${!severity?'btn-primary':'btn-ghost'}" onclick="loadErrorLogs('')" style="font-size:10px;padding:3px 8px">All (${L.length})</button>
+      ${['critical','error','warning','info'].map(s=>{
+        const cnt=L.filter(x=>x.severity===s).length;
+        return cnt?`<button class="btn btn-sm ${severity===s?'btn-primary':'btn-ghost'}" onclick="loadErrorLogs('${s}')" style="font-size:10px;padding:3px 8px;color:${sevColor[s]}">${s.toUpperCase()} (${cnt})</button>`:'';
+      }).join('')}
+    </div>
+    ${L.length===0?'<div class="empty">No error logs — system running clean ✅</div>':`
+    <table><thead><tr>
+      <th style="width:80px">ID</th>
+      <th style="width:70px">Severity</th>
+      <th style="width:120px">Time</th>
+      <th style="width:90px">Module</th>
+      <th style="width:90px">Action</th>
+      <th style="width:100px">User/Role</th>
+      <th>Error</th>
+    </tr></thead><tbody>
+    ${L.map(e=>{
+      const col=sevColor[e.severity]||'#94A3B8';
+      const ts=e.created_at?new Date(e.created_at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'—';
+      return`<tr>
+        <td style="font-size:9px;color:var(--gold);font-family:monospace">${esc(e.error_id||'—')}</td>
+        <td><span style="background:${col}22;color:${col};border:1px solid ${col}44;border-radius:4px;padding:2px 5px;font-size:9px;font-weight:700">${(e.severity||'error').toUpperCase()}</span></td>
+        <td style="font-size:10px;color:var(--faint);white-space:nowrap">${ts}</td>
+        <td style="font-size:10px;color:var(--muted)">${esc(e.module||'—')}</td>
+        <td style="font-size:10px;color:var(--muted)">${esc(e.action||'—')}</td>
+        <td style="font-size:10px;color:var(--muted)">${esc(e.user_role||'System')}</td>
+        <td style="font-size:10px;color:var(--text);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(e.error_msg||'')}">${esc(e.error_msg||'—')}</td>
       </tr>`;
     }).join('')}
     </tbody></table>`}
