@@ -3852,7 +3852,7 @@ async function saveStockMovement(e){
     });
     if(error){showToast('Error: '+error.message,'error');return;}
     if(!stockResult?.success){showToast('Error: '+(stockResult?.error||'Unknown'),'error');return;}
-    showToast(type+' '+no+' recorded');closeModal();loadInventory('ledger');
+    showToast((stockResult.transaction_no||type)+' recorded ✓');closeModal();loadInventory('ledger');
   }catch(e2){showToast('Error: '+e2.message,'error');}
   finally{if(btn){btn.disabled=false;btn.textContent='Record';}}
 }
