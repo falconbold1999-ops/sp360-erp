@@ -68,6 +68,10 @@ header{background:var(--n2);border-bottom:1px solid var(--bdr);height:56px;displ
 #layout{display:flex;flex:1;overflow:hidden;min-height:0}
 aside{width:192px;flex-shrink:0;background:var(--n2);border-right:1px solid var(--bdr);display:flex;flex-direction:column;transition:width .2s;overflow:hidden}
 aside.collapsed{width:0}
+/* ── P2-3 BI Panel ── */
+#bi-panel{transition:transform .25s cubic-bezier(.4,0,.2,1)}
+@media(max-width:520px){#bi-panel{width:100vw!important}}
+
 /* ── P2-1 Notifications ── */
 #notif-bell{transition:all .2s}
 #notif-bell:hover{background:#F9731618!important;border-color:#F9731644!important;color:#F97316!important}
@@ -475,6 +479,34 @@ tr:hover td{background:#1A366010}
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- ── BI EXPORT PANEL ──────────────────────────────────── -->
+<div id="bi-overlay" onclick="closeBIPanel()" style="display:none;position:fixed;inset:0;background:#00000055;z-index:1100;backdrop-filter:blur(2px)"></div>
+<div id="bi-panel" style="display:none;position:fixed;top:0;left:0;width:480px;max-width:98vw;height:100vh;background:var(--card);border-right:1px solid var(--bdr);z-index:1101;flex-direction:column;box-shadow:8px 0 32px #0008;transition:transform .25s">
+  <div style="padding:16px 18px 12px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px">
+    <span style="font-size:20px">📡</span>
+    <div style="flex:1">
+      <div style="font-size:14px;font-weight:800;color:var(--text)">Power BI Integration</div>
+      <div style="font-size:10px;color:var(--muted)">Export live data snapshots for Power BI / Excel</div>
+    </div>
+    <button onclick="closeBIPanel()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
+  </div>
+
+  <!-- How-to banner -->
+  <div style="margin:12px 16px 0;padding:10px 12px;background:#3B82F611;border:1px solid #3B82F633;border-radius:8px;font-size:10px;color:#3B82F6;line-height:1.6">
+    <b>How to connect Power BI:</b><br>
+    1. Click <b>Generate Snapshot</b> on any dataset below<br>
+    2. Download the JSON file<br>
+    3. In Power BI → <b>Get Data → JSON → Browse</b> to the file<br>
+    4. Or use <b>Web connector</b> with a GitHub-hosted snapshot URL
+  </div>
+
+  <div id="bi-list" style="flex:1;overflow-y:auto;padding:12px 16px"></div>
+
+  <div style="padding:12px 16px;border-top:1px solid var(--bdr)">
+    <button onclick="generateAllBI()" style="width:100%;background:#3B82F6;border:none;color:#fff;border-radius:8px;padding:10px;font-size:12px;font-weight:700;cursor:pointer">⚡ Generate All Snapshots</button>
+  </div>
+</div>
 
 <!-- ── NOTIFICATIONS DRAWER ─────────────────────────────── -->
 <div id="notif-overlay" onclick="if(event.target===this)closeNotifDrawer()" style="display:none;position:fixed;inset:0;background:#00000055;z-index:1100;backdrop-filter:blur(2px)"></div>
@@ -5123,6 +5155,7 @@ async function loadCEO(){
     <div style="display:flex;gap:8px">
       <button class="btn btn-ghost btn-sm" onclick="exportCEOPDF()">📄 Export PDF</button>
       <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 Print</button>
+      <button class="btn btn-ghost btn-sm" onclick="openBIPanel()" style="background:#3B82F611;border-color:#3B82F644;color:#3B82F6">📡 BI Export</button>
     </div>
   </div>
 
@@ -6798,7 +6831,7 @@ function openAboutModal(){
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
     ${[
-      ['Version','v3.2 (P2: Notifications + CEO Advanced)'],
+      ['Version','v3.2 (P2: Notifications + CEO + BI Integration)'],
       ['Database','Supabase (PostgreSQL)'],
       ['Migrations','020 migrations applied'],
       ['Security','RLS + Server-side RPCs'],
@@ -7326,6 +7359,402 @@ loadWfBadge = async function(){
   // Silently refresh notif counts in background
   try{ await _silentRefreshNotifs(); }catch(e){}
 };
+
+// ══════════════════════════════════════════════════════════════
+//  P2-3 · POWER BI INTEGRATION ENGINE
+//  Generates JSON snapshots for Power BI / Excel / Tableau
+// ══════════════════════════════════════════════════════════════
+
+const BI_DATASETS = [
+  {
+    id:    'portfolio_kpis',
+    icon:  '📊',
+    name:  'Portfolio KPIs',
+    desc:  'CPI, SPI, EAC, VAC, TCPI, RAG — Portfolio level',
+    color: '#C9A84C',
+    fetch: biPortfolioKPIs
+  },
+  {
+    id:    'project_evm',
+    icon:  '🏗',
+    name:  'Project EVM Detail',
+    desc:  'Per-project EVM table: BAC, EV, AC, PV, CPI, SPI, EAC, ETC, VAC',
+    color: '#3B82F6',
+    fetch: biProjectEVM
+  },
+  {
+    id:    'financial_summary',
+    icon:  '💰',
+    name:  'Financial Summary',
+    desc:  'Revenue, Cost, GP, AR/AP, Cash Flow (last 6 months)',
+    color: '#10B981',
+    fetch: biFinancialSummary
+  },
+  {
+    id:    'workflow_status',
+    icon:  '⚡',
+    name:  'Workflow Status',
+    desc:  'Pending / Overdue approvals breakdown by type and age',
+    color: '#F97316',
+    fetch: biWorkflowStatus
+  },
+  {
+    id:    'qhse_hr',
+    icon:  '🛡',
+    name:  'QHSE & HR',
+    desc:  'NCR counts by severity/status, headcount by department',
+    color: '#8B5CF6',
+    fetch: biQHSEHR
+  }
+];
+
+// ── Open / Close ──────────────────────────────────────────────
+function openBIPanel(){
+  const overlay = document.getElementById('bi-overlay');
+  const panel   = document.getElementById('bi-panel');
+  overlay.style.display = 'block';
+  panel.style.display   = 'flex';
+  panel.style.transform = 'translateX(-100%)';
+  requestAnimationFrame(()=>{ panel.style.transform = 'translateX(0)'; });
+  renderBIList();
+}
+
+function closeBIPanel(){
+  const panel   = document.getElementById('bi-panel');
+  const overlay = document.getElementById('bi-overlay');
+  if(panel){ panel.style.transform = 'translateX(-100%)'; setTimeout(()=>{ panel.style.display='none'; },250); }
+  if(overlay) overlay.style.display = 'none';
+}
+
+// ── Render dataset cards ──────────────────────────────────────
+function renderBIList(){
+  const list = document.getElementById('bi-list');
+  if(!list) return;
+  list.innerHTML = BI_DATASETS.map(ds=>`
+    <div style="border:1px solid var(--bdr);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--card2)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:18px">${ds.icon}</span>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;color:${ds.color}">${ds.name}</div>
+          <div style="font-size:10px;color:var(--muted)">${ds.desc}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button onclick="generateBI('${ds.id}')"
+          style="flex:1;background:${ds.color}22;border:1px solid ${ds.color}44;color:${ds.color};border-radius:6px;padding:6px 10px;font-size:10px;font-weight:700;cursor:pointer">
+          ⬇ Download JSON
+        </button>
+        <button onclick="previewBI('${ds.id}')"
+          style="background:var(--n4);border:1px solid var(--bdr);color:var(--muted);border-radius:6px;padding:6px 10px;font-size:10px;font-weight:600;cursor:pointer">
+          👁 Preview
+        </button>
+      </div>
+      <div id="bi-status-${ds.id}" style="font-size:9px;color:var(--faint);margin-top:4px"></div>
+    </div>`).join('');
+}
+
+// ── Download helper ───────────────────────────────────────────
+function biDownload(filename, data){
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function biStatus(id, msg, ok=true){
+  const el = document.getElementById('bi-status-'+id);
+  if(el) el.innerHTML = `<span style="color:${ok?'#10B981':'#EF4444'}">${msg}</span>`;
+}
+
+// ── Generate single dataset ───────────────────────────────────
+async function generateBI(id){
+  const ds = BI_DATASETS.find(d=>d.id===id);
+  if(!ds) return;
+  biStatus(id, '⏳ Fetching…');
+  try{
+    const data = await ds.fetch();
+    const ts   = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+    biDownload(`SP360_${id}_${ts}.json`, data);
+    biStatus(id, `✓ Downloaded — ${Array.isArray(data.data||data)?((data.data||data).length)+' rows':'snapshot'} · ${ts.slice(0,10)}`);
+  }catch(e){
+    biStatus(id, `✗ Error: ${e.message}`, false);
+  }
+}
+
+async function previewBI(id){
+  const ds = BI_DATASETS.find(d=>d.id===id);
+  if(!ds) return;
+  biStatus(id, '⏳ Loading preview…');
+  try{
+    const data = await ds.fetch();
+    const rows = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : [data]);
+    const cols = rows.length ? Object.keys(rows[0]) : [];
+    const preview = rows.slice(0,3);
+    openModal(`📡 ${ds.name} — Preview`,`
+      <div style="font-size:10px;color:var(--muted);margin-bottom:10px">${rows.length} rows · ${cols.length} columns · Generated: ${new Date().toLocaleString('en-GB')}</div>
+      <div style="overflow-x:auto">
+        <table style="font-size:10px;border-collapse:collapse;width:100%">
+          <thead><tr>${cols.map(c=>`<th style="background:var(--n3);padding:5px 8px;text-align:left;border:1px solid var(--bdr);white-space:nowrap">${c}</th>`).join('')}</tr></thead>
+          <tbody>${preview.map(r=>`<tr>${cols.map(c=>`<td style="padding:4px 8px;border:1px solid var(--bdr);white-space:nowrap;color:${typeof r[c]==='number'?'#C9A84C':'var(--text)'}">${r[c]!=null?String(r[c]).substring(0,40):'—'}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table>
+      </div>
+      ${rows.length>3?`<div style="font-size:10px;color:var(--faint);margin-top:6px">…and ${rows.length-3} more rows in full export</div>`:''}
+      <div style="margin-top:12px">
+        <button class="btn btn-primary btn-sm" onclick="generateBI('${id}');closeModal()">⬇ Download Full JSON</button>
+      </div>`);
+    biStatus(id, `✓ Preview ready — ${rows.length} rows`);
+  }catch(e){
+    biStatus(id, `✗ Error: ${e.message}`, false);
+  }
+}
+
+async function generateAllBI(){
+  showToast('Generating all snapshots…');
+  for(const ds of BI_DATASETS){
+    biStatus(ds.id, '⏳ Generating…');
+    try{
+      const data = await ds.fetch();
+      const ts   = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+      biDownload(`SP360_${ds.id}_${ts}.json`, data);
+      biStatus(ds.id, `✓ Downloaded`);
+      await new Promise(r=>setTimeout(r,400));
+    }catch(e){ biStatus(ds.id, `✗ ${e.message}`, false); }
+  }
+  showToast('All snapshots downloaded ✓');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  DATA FETCHERS — each returns structured JSON for Power BI
+// ══════════════════════════════════════════════════════════════
+
+async function biPortfolioKPIs(){
+  const [projR, snapR] = await Promise.all([
+    sb.from('projects').select('id,project_no,name,status,bac,ev,ac,pv,cpi,spi,pct,rag_status,department,client'),
+    sb.from('project_evm_snapshots').select('project_id,snapshot_date,pv,ev,ac').order('snapshot_date',{ascending:false}).limit(1)
+  ]);
+  const projs = (projR.data||[]).filter(p=>['planning','execution','monitoring','closeout'].includes(p.status));
+  const totalBAC = projs.reduce((s,p)=>s+Number(p.bac),0);
+  const totalEV  = projs.reduce((s,p)=>s+Number(p.ev),0);
+  const totalAC  = projs.reduce((s,p)=>s+Number(p.ac),0);
+  const totalPV  = projs.reduce((s,p)=>s+Number(p.pv),0);
+  const portCPI  = totalAC>0 ? totalEV/totalAC : 1;
+  const portSPI  = totalPV>0 ? totalEV/totalPV : null;
+  const totalEAC = projs.reduce((s,p)=>{
+    const cpi=Number(p.cpi)||1;
+    return s+(cpi>0 ? Number(p.ac)+(Number(p.bac)-Number(p.ev))/cpi : Number(p.bac));
+  },0);
+  const totalVAC  = totalBAC - totalEAC;
+  const totalETC  = Math.max(totalEAC - totalAC, 0);
+  const wRem      = totalBAC - totalEV;
+  const bRem      = totalBAC - totalAC;
+  const portTCPI  = wRem>0 && bRem>0 ? wRem/bRem : null;
+  const ragCounts = projs.reduce((m,p)=>{ m[p.rag_status||'N/A']=(m[p.rag_status||'N/A']||0)+1; return m; },{});
+
+  return {
+    generated_at:   new Date().toISOString(),
+    report_date:    new Date().toLocaleDateString('en-GB'),
+    source:         'SP360 ERP v3.2 — Smart Projects 360 Kuwait',
+    data: [{
+      metric: 'Portfolio Summary',
+      active_projects:   projs.length,
+      total_bac_kwd:     Math.round(totalBAC),
+      total_ev_kwd:      Math.round(totalEV),
+      total_ac_kwd:      Math.round(totalAC),
+      total_pv_kwd:      Math.round(totalPV),
+      total_eac_kwd:     Math.round(totalEAC),
+      total_etc_kwd:     Math.round(totalETC),
+      total_vac_kwd:     Math.round(totalVAC),
+      portfolio_cpi:     Number(portCPI.toFixed(3)),
+      portfolio_spi:     portSPI !== null ? Number(portSPI.toFixed(3)) : null,
+      portfolio_tcpi:    portTCPI !== null ? Number(portTCPI.toFixed(3)) : null,
+      cpi_status:        portCPI>=1?'On Track':portCPI>=0.9?'At Risk':'Critical',
+      rag_green:         ragCounts['green']||0,
+      rag_amber:         ragCounts['amber']||0,
+      rag_red:           ragCounts['red']||0,
+      overall_pct:       projs.length>0?Math.round(projs.reduce((s,p)=>s+Number(p.pct||0),0)/projs.length):0
+    }]
+  };
+}
+
+async function biProjectEVM(){
+  const {data:projs} = await sb.from('projects')
+    .select('id,project_no,name,client,status,department,bac,ev,ac,pv,cpi,spi,pct,rag_status,start_date,end_date,contract_value')
+    .order('project_no');
+
+  const data = (projs||[]).map(p=>{
+    const bac=Number(p.bac)||0, ev=Number(p.ev)||0, ac=Number(p.ac)||0, pv=Number(p.pv)||0;
+    const cpi=Number(p.cpi)||0, spi=p.spi!=null?Number(p.spi):null;
+    const eac = cpi>0 ? ac+(bac-ev)/cpi : bac;
+    const etc = Math.max(eac-ac,0);
+    const vac = bac-eac;
+    const cv  = ev-ac;
+    const sv  = ev-pv;
+    const wRem=bac-ev, bRem=bac-ac;
+    const tcpi = wRem>0&&bRem>0 ? wRem/bRem : null;
+    return {
+      project_no:      p.project_no,
+      name:            p.name,
+      client:          p.client,
+      department:      p.department,
+      status:          p.status,
+      pct_complete:    Number(p.pct)||0,
+      rag_status:      p.rag_status||'N/A',
+      contract_value:  Math.round(Number(p.contract_value)||0),
+      bac:             Math.round(bac),
+      ev:              Math.round(ev),
+      ac:              Math.round(ac),
+      pv:              Math.round(pv),
+      cpi:             Number(cpi.toFixed(3)),
+      spi:             spi!==null ? Number(spi.toFixed(3)) : null,
+      eac:             Math.round(eac),
+      etc:             Math.round(etc),
+      vac:             Math.round(vac),
+      cv:              Math.round(cv),
+      sv:              Math.round(sv),
+      tcpi:            tcpi!==null ? Number(tcpi.toFixed(3)) : null,
+      cpi_status:      cpi>=1?'On Track':cpi>=0.9?'At Risk':'Critical',
+      start_date:      p.start_date,
+      end_date:        p.end_date
+    };
+  });
+  return { generated_at:new Date().toISOString(), source:'SP360 ERP v3.2', data };
+}
+
+async function biFinancialSummary(){
+  const {data:invs} = await sb.from('invoices').select('*');
+  const today = new Date();
+  const I = invs||[];
+
+  const rev   = I.filter(i=>i.invoice_type==='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+  const cost  = I.filter(i=>i.invoice_type!=='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+  const gp    = rev-cost;
+  const arOut = I.filter(i=>i.invoice_type==='client'&&!['paid','cancelled'].includes(i.status)).reduce((s,i)=>s+Number(i.net_amount),0);
+  const apOut = I.filter(i=>i.invoice_type!=='client'&&!['paid','cancelled'].includes(i.status)).reduce((s,i)=>s+Number(i.net_amount),0);
+  const overdue = I.filter(i=>!['paid','cancelled'].includes(i.status)&&i.due_date&&new Date(i.due_date)<today).reduce((s,i)=>s+Number(i.net_amount),0);
+
+  // Cash flow last 6 months
+  const cfRows = [];
+  for(let i=-5;i<=0;i++){
+    const d=new Date(today.getFullYear(),today.getMonth()+i,1);
+    const m=d.toISOString().slice(0,7);
+    const inflow  = I.filter(x=>x.invoice_type==='client'&&x.status==='paid'&&x.paid_date?.startsWith(m)).reduce((s,x)=>s+Number(x.net_amount),0);
+    const outflow = I.filter(x=>x.invoice_type!=='client'&&x.status==='paid'&&x.paid_date?.startsWith(m)).reduce((s,x)=>s+Number(x.net_amount),0);
+    cfRows.push({ month:m, inflow:Math.round(inflow), outflow:Math.round(outflow), net:Math.round(inflow-outflow) });
+  }
+
+  return {
+    generated_at: new Date().toISOString(),
+    source: 'SP360 ERP v3.2',
+    summary: {
+      revenue_collected_kwd:  Math.round(rev),
+      cost_paid_kwd:          Math.round(cost),
+      gross_profit_kwd:       Math.round(gp),
+      gp_margin_pct:          rev>0 ? Number(((gp/rev)*100).toFixed(1)) : 0,
+      ar_outstanding_kwd:     Math.round(arOut),
+      ap_outstanding_kwd:     Math.round(apOut),
+      overdue_total_kwd:      Math.round(overdue),
+      total_invoices:         I.length,
+      paid_invoices:          I.filter(i=>i.status==='paid').length,
+      pending_invoices:       I.filter(i=>i.status==='pending').length
+    },
+    cash_flow_6m: cfRows
+  };
+}
+
+async function biWorkflowStatus(){
+  const {data:wfs} = await sb.from('workflow_items').select('id,title,entity_type,status,created_at,due_date,assigned_to');
+  const today = new Date();
+  const W = wfs||[];
+
+  const byType = W.reduce((m,w)=>{ const t=w.entity_type||'other'; m[t]=(m[t]||{count:0,pending:0,overdue:0}); m[t].count++; if(w.status==='pending')m[t].pending++; if(w.status==='overdue')m[t].overdue++; return m; },{});
+
+  const data = Object.entries(byType).map(([type,v])=>({
+    entity_type: type,
+    total:       v.count,
+    pending:     v.pending,
+    overdue:     v.overdue
+  }));
+
+  const aging = W.filter(w=>['pending','overdue'].includes(w.status)).map(w=>{
+    const age = Math.floor((today-new Date(w.created_at))/86400000);
+    return {
+      id:          w.id,
+      title:       w.title,
+      entity_type: w.entity_type,
+      status:      w.status,
+      age_days:    age,
+      due_date:    w.due_date,
+      bucket:      age<=3?'0-3d':age<=7?'4-7d':age<=14?'8-14d':'14d+'
+    };
+  });
+
+  return {
+    generated_at: new Date().toISOString(),
+    source: 'SP360 ERP v3.2',
+    summary: {
+      total_items:    W.length,
+      pending:        W.filter(w=>w.status==='pending').length,
+      overdue:        W.filter(w=>w.status==='overdue').length,
+      approved:       W.filter(w=>w.status==='approved').length,
+      rejected:       W.filter(w=>w.status==='rejected').length
+    },
+    by_type: data,
+    aging_detail: aging
+  };
+}
+
+async function biQHSEHR(){
+  const [{data:ncrs},{data:emps}] = await Promise.all([
+    sb.from('ncrs').select('id,ncr_no,severity,status,department,created_at'),
+    sb.from('employees').select('id,department,status,employment_type')
+  ]);
+  const N=ncrs||[], E=emps||[];
+
+  const ncrBySev = ['critical','major','minor','observation'].map(sev=>({
+    severity: sev,
+    total:    N.filter(n=>n.severity===sev).length,
+    open:     N.filter(n=>n.severity===sev&&n.status==='open').length,
+    closed:   N.filter(n=>n.severity===sev&&n.status==='closed').length
+  }));
+
+  const depts = [...new Set(E.map(e=>e.department).filter(Boolean))];
+  const headcount = depts.map(d=>({
+    department:  d,
+    total:       E.filter(e=>e.department===d).length,
+    active:      E.filter(e=>e.department===d&&e.status==='active').length,
+    permanent:   E.filter(e=>e.department===d&&e.employment_type==='permanent').length,
+    contract:    E.filter(e=>e.department===d&&e.employment_type==='contract').length
+  }));
+
+  return {
+    generated_at: new Date().toISOString(),
+    source: 'SP360 ERP v3.2',
+    qhse_summary: {
+      total_ncrs:    N.length,
+      open_ncrs:     N.filter(n=>n.status==='open').length,
+      closed_ncrs:   N.filter(n=>n.status==='closed').length,
+      critical_open: N.filter(n=>n.severity==='critical'&&n.status==='open').length
+    },
+    ncr_by_severity: ncrBySev,
+    hr_summary: {
+      total_employees:  E.length,
+      active:           E.filter(e=>e.status==='active').length,
+      on_leave:         E.filter(e=>e.status==='on_leave').length,
+      terminated:       E.filter(e=>e.status==='terminated').length
+    },
+    headcount_by_dept: headcount
+  };
+}
+
+// ── ESC key closes BI panel ───────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(document.getElementById('bi-panel')?.style.display==='flex') closeBIPanel();
+  }
+},{passive:true});
 
 async function installPWA(){
   if(!_pwaPrompt){
