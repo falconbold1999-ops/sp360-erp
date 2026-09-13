@@ -605,17 +605,11 @@ window.addEventListener('unhandledrejection', e=>{
 // Handled via unhandledrejection + Supabase auth state
 
 // ── BUTTON PROTECTION ────────────────────────────────────────
-// Prevent double-clicks on btn-primary/btn-danger — EXCLUDES auth buttons
+// Prevent double-clicks on any .btn-primary or .btn-danger
 document.addEventListener('click', e=>{
   const btn = e.target.closest('button');
   if(!btn) return;
-  // Never protect auth-screen buttons (login, MFA verify)
-  if(btn.id==='btn-login'||btn.closest('#auth-screen')) return;
-  if(btn.dataset.protected){
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    return;
-  }
+  if(btn.dataset.protected) return; // already protected
   if(btn.classList.contains('btn-primary')||btn.classList.contains('btn-danger')){
     btn.dataset.protected = '1';
     setTimeout(()=>{ delete btn.dataset.protected; }, 3000);
@@ -872,7 +866,7 @@ function enterApp(){
 const SESSION_CONFIG = {
   IDLE_MS:     30 * 60 * 1000,            // 30 min idle (matches sp360_config)
   ABSOLUTE_MS:  8 * 60 * 60 * 1000,       // 8 hours absolute (matches sp360_config)
-  MFA_REQUIRED_ROLES: ['PMO Manager','Finance Manager','Admin'], // P1: mandatory MFA
+  MFA_REQUIRED_ROLES: [], // Temporarily disabled — enroll first
 };
 // Load session config from database (overrides defaults if available)
 (async()=>{
@@ -3041,8 +3035,6 @@ async function loadHR(tab='employees'){
   curHRTab=tab;
   const el=document.getElementById('page-hr');
   el.innerHTML=`<div class="loading">Loading…</div>`;
-  const isPMOAdmin=['PMO Manager','Admin'].includes(currentProfile?.role);
-  const pcTab=isPMOAdmin?('<button class="tab"'+(tab==="payroll_config"?' style="border-bottom:2px solid var(--gold)"':'')+' onclick="loadHR(\"payroll_config\")">&#9881; Config</button>'):'';
   const tabs=`<div class="tabs">
     <button class="tab${tab==='employees'?' act':''}" onclick="loadHR('employees')">👥 Employees</button>
     <button class="tab${tab==='leave'?' act':''}" onclick="loadHR('leave')">🏖 Leave Requests</button>
@@ -3050,7 +3042,7 @@ async function loadHR(tab='employees'){
     <button class="tab${tab==='attendance'?' act':''}" onclick="loadHR('attendance')">🕐 Attendance</button>
     <button class="tab${tab==='balance'?' act':''}" onclick="loadHR('balance')">📊 Leave Balance</button>
     <button class="tab${tab==='payroll'?' act':''}" onclick="loadHR('payroll')">💵 Payroll</button>
-    ${isPMOAdmin?pcTab:''}
+    ${['PMO Manager','Admin'].includes(currentProfile?.role)?`<button class="tab${tab==='payroll_config'?' act':''}" onclick="loadHR('payroll_config')">⚙️ Payroll Config</button>`:''}`
   </div>`;
   let kpis='',body='';
   if(tab==='employees'){
