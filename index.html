@@ -3035,6 +3035,8 @@ async function loadHR(tab='employees'){
   curHRTab=tab;
   const el=document.getElementById('page-hr');
   el.innerHTML=`<div class="loading">Loading…</div>`;
+  const isPMOAdmin=['PMO Manager','Admin'].includes(currentProfile?.role);
+  const pcTab=isPMOAdmin?('<button class="tab'+(tab==="payroll_config"?' act':'')+('" id="pc-tab-btn">&#9881; Config</button>')):'';
   const tabs=`<div class="tabs">
     <button class="tab${tab==='employees'?' act':''}" onclick="loadHR('employees')">👥 Employees</button>
     <button class="tab${tab==='leave'?' act':''}" onclick="loadHR('leave')">🏖 Leave Requests</button>
@@ -3042,7 +3044,7 @@ async function loadHR(tab='employees'){
     <button class="tab${tab==='attendance'?' act':''}" onclick="loadHR('attendance')">🕐 Attendance</button>
     <button class="tab${tab==='balance'?' act':''}" onclick="loadHR('balance')">📊 Leave Balance</button>
     <button class="tab${tab==='payroll'?' act':''}" onclick="loadHR('payroll')">💵 Payroll</button>
-    ${['PMO Manager','Admin'].includes(currentProfile?.role)?`<button class="tab${tab==='payroll_config'?' act':''}" onclick="loadHR('payroll_config')">⚙️ Payroll Config</button>`:''}`
+    ${isPMOAdmin?pcTab:''}
   </div>`;
   let kpis='',body='';
   if(tab==='employees'){
@@ -3194,6 +3196,9 @@ async function loadHR(tab='employees'){
   </div>
   <div class="grid4">${kpis}</div>
   <div class="card">${tabs}${body}</div>`;
+  // Attach click handler for payroll config tab (avoids quote nesting issues)
+  const pcBtn=document.getElementById('pc-tab-btn');
+  if(pcBtn) pcBtn.addEventListener('click',()=>loadHR('payroll_config'));
 }
 
 // ── PAYROLL CONFIG MODAL ─────────────────────────────────────
