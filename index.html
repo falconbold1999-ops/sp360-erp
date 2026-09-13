@@ -3834,7 +3834,9 @@ async function openStockMovementModal(){
 async function saveStockMovement(e){
   const btn=e?.target;if(btn){btn.disabled=true;btn.textContent='Saving...';}
   try{
-    const type=document.getElementById('st-type').value;
+    const typeRaw=document.getElementById('st-type').value;
+    const typeMap={'GRN':'IN','ISSUE':'OUT','RETURN':'RETURN','ADJUSTMENT':'ADJUSTMENT'};
+    const type=typeMap[typeRaw]||typeRaw;
     const itemId=document.getElementById('st-item').value;
     const qty=Number(document.getElementById('st-qty').value)||0;
     const date=document.getElementById('st-date').value;
