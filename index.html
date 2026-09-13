@@ -1183,7 +1183,7 @@ async function loadDashboard(){
     ${kpi('Portfolio Value',fmtKWD(totalVal),'#C9A84C',projs.length+' projects')}
     ${kpi('Portfolio CPI',portCPI,cpiColor(portCPI),'ΣEV / ΣAC')}
     ${kpi('Portfolio SPI',portSPI,portSPI==='N/A'?'#94A3B8':cpiColor(portSPI),portSPI==='N/A'?'No Baselines yet':'ΣEV / ΣPV')}
-    ${kpi('Gross Profit',fmtKWD(rev-cost),rev-cost>=0?'#C9A84C':'#EF4444',rev>0?(((rev-cost)/rev*100).toFixed(1)+'% margin'):'No revenue yet')}
+    ${kpi('Gross Profit',fmtKWD(rev-cost),rev-cost>=0?'#C9A84C':'#EF4444',rev>0?(((rev-cost)/rev*100).toFixed(1)+'% of collected revenue'):'No revenue yet')}
   </div>
   <div class="grid4">
     ${kpi('Outstanding AR',fmtKWD(outstanding),'#F97316','Pending collection')}
@@ -2753,7 +2753,7 @@ async function loadFinance(tab='overview'){
       ${kpi('Revenue Collected',fmtKWD(totalRevenue),'#10B981','Client invoices paid')}
       ${kpi('AR Outstanding',fmtKWD(arOutstanding),overdueAR.length>0?'#EF4444':'#F97316',overdueAR.length>0?'⚠️ '+overdueAR.length+' overdue':'Pending collection')}
       ${kpi('Cost Paid',fmtKWD(totalCost),'#EF4444','Supplier invoices paid')}
-      ${kpi('Gross Profit',fmtKWD(grossProfit),grossProfit>=0?'#C9A84C':'#EF4444',margin.toFixed(1)+'% margin')}
+      ${kpi('Gross Profit',fmtKWD(grossProfit),grossProfit>=0?'#C9A84C':'#EF4444',margin.toFixed(1)+'% of collected revenue')}
     </div>
     <div class="grid4" style="margin-bottom:14px">
       ${kpi('AP Outstanding',fmtKWD(apOutstanding),'#8B5CF6','Supplier bills due')}
@@ -5250,7 +5250,7 @@ async function loadCEO(){
         ${[
           ['Revenue Collected',fmtKWD(rev),'#10B981'],
           ['Cost Paid',fmtKWD(cost),'#EF4444'],
-          ['Gross Profit',fmtKWD(gp)+' ('+gpPct+'%)',gp>=0?'#C9A84C':'#EF4444'],
+          ['Gross Profit',fmtKWD(gp),gp>=0?'#C9A84C':'#EF4444',gpPct+'% of collected rev'],
           ['AR Outstanding',fmtKWD(arOutstanding),overdueAR.length>0?'#EF4444':'#F97316'],
           ['AP Outstanding',fmtKWD(apOutstanding),'#8B5CF6'],
           ['Retention Held',fmtKWD(retentionHeld-retentionReleased),'#3B82F6']
