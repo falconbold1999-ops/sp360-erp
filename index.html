@@ -481,7 +481,15 @@ tr:hover td{background:#1A366010}
 const SUPABASE_URL = 'https://sqizirpsatofcoqshwer.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxaXppcnBzYXRvZmNvcXNod2VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxNTM5MTAsImV4cCI6MjEwMjcyOTkxMH0.LnfA4pGIbv30uQVNHa7MeFioP9OF2ukNTol_cDUF8mk';
 // ── SUPABASE INIT (safe, non-blocking) ───────────────────────
-var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession:     true,
+    autoRefreshToken:   true,
+    detectSessionInUrl: true,
+    storageKey:         'sp360-auth-token',
+    flowType:           'implicit'
+  }
+});
 
 // ── ROLE-BASED ACCESS ────────────────────────────────────────
 const ROLE_PAGES = {
@@ -802,10 +810,25 @@ function enterApp(){
 
 // ── Session Configuration (single source of truth) ──────────
 const SESSION_CONFIG = {
-  IDLE_MS:     30 * 60 * 1000,   // 30 minutes idle → logout
-  ABSOLUTE_MS:  8 * 60 * 60 * 1000,   //  8 hours absolute → logout
-  MFA_REQUIRED_ROLES: [], // MFA optional — enable when ready (add roles here)
+  IDLE_MS:     30 * 60 * 1000,            // 30 min idle (matches sp360_config)
+  ABSOLUTE_MS:  8 * 60 * 60 * 1000,       // 8 hours absolute (matches sp360_config)
+  MFA_REQUIRED_ROLES: ['PMO Manager','Finance Manager','Admin'], // P1: mandatory MFA
 };
+// Load session config from database (overrides defaults if available)
+(async()=>{
+  try{
+    const {data:cfg}=await sb.from('sp360_config')
+      .select('key,value')
+      .in('key',['session_idle_ms','session_absolute_ms','mfa_required_roles']);
+    if(cfg&&cfg.length){
+      cfg.forEach(row=>{
+        if(row.key==='session_idle_ms') SESSION_CONFIG.IDLE_MS=Number(row.value);
+        if(row.key==='session_absolute_ms') SESSION_CONFIG.ABSOLUTE_MS=Number(row.value);
+        if(row.key==='mfa_required_roles') SESSION_CONFIG.MFA_REQUIRED_ROLES=row.value.split(',').map(r=>r.trim());
+      });
+    }
+  }catch(e){ console.warn('sp360_config load failed, using defaults:',e?.message); }
+})();
 const SESSION_IDLE_MS = SESSION_CONFIG.IDLE_MS;
 const SESSION_ABS_MS  = SESSION_CONFIG.ABSOLUTE_MS;
 let _idleTimer=null,_absTimer=null;
@@ -3770,23 +3793,42 @@ async function saveNewItem(e){
     const code=document.getElementById('itm-code').value.trim();
     const name=document.getElementById('itm-name').value.trim();
     if(!code||!name){showToast('Code and Name required','error');return;}
-    const {error}=await sb.from('material_master').insert({item_code:code,item_name:name,category:document.getElementById('itm-cat').value.trim()||null,unit_of_measure:document.getElementById('itm-uom').value,standard_cost:Number(document.getElementById('itm-cost').value)||0,current_stock:Number(document.getElementById('itm-stock').value)||0,reorder_level:Number(document.getElementById('itm-reorder').value)||0,is_active:true,created_by:currentProfile?.id});
+    const {error}=await sb.from('material_master').insert({item_code:code,item_name:name,category:document.getElementById('itm-cat').value.trim()||null,unit_of_measure:document.getElementById('itm-uom').value,standard_cost:Number(document.getElementById('itm-cost').value)||0,current_stock:Number(document.getElementById('itm-stock').value)||0,reorder_level:Number(document.getElementById('itm-reorder').value)||0,max_stock:Number(document.getElementById('itm-reorder').value)*3||0,is_active:true,created_by:currentProfile?.id,created_at:new Date().toISOString()});
     if(error){showToast('Error: '+error.message,'error');return;}
     showToast('Item '+code+' added');closeModal();loadInventory('items');
   }catch(e2){showToast('Error: '+e2.message,'error');}
   finally{if(btn){btn.disabled=false;btn.textContent='Add Item';}}
 }
 
-function openStockMovementModal(){
-  const items=window._cachedItems||[];
+async function openStockMovementModal(){
   const today=new Date().toISOString().split('T')[0];
   openModal('Record Stock Movement',`
     <div class="form-row"><div class="form-field"><label>Type *</label><select id="st-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="GRN">GRN - Goods Received</option><option value="ISSUE">ISSUE - Issue to Project</option><option value="RETURN">RETURN - Return to Stock</option><option value="ADJUSTMENT">ADJUSTMENT</option></select></div><div class="form-field"><label>Date *</label><input id="st-date" type="date" value="${today}"/></div></div>
-    <div class="form-field"><label>Item *</label><select id="st-item" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="">— Select Item —</option>${items.map(i=>`<option value="${i.id}">${i.item_code} — ${i.item_name}</option>`).join('')}</select></div>
+    <div class="form-field"><label>Item *</label><select id="st-item" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="">— Loading items... —</option></select></div>
     <div class="form-row"><div class="form-field"><label>Quantity *</label><input id="st-qty" type="number" min="0" step="0.01" placeholder="0.00"/></div><div class="form-field"><label>Unit Cost (KWD)</label><input id="st-cost" type="number" min="0" step="0.001" placeholder="0.000"/></div></div>
     <div class="form-field"><label>Reference</label><input id="st-ref" placeholder="PO No, MRV No..."/></div>
     <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveStockMovement(event)">Record</button></div>
   `);
+  // Fetch items fresh (bypass cache to ensure RLS-filtered results)
+  try{
+    const {data:items,error}=await sb.from('material_master')
+      .select('id,item_code,item_name,current_stock')
+      .eq('is_active',true)
+      .order('item_code');
+    const sel=document.getElementById('st-item');
+    if(!sel) return;
+    if(error||!items||items.length===0){
+      sel.innerHTML='<option value="">— No items available —</option>';
+      return;
+    }
+    window._cachedItems=items; // update cache too
+    sel.innerHTML='<option value="">— Select Item —</option>'+
+      items.map(i=>`<option value="${i.id}">${i.item_code} — ${i.item_name} (Stock: ${i.current_stock??0})</option>`).join('');
+  }catch(e){
+    const sel=document.getElementById('st-item');
+    if(sel) sel.innerHTML='<option value="">— Error loading items —</option>';
+    console.error('Items load error:',e);
+  }
 }
 
 async function saveStockMovement(e){
@@ -3797,18 +3839,17 @@ async function saveStockMovement(e){
     const qty=Number(document.getElementById('st-qty').value)||0;
     const date=document.getElementById('st-date').value;
     if(!itemId||qty<=0||!date){showToast('Item, quantity and date required','error');return;}
-    // ATOMIC: ledger + stock update + audit in ONE transaction
+    // ATOMIC: ledger + stock update + audit in ONE transaction (server-side RPC)
     const {data:stockResult,error}=await sb.rpc('record_stock_movement_atomic',{
-      p_transaction_type: type,
-      p_transaction_date: date,
-      p_item_id:          itemId,
-      p_quantity:         qty,
-      p_unit_cost:        Number(document.getElementById('st-cost').value)||null,
-      p_reference:        document.getElementById('st-ref').value.trim()||null,
-      p_created_by:       currentProfile?.id
+      p_movement_type: type,
+      p_item_id:       itemId,
+      p_quantity:      qty,
+      p_unit_cost:     Number(document.getElementById('st-cost').value)||0,
+      p_reference:     document.getElementById('st-ref').value.trim()||null,
+      p_notes:         null
     });
     if(error){showToast('Error: '+error.message,'error');return;}
-    if(!stockResult?.ok){showToast('Error: '+(stockResult?.error||'Unknown'),'error');return;}
+    if(!stockResult?.success){showToast('Error: '+(stockResult?.error||'Unknown'),'error');return;}
     showToast(type+' '+no+' recorded');closeModal();loadInventory('ledger');
   }catch(e2){showToast('Error: '+e2.message,'error');}
   finally{if(btn){btn.disabled=false;btn.textContent='Record';}}
@@ -6383,29 +6424,56 @@ function openAboutModal(){
     auth.style.display='flex';
 
     try{
+      // Check absolute timeout first
       const started=Number(localStorage.getItem(SESSION_START_KEY)||0);
       if(started && Date.now()-started>ABS_MS){
         await sb.auth.signOut().catch(()=>{});
         localStorage.removeItem(SESSION_START_KEY);
-        return;
+        return; // show login
       }
 
+      // Get session from local storage (fast, no network)
       const {data:sessionData,error:sessionError}=await sb.auth.getSession();
-      if(sessionError || !sessionData?.session) return;
+      if(sessionError || !sessionData?.session){
+        return; // no session → show login
+      }
 
-      // Verify session is still valid with server (not just localStorage)
-      const {data:userData,error:userError}=await sb.auth.getUser();
-      if(userError || !userData?.user) {
+      const session=sessionData.session;
+
+      // Check if token is expired or about to expire (within 60s)
+      const expiresAt=(session.expires_at||0)*1000;
+      const needsRefresh=expiresAt - Date.now() < 60*1000;
+
+      if(needsRefresh){
+        // Refresh token silently
+        const {data:refreshed,error:refreshErr}=await sb.auth.refreshSession();
+        if(refreshErr || !refreshed?.session){
+          await sb.auth.signOut().catch(()=>{});
+          return; // refresh failed → show login
+        }
+        currentUser=refreshed.session.user;
+      } else {
+        // Use cached session user (no network call needed on every refresh)
+        currentUser=session.user;
+      }
+
+      if(!currentUser){
         await sb.auth.signOut().catch(()=>{});
         return;
       }
 
-      currentUser=userData.user;
       await loadProfile();
+      if(!currentProfile){
+        await sb.auth.signOut().catch(()=>{});
+        return;
+      }
+
       if(!localStorage.getItem(SESSION_START_KEY))
         localStorage.setItem(SESSION_START_KEY,String(Date.now()));
+
       enterApp();
       resetIdleTimer();
+
     }catch(e){
       currentUser=null;
       currentProfile=null;
@@ -6414,9 +6482,8 @@ function openAboutModal(){
     }
   }
 
-  // Proper session restore: validate with server, require login if invalid
-  // Force fresh login on every page load — clears any stored session
-  (async()=>{ await sb.auth.signOut().catch(()=>{}); })();
+  // Session restore: validate with server, require login if invalid session
+  bootstrapSession();
 })();
 
 document.addEventListener('keydown',e=>{
