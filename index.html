@@ -3042,6 +3042,7 @@ async function loadHR(tab='employees'){
     <button class="tab${tab==='attendance'?' act':''}" onclick="loadHR('attendance')">🕐 Attendance</button>
     <button class="tab${tab==='balance'?' act':''}" onclick="loadHR('balance')">📊 Leave Balance</button>
     <button class="tab${tab==='payroll'?' act':''}" onclick="loadHR('payroll')">💵 Payroll</button>
+    ${['PMO Manager','Admin'].includes(currentProfile?.role)?`<button class="tab${tab==='payroll_config'?' act':''}" onclick="loadHR('payroll_config')">⚙️ Payroll Config</button>`:''}`
   </div>`;
   let kpis='',body='';
   if(tab==='employees'){
@@ -3158,6 +3159,31 @@ async function loadHR(tab='employees'){
       <td style="text-align:center">${pill(r.status,r.status==='paid'?'#10B981':r.status==='processed'?'#3B82F6':'#F97316')}</td>
     </tr>`).join('')}</tbody></table>`;
 
+  } else if(tab==='payroll_config'){
+    // Load payroll config from database
+    const {data:cfgList}=await sb.from('payroll_config').select('*').order('effective_date',{ascending:false});
+    const cfg=cfgList||[];
+    const latest=cfg[0]||{};
+    kpis=kpi('NSSF Employee',(latest.nssf_employee_pct||0)+'%','#3B82F6')+
+         kpi('NSSF Employer',(latest.nssf_employer_pct||0)+'%','#8B5CF6')+
+         kpi('Working Days',(latest.standard_working_days||22)+' days','#10B981')+
+         kpi('Income Tax',(latest.income_tax_pct||0)+'%','#F59E0B');
+    body=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span style="font-size:12px;color:var(--muted)">Active Config: <b style="color:var(--gold)">${latest.country_code||'KW'} — Effective ${latest.effective_date||'—'}</b></span>
+      <button class="btn btn-primary btn-sm" onclick="openPayrollConfigModal()">✏️ Update Config</button>
+    </div>
+    <table><thead><tr><th>Parameter</th><th style="text-align:right">Value</th><th>Description</th><th style="text-align:center">Effective</th><th style="text-align:center">Active</th></tr></thead><tbody>
+    <tr><td>NSSF Employee %</td><td style="text-align:right;font-weight:700;color:#3B82F6">${latest.nssf_employee_pct||0}%</td><td style="font-size:10px;color:var(--muted)">Employee contribution to NSSF</td><td style="text-align:center;font-size:10px">${latest.effective_date||'—'}</td><td style="text-align:center">${latest.is_active?'✅':'❌'}</td></tr>
+    <tr><td>NSSF Employer %</td><td style="text-align:right;font-weight:700;color:#8B5CF6">${latest.nssf_employer_pct||0}%</td><td style="font-size:10px;color:var(--muted)">Employer contribution to NSSF</td><td style="text-align:center;font-size:10px">${latest.effective_date||'—'}</td><td style="text-align:center">${latest.is_active?'✅':'❌'}</td></tr>
+    <tr><td>NSSF Salary Cap</td><td style="text-align:right;font-weight:700">${fmtKWD(latest.nssf_max_salary||0)}</td><td style="font-size:10px;color:var(--muted)">Maximum salary subject to NSSF</td><td style="text-align:center;font-size:10px">${latest.effective_date||'—'}</td><td style="text-align:center">${latest.is_active?'✅':'❌'}</td></tr>
+    <tr><td>Income Tax %</td><td style="text-align:right;font-weight:700;color:#10B981">${latest.income_tax_pct||0}%</td><td style="font-size:10px;color:var(--muted)">Income tax rate (0% Kuwait)</td><td style="text-align:center;font-size:10px">${latest.effective_date||'—'}</td><td style="text-align:center">${latest.is_active?'✅':'❌'}</td></tr>
+    <tr><td>Working Days/Month</td><td style="text-align:right;font-weight:700">${latest.standard_working_days||22}</td><td style="font-size:10px;color:var(--muted)">Standard working days per month</td><td style="text-align:center;font-size:10px">${latest.effective_date||'—'}</td><td style="text-align:center">${latest.is_active?'✅':'❌'}</td></tr>
+    <tr><td>Hours Per Day</td><td style="text-align:right;font-weight:700">${latest.standard_hours_per_day||8}</td><td style="font-size:10px;color:var(--muted)">Standard working hours per day</td><td style="text-align:center;font-size:10px">${latest.effective_date||'—'}</td><td style="text-align:center">${latest.is_active?'✅':'❌'}</td></tr>
+    <tr><td>Overtime Multiplier</td><td style="text-align:right;font-weight:700;color:#F59E0B">${latest.overtime_multiplier||1.5}x</td><td style="font-size:10px;color:var(--muted)">Overtime pay multiplier</td><td style="text-align:center;font-size:10px">${latest.effective_date||'—'}</td><td style="text-align:center">${latest.is_active?'✅':'❌'}</td></tr>
+    </tbody></table>
+    ${cfg.length>1?`<div style="margin-top:12px;font-size:10px;color:var(--muted)">📋 ${cfg.length} config versions on record — showing latest active</div>`:''}`;
+
   } else {
     kpis=''; body='';
   }
@@ -3168,6 +3194,74 @@ async function loadHR(tab='employees'){
   </div>
   <div class="grid4">${kpis}</div>
   <div class="card">${tabs}${body}</div>`;
+}
+
+// ── PAYROLL CONFIG MODAL ─────────────────────────────────────
+async function openPayrollConfigModal(){
+  const {data:cfg}=await sb.from('payroll_config').select('*').eq('country_code','KW').eq('is_active',true).order('effective_date',{ascending:false}).limit(1);
+  const c=cfg?.[0]||{};
+  openModal('Update Payroll Config',`
+    <div class="form-row">
+      <div class="form-field"><label>NSSF Employee % *</label><input id="pc-nssf-emp" type="number" step="0.01" value="${c.nssf_employee_pct||5}"/></div>
+      <div class="form-field"><label>NSSF Employer %</label><input id="pc-nssf-er" type="number" step="0.01" value="${c.nssf_employer_pct||11}"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>NSSF Salary Cap (KWD)</label><input id="pc-nssf-cap" type="number" step="0.001" value="${c.nssf_max_salary||1750}"/></div>
+      <div class="form-field"><label>Income Tax %</label><input id="pc-tax" type="number" step="0.01" value="${c.income_tax_pct||0}"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Working Days/Month *</label><input id="pc-days" type="number" min="1" max="31" value="${c.standard_working_days||22}"/></div>
+      <div class="form-field"><label>Overtime Multiplier</label><input id="pc-ot" type="number" step="0.1" value="${c.overtime_multiplier||1.5}"/></div>
+    </div>
+    <div class="form-field"><label>Effective Date *</label><input id="pc-date" type="date" value="${new Date().toISOString().split('T')[0]}"/></div>
+    <div style="padding:8px;background:#1E3A5F;border-radius:6px;font-size:10px;color:var(--muted);margin-top:8px">
+      ⚠️ A new config version will be created. Previous versions are retained for audit.
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="savePayrollConfig(event)">Save Config</button>
+    </div>
+  `);
+}
+
+async function savePayrollConfig(e){
+  const btn=e?.target;if(btn){btn.disabled=true;btn.textContent='Saving...';}
+  try{
+    const nssfEmp  = Number(document.getElementById('pc-nssf-emp').value)||5;
+    const nssfEr   = Number(document.getElementById('pc-nssf-er').value)||11;
+    const nssfCap  = Number(document.getElementById('pc-nssf-cap').value)||1750;
+    const tax      = Number(document.getElementById('pc-tax').value)||0;
+    const days     = Number(document.getElementById('pc-days').value)||22;
+    const ot       = Number(document.getElementById('pc-ot').value)||1.5;
+    const effDate  = document.getElementById('pc-date').value;
+    if(!effDate){showToast('Effective date required','error');return;}
+    if(days<1||days>31){showToast('Working days must be 1-31','error');return;}
+
+    // Deactivate old configs
+    await sb.from('payroll_config').update({is_active:false}).eq('country_code','KW');
+
+    // Insert new config version
+    const {error}=await sb.from('payroll_config').insert({
+      country_code:          'KW',
+      effective_date:        effDate,
+      nssf_employee_pct:     nssfEmp,
+      nssf_employer_pct:     nssfEr,
+      nssf_max_salary:       nssfCap,
+      income_tax_pct:        tax,
+      standard_working_days: days,
+      standard_hours_per_day:8,
+      overtime_multiplier:   ot,
+      leave_deduction_per_day:true,
+      is_active:             true,
+      notes:                 'Updated by '+currentProfile?.full_name,
+      created_by:            currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Payroll config updated ✓');
+    closeModal();
+    loadHR('payroll_config');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save Config';}}
 }
 
 // ── HR LEAVE REQUESTS ────────────────────────────────────────
@@ -3665,7 +3759,7 @@ function openRunPayrollModal(){
   const period=new Date().toISOString().slice(0,7);
   openModal('Run Payroll',`
     <div class="form-row"><div class="form-field"><label>Period *</label><input id="pay-period" type="month" value="${period}"/></div><div class="form-field"><label>Employee (blank = all)</label><select id="pay-emp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)"><option value="">— All Active —</option>${empSel.map(e=>`<option value="${e.id}">${e.full_name}</option>`).join('')}</select></div></div>
-    <div class="form-field" style="padding:10px;background:#1E3A5F;border-radius:8px;font-size:11px;color:var(--muted)">Pulls Basic + Allowances from active contracts. NSSF deduction: 5% of basic.</div>
+    <div class="form-field" style="padding:10px;background:#1E3A5F;border-radius:8px;font-size:11px;color:var(--muted)">Pulls Basic + Allowances from active contracts. Deductions calculated from Payroll Config (NSSF, Tax, Working Days).</div>
     <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="runPayroll(event)">Process Payroll</button></div>
   `);
 }
@@ -3684,17 +3778,11 @@ async function runPayroll(e){
     const existIds=new Set((existing||[]).map(r=>r.employee_id));
     const toProcess=emps.filter(e=>!existIds.has(e.id));
     if(toProcess.length===0){showToast('All employees already processed for this period','error');return;}
-    const rows=toProcess.map(emp=>{
-      const c=emp.employee_contracts?.[0]||{};
-      const basic=Number(c.basic_salary||0),allow=Number(c.allowances||0);
-      const gross=basic+allow,nssf=Math.round(basic*0.05*1000)/1000,net=Math.round((gross-nssf)*1000)/1000;
-      return{employee_id:emp.id,period_month:period,working_days:22,basic_salary:basic,allowances:allow,gross_salary:gross,nssf_deduction:nssf,tax_deduction:0,other_deductions:0,total_deductions:nssf,net_salary:net,status:'processed',processed_by:currentProfile?.id};
-    });
-    // ATOMIC: use server-side RPC for payroll processing
+    // ATOMIC: server-side RPC reads config from payroll_config table
     const {data:payResult,error}=await sb.rpc('process_payroll_atomic',{
       p_period_month: period,
       p_employee_id:  empId||null,
-      p_working_days: 22,
+      p_working_days: null,  // null = use payroll_config
       p_processed_by: currentProfile?.id
     });
     if(error){showToast('Error: '+error.message,'error');return;}
