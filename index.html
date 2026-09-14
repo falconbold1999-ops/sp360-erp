@@ -580,6 +580,10 @@ img,canvas,svg{max-width:100%;height:auto}
         <button class="nav-btn" id="nav-ceo" onclick="navTo('ceo',this)"><span class="nav-icon">👔</span>CEO Report</button>
         <button class="nav-btn" id="nav-contracts" onclick="navTo('contracts',this)"><span class="nav-icon">📜</span>Contracts</button>
         <button class="nav-btn" id="nav-lessons" onclick="navTo('lessons',this)"><span class="nav-icon">📚</span>Lessons</button>
+        <button class="nav-btn" id="nav-forecast" onclick="navTo('forecast',this)"><span class="nav-icon">📈</span>Forecast</button>
+        <button class="nav-btn" id="nav-reports" onclick="navTo('reports',this)"><span class="nav-icon">📑</span>Reports</button>
+        <button class="nav-btn" id="nav-training" onclick="navTo('training',this)"><span class="nav-icon">🎓</span>Training</button>
+        <button class="nav-btn" id="nav-assets" onclick="navTo('assets',this)"><span class="nav-icon">🔧</span>Assets</button>
         <button class="nav-btn" id="nav-system" onclick="navTo('system',this)"><span class="nav-icon">⚙️</span>System</button>
       </nav>
       <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v3.3 · Production<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
@@ -602,6 +606,10 @@ img,canvas,svg{max-width:100%;height:auto}
       <div class="page" id="page-gantt"></div>
       <div class="page" id="page-contracts"></div>
       <div class="page" id="page-lessons"></div>
+      <div class="page" id="page-forecast"></div>
+      <div class="page" id="page-reports"></div>
+      <div class="page" id="page-training"></div>
+      <div class="page" id="page-assets"></div>
       <div class="page" id="page-system"></div>
       <div class="page" id="page-resources"></div>
       <div class="page" id="page-scorecard"></div>
@@ -742,15 +750,15 @@ var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 // Page visibility per role
 const ROLE_PAGES = {
-  'Admin':             ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons'],
-  'PMO Manager':       ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons'],
-  'CEO':               ['dashboard','ceo','projects','gantt','resources','scorecard','bizdev','finance','contracts','lessons'],
-  'Finance Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','finance','inventory','workflow','audit','contracts','lessons'],
-  'Project Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','inventory','qhse','documents','workflow','contracts','lessons'],
-  'Procurement Lead':  ['dashboard','projects','gantt','procurement','inventory','workflow','contracts','lessons'],
+  'Admin':             ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets'],
+  'PMO Manager':       ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets'],
+  'CEO':               ['dashboard','ceo','projects','gantt','resources','scorecard','bizdev','finance','contracts','lessons','forecast','reports'],
+  'Finance Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','finance','inventory','workflow','audit','contracts','lessons','forecast','reports','assets'],
+  'Project Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','inventory','qhse','documents','workflow','contracts','lessons','forecast','reports','training','assets'],
+  'Procurement Lead':  ['dashboard','projects','gantt','procurement','inventory','workflow','contracts','lessons','assets'],
   'BD Manager':        ['dashboard','bizdev','projects','gantt','contracts','lessons'],
   'QHSE Engineer':     ['dashboard','projects','gantt','qhse','documents','contracts','lessons'],
-  'HR Manager':        ['dashboard','hr','documents','contracts','lessons'],
+  'HR Manager':        ['dashboard','hr','documents','contracts','lessons','training'],
   'Viewer':            ['dashboard','projects','gantt']
 };
 
@@ -1128,7 +1136,7 @@ function enterApp(){
 
   // ── Apply role-based nav visibility ──────────────────────
   const allowed = ROLE_PAGES[currentProfile?.role] || ['dashboard'];
-  ['bizdev','projects','gantt','resources','scorecard','contracts','lessons','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system'].forEach(p=>{
+  ['bizdev','projects','gantt','resources','scorecard','contracts','lessons','forecast','reports','training','assets','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system'].forEach(p=>{
     const btn = document.getElementById('nav-'+p);
     if(btn) btn.style.display = allowed.includes(p) ? '' : 'none';
   });
@@ -1373,7 +1381,7 @@ function navTo(id,btn){
     procurement:()=>loadProc(curProcTab),finance:loadFinance,
     hr:()=>loadHR(curHRTab),qhse:()=>loadQHSE(curQHSETab),
     inventory:loadInventory,documents:()=>loadDocs(curDocTab),workflow:loadWorkflow,audit:loadAudit,
-    users:loadUsers,ceo:loadCEO,system:loadSystem,resources:loadResources,scorecard:loadScorecard,contracts:loadContracts,lessons:loadLessons
+    users:loadUsers,ceo:loadCEO,system:loadSystem,resources:loadResources,scorecard:loadScorecard,contracts:loadContracts,lessons:loadLessons,forecast:loadForecast,reports:loadReports,training:loadTraining,assets:loadAssets
   };
   if(loaders[id])loaders[id]();
 }
@@ -2019,6 +2027,7 @@ async function loadProjects(tab){
           <div style="display:flex;gap:4px;justify-content:center">
             <button class="btn btn-primary btn-sm" onclick="saveProgress(event,'${p.id}',${p.bac})">Save</button>
             <button onclick="openRiskRegister('${p.id}','${p.project_no}')" style="background:#EF444411;border:1px solid #EF444433;color:#EF4444;border-radius:5px;padding:3px 7px;font-size:9px;font-weight:700;cursor:pointer" title="Risk Register">⚠️</button>
+            <button onclick="exportClientPortal('${p.id}','${p.project_no}')" style="background:#C9A84C11;border:1px solid #C9A84C33;color:#C9A84C;border-radius:5px;padding:3px 7px;font-size:9px;font-weight:700;cursor:pointer" title="Client Report">📤</button>
           </div>
         </td>
       </tr>`;
@@ -10658,6 +10667,1004 @@ function currencySelector(id='ccy-select', defaultVal='KWD'){
   return `<select id="${id}" style="background:var(--card);border:1px solid var(--bdr);border-radius:6px;padding:4px 8px;color:var(--text);font-size:11px">
     ${Object.entries(CURRENCIES).map(([code,c])=>`<option value="${code}"${code===defaultVal?' selected':''}>${code} — ${c.name}</option>`).join('')}
   </select>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P7-1 · CASH FLOW FORECASTING
+// ══════════════════════════════════════════════════════════════
+async function loadForecast(){
+  const el = document.getElementById('page-forecast');
+  if(!el) return;
+  el.innerHTML = '<div class="loading">Building Cash Flow Forecast…</div>';
+  try{
+    const today = new Date();
+    const [invR, projR, poR] = await Promise.all([
+      sb.from('invoices').select('*').order('created_at',{ascending:false}),
+      sb.from('projects').select('id,project_no,name,bac,ac,ev,pct,status,end_date').in('status',ACTIVE_STATUSES),
+      sb.from('purchase_orders').select('total_amount,status,created_at').in('status',['approved','partial'])
+    ]);
+    const invs  = invR.data||[];
+    const projs = projR.data||[];
+    const pos   = poR.data||[];
+
+    // ── Historical 6 months ───────────────────────────────────
+    const hist = [];
+    for(let i=-5;i<=0;i++){
+      const d = new Date(today.getFullYear(), today.getMonth()+i, 1);
+      const m = d.toISOString().slice(0,7);
+      const inflow  = invs.filter(x=>x.invoice_type==='client'&&x.status==='paid'&&x.paid_date?.startsWith(m)).reduce((s,x)=>s+Number(x.net_amount),0);
+      const outflow = invs.filter(x=>x.invoice_type!=='client'&&x.status==='paid'&&x.paid_date?.startsWith(m)).reduce((s,x)=>s+Number(x.net_amount),0);
+      hist.push({m, label:d.toLocaleDateString('en-GB',{month:'short',year:'2-digit'}), inflow, outflow, net:inflow-outflow, type:'actual'});
+    }
+
+    // ── Forecast 6 months ─────────────────────────────────────
+    // Based on: avg monthly collections + pending AR aging + project completion curve
+    const avgInflow  = hist.reduce((s,h)=>s+h.inflow,0)/6 || 0;
+    const avgOutflow = hist.reduce((s,h)=>s+h.outflow,0)/6 || 0;
+
+    // Pending AR — distribute over next 3 months
+    const pendingAR = invs.filter(i=>i.invoice_type==='client'&&!['paid','cancelled'].includes(i.status));
+    const pendingAP = invs.filter(i=>i.invoice_type!=='client'&&!['paid','cancelled'].includes(i.status));
+
+    // Project completion-based revenue forecast
+    const projForecast = projs.map(p=>{
+      const remaining = Number(p.bac||0) - Number(p.ac||0);
+      const pctLeft   = Math.max(100 - Number(p.pct||0), 0) / 100;
+      const monthsLeft= p.end_date ? Math.max(Math.ceil((new Date(p.end_date)-today)/2592000000),1) : 6;
+      return {monthly: (remaining * pctLeft) / monthsLeft};
+    });
+    const projMonthlyRev = projForecast.reduce((s,p)=>s+p.monthly,0);
+
+    const fcast = [];
+    for(let i=1;i<=6;i++){
+      const d = new Date(today.getFullYear(), today.getMonth()+i, 1);
+      const label = d.toLocaleDateString('en-GB',{month:'short',year:'2-digit'});
+      // Decay factor — confidence decreases over time
+      const confidence = Math.max(1 - (i-1)*0.1, 0.5);
+      // AR collection: spread pending AR over 3 months
+      const arCollection = i<=3 ? pendingAR.reduce((s,i2)=>s+Number(i2.net_amount),0)/3 : 0;
+      const apPayment    = i<=3 ? pendingAP.reduce((s,i2)=>s+Number(i2.net_amount),0)/3 : 0;
+      const inflow  = Math.round((avgInflow * 0.3 + projMonthlyRev * 0.5 + arCollection * 0.2) * confidence);
+      const outflow = Math.round((avgOutflow * 0.4 + apPayment * 0.4 + avgOutflow * 0.2) * confidence);
+      fcast.push({m:d.toISOString().slice(0,7), label, inflow, outflow, net:inflow-outflow, type:'forecast', confidence:Math.round(confidence*100)});
+    }
+
+    const all = [...hist, ...fcast];
+    const maxVal = Math.max(...all.map(m=>Math.max(m.inflow,m.outflow)), 1);
+
+    // Running balance
+    let balance = hist.reduce((s,h)=>s+h.net, 0);
+    const withBalance = all.map(m=>{ balance+=m.net; return {...m, balance}; });
+
+    // KPIs
+    const totalFcastInflow  = fcast.reduce((s,f)=>s+f.inflow,0);
+    const totalFcastOutflow = fcast.reduce((s,f)=>s+f.outflow,0);
+    const netFcast          = totalFcastInflow - totalFcastOutflow;
+    const currentBalance    = hist.reduce((s,h)=>s+h.net,0);
+
+    el.innerHTML = `
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">📈</span>
+        <div><h1>Cash Flow Forecast</h1><div class="sub">6-month historical + 6-month forecast · Model-based projection</div></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="loadForecast()">🔄 Refresh</button>
+    </div>
+
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Current Balance',  fmtKWD(currentBalance),   currentBalance>=0?'#10B981':'#EF4444', 'Last 6 months net')}
+      ${kpi('Forecast Inflow',  fmtKWD(totalFcastInflow),  '#3B82F6', 'Next 6 months projected')}
+      ${kpi('Forecast Outflow', fmtKWD(totalFcastOutflow), '#EF4444', 'Next 6 months projected')}
+      ${kpi('Net Forecast',     fmtKWD(netFcast),          netFcast>=0?'#10B981':'#EF4444', 'Projected net cash')}
+    </div>
+
+    <!-- Chart -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="sec-head">
+        <div class="sec-title"><span>📊</span>Cash Flow — 12 Month View</div>
+        <div style="display:flex;gap:12px;font-size:10px;color:var(--muted)">
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#10B981;border-radius:2px"></span>Inflow</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#EF4444;border-radius:2px"></span>Outflow</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:2px;height:10px;background:#C9A84C"></span>Net Balance</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#94A3B833;border:1px dashed #94A3B8;border-radius:2px"></span>Forecast</span>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <div style="min-width:700px;padding:8px 0">
+          <!-- Bar chart -->
+          <div style="display:flex;align-items:flex-end;gap:4px;height:160px;padding-bottom:4px;border-bottom:1px solid var(--bdr)">
+            ${all.map((m,i)=>{
+              const isFcast = m.type==='forecast';
+              const inH  = Math.max(m.inflow/maxVal*140,2);
+              const outH = Math.max(m.outflow/maxVal*140,2);
+              return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0">
+                <div style="display:flex;gap:1px;align-items:flex-end;height:140px">
+                  <div style="width:10px;background:${isFcast?'#10B98155':'#10B981'};height:${inH}px;border-radius:2px 2px 0 0;${isFcast?'border:1px dashed #10B981':''}" title="Inflow: ${fmtKWD(m.inflow)}"></div>
+                  <div style="width:10px;background:${isFcast?'#EF444455':'#EF4444'};height:${outH}px;border-radius:2px 2px 0 0;${isFcast?'border:1px dashed #EF4444':''}" title="Outflow: ${fmtKWD(m.outflow)}"></div>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+          <!-- Labels -->
+          <div style="display:flex;gap:4px;margin-top:4px">
+            ${all.map(m=>`<div style="flex:1;text-align:center;font-size:8px;color:${m.type==='forecast'?'#C9A84C':'var(--faint)'};min-width:0;overflow:hidden;white-space:nowrap">${m.label}</div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data table -->
+    <div class="card">
+      <div class="sec-head"><div class="sec-title"><span>📋</span>Monthly Breakdown</div></div>
+      <div style="overflow-x:auto">
+        <table><thead><tr>
+          <th>Month</th><th>Type</th>
+          <th style="text-align:right">Inflow</th>
+          <th style="text-align:right">Outflow</th>
+          <th style="text-align:right">Net</th>
+          <th style="text-align:right">Running Balance</th>
+          <th style="text-align:center">Confidence</th>
+        </tr></thead><tbody>
+        ${withBalance.map(m=>`<tr style="background:${m.type==='forecast'?'#C9A84C08':''}">
+          <td style="font-weight:600;color:${m.type==='forecast'?'#C9A84C':'var(--text)'}">${m.label}</td>
+          <td><span style="font-size:9px;background:${m.type==='forecast'?'#C9A84C22':'#3B82F622'};color:${m.type==='forecast'?'#C9A84C':'#3B82F6'};border-radius:4px;padding:2px 6px">${m.type==='forecast'?'Forecast':'Actual'}</span></td>
+          <td style="text-align:right;color:#10B981;font-weight:600">${fmtKWD(m.inflow)}</td>
+          <td style="text-align:right;color:#EF4444;font-weight:600">${fmtKWD(m.outflow)}</td>
+          <td style="text-align:right;font-weight:700;color:${m.net>=0?'#10B981':'#EF4444'}">${fmtKWD(m.net)}</td>
+          <td style="text-align:right;font-weight:700;color:${m.balance>=0?'#C9A84C':'#EF4444'}">${fmtKWD(m.balance)}</td>
+          <td style="text-align:center;font-size:10px;color:var(--muted)">${m.type==='forecast'?m.confidence+'%':'100%'}</td>
+        </tr>`).join('')}
+        </tbody></table>
+      </div>
+      <div style="margin-top:10px;padding:8px 10px;background:var(--n3);border-radius:6px;font-size:10px;color:var(--faint)">
+        ⚠️ Forecast is model-based: 30% avg trend + 50% project completion curve + 20% AR collection. Confidence decreases by 10% per month.
+        Always review against actual pipeline and signed contracts.
+      </div>
+    </div>`;
+
+  }catch(err){
+    el.innerHTML = `<div class="empty">Error: ${err.message}</div>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P7-2 · ADVANCED REPORTING ENGINE
+// ══════════════════════════════════════════════════════════════
+async function loadReports(){
+  const el = document.getElementById('page-reports');
+  if(!el) return;
+
+  const reports = [
+    {id:'portfolio_summary',   icon:'🏗', name:'Portfolio Summary Report',       desc:'All active projects — EVM, CPI, SPI, RAG, progress',           color:'#C9A84C', roles:['all']},
+    {id:'finance_monthly',     icon:'💰', name:'Monthly Finance Report',          desc:'Revenue, cost, GP, AR/AP, cash flow for current month',         color:'#10B981', roles:['all']},
+    {id:'hr_headcount',        icon:'👥', name:'HR Headcount Report',             desc:'Employees by department, status, contract type',                color:'#3B82F6', roles:['Admin','PMO Manager','HR Manager']},
+    {id:'qhse_summary',        icon:'🛡', name:'QHSE Summary Report',             desc:'NCRs by severity, inspections, incidents — period summary',     color:'#F97316', roles:['all']},
+    {id:'procurement_summary', icon:'📦', name:'Procurement Status Report',       desc:'POs, RFQs, MRVs, vendor performance — current period',          color:'#8B5CF6', roles:['Admin','PMO Manager','Procurement Lead','Finance Manager']},
+    {id:'kpi_scorecard_pdf',   icon:'🎯', name:'Executive KPI Scorecard PDF',     desc:'Full scorecard export — targets, actuals, status',              color:'#EF4444', roles:['all']},
+  ];
+
+  el.innerHTML = `
+  <div class="page-head">
+    <div class="page-head-left"><span style="font-size:22px">📑</span>
+      <div><h1>Reports Center</h1><div class="sub">Generate professional PDF & Excel reports for any module</div></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">
+    ${reports.map(r=>`
+    <div style="border:1px solid var(--bdr);border-radius:10px;padding:16px;background:var(--card2)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span style="font-size:24px">${r.icon}</span>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:${r.color}">${r.name}</div>
+          <div style="font-size:10px;color:var(--muted)">${r.desc}</div>
+        </div>
+      </div>
+      <div id="rpt-status-${r.id}" style="font-size:9px;color:var(--faint);min-height:14px;margin-bottom:8px"></div>
+      <div style="display:flex;gap:6px">
+        <button onclick="generateReport('${r.id}','pdf')"
+          style="flex:1;background:#EF444422;border:1px solid #EF444433;color:#EF4444;border-radius:6px;padding:7px;font-size:10px;font-weight:700;cursor:pointer">
+          📄 PDF
+        </button>
+        <button onclick="generateReport('${r.id}','excel')"
+          style="flex:1;background:#10B98122;border:1px solid #10B98133;color:#10B981;border-radius:6px;padding:7px;font-size:10px;font-weight:700;cursor:pointer">
+          📊 Excel
+        </button>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+async function generateReport(reportId, format){
+  const statusEl = document.getElementById('rpt-status-'+reportId);
+  if(statusEl) statusEl.innerHTML = '⏳ Generating…';
+  try{
+    if(format==='pdf')        await _generateReportPDF(reportId);
+    else if(format==='excel') await _generateReportExcel(reportId);
+    if(statusEl) statusEl.innerHTML = `<span style="color:#10B981">✓ Downloaded — ${new Date().toLocaleTimeString('en-GB')}</span>`;
+  }catch(e){
+    if(statusEl) statusEl.innerHTML = `<span style="color:#EF4444">✗ ${e.message}</span>`;
+    logError('Reports','generateReport',e,{reportId,format});
+  }
+}
+
+async function _generateReportPDF(reportId){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const today = new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+
+  // Shared header
+  const addHeader = (title, subtitle='')=>{
+    doc.setFillColor(30,58,95);
+    doc.rect(0,0,210,35,'F');
+    doc.setTextColor(201,168,76); doc.setFontSize(18); doc.setFont('helvetica','bold');
+    doc.text('SMART PROJECTS 360',14,14);
+    doc.setTextColor(255,255,255); doc.setFontSize(14);
+    doc.text(title,14,24);
+    doc.setTextColor(148,163,184); doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.text(subtitle||today,14,31);
+    doc.text('SP360 ERP v3.3 · Confidential',196,31,'right');
+  };
+
+  const addTable = (headers, rows, startY, colWidths)=>{
+    let y = startY;
+    // Header row
+    doc.setFillColor(30,58,95);
+    doc.rect(14,y-5,182,7,'F');
+    doc.setTextColor(201,168,76); doc.setFontSize(8); doc.setFont('helvetica','bold');
+    let x=16;
+    headers.forEach((h,i)=>{ doc.text(String(h),x,y); x+=colWidths[i]; });
+    y+=5;
+    // Data rows
+    doc.setFont('helvetica','normal'); doc.setTextColor(15,23,42); doc.setFontSize(8);
+    rows.forEach((row,ri)=>{
+      if(y>270){ doc.addPage(); y=20; }
+      if(ri%2===0){ doc.setFillColor(248,250,252); doc.rect(14,y-4,182,6,'F'); }
+      x=16;
+      row.forEach((cell,ci)=>{ doc.text(String(cell??'—').substring(0,30),x,y); x+=colWidths[ci]; });
+      y+=6;
+    });
+    return y+4;
+  };
+
+  if(reportId==='portfolio_summary'){
+    const {data:projs}=await sb.from('projects').select('project_no,name,status,pct,cpi,spi,bac,ev,ac,department').in('status',ACTIVE_STATUSES).order('project_no');
+    addHeader('PORTFOLIO SUMMARY REPORT', today);
+    let y=45;
+    doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(30,58,95);
+    doc.text(`Active Projects: ${(projs||[]).length}`,14,y); y+=10;
+    const headers=['Proj No','Name','Status','%','CPI','SPI','BAC (KD)','EV (KD)','AC (KD)'];
+    const rows=(projs||[]).map(p=>[
+      p.project_no, (p.name||'').substring(0,22), p.status,
+      (p.pct||0)+'%', Number(p.cpi||1).toFixed(2), p.spi?Number(p.spi).toFixed(2):'N/A',
+      Math.round(p.bac||0).toLocaleString(), Math.round(p.ev||0).toLocaleString(), Math.round(p.ac||0).toLocaleString()
+    ]);
+    addTable(headers, rows, y, [18,38,18,8,10,10,22,22,22]);
+
+  } else if(reportId==='finance_monthly'){
+    const {data:invs}=await sb.from('invoices').select('*');
+    const I=invs||[], m=new Date().toISOString().slice(0,7);
+    const rev  = I.filter(i=>i.invoice_type==='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+    const cost = I.filter(i=>i.invoice_type!=='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+    const ar   = I.filter(i=>i.invoice_type==='client'&&!['paid','cancelled'].includes(i.status)).reduce((s,i)=>s+Number(i.net_amount),0);
+    const ap   = I.filter(i=>i.invoice_type!=='client'&&!['paid','cancelled'].includes(i.status)).reduce((s,i)=>s+Number(i.net_amount),0);
+    addHeader('MONTHLY FINANCE REPORT', today);
+    let y=45;
+    const summaryRows=[['Revenue Collected',`KD ${rev.toFixed(3)}`],['Cost Paid',`KD ${cost.toFixed(3)}`],
+      ['Gross Profit',`KD ${(rev-cost).toFixed(3)}`],['GP Margin',rev>0?((rev-cost)/rev*100).toFixed(1)+'%':'—'],
+      ['AR Outstanding',`KD ${ar.toFixed(3)}`],['AP Outstanding',`KD ${ap.toFixed(3)}`]];
+    addTable(['Metric','Amount'],summaryRows,y,[100,82]);
+
+  } else if(reportId==='qhse_summary'){
+    const [{data:ncrs},{data:insp}]=await Promise.all([
+      sb.from('ncrs').select('ncr_no,severity,status,department,created_at').order('created_at',{ascending:false}).limit(50),
+      sb.from('inspections').select('inspection_no,type,result,created_at').order('created_at',{ascending:false}).limit(20)
+    ]);
+    addHeader('QHSE SUMMARY REPORT', today);
+    let y=45;
+    doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(30,58,95);
+    doc.text('Non-Conformance Reports',14,y); y+=8;
+    addTable(['NCR No','Severity','Status','Department','Date'],
+      (ncrs||[]).map(n=>[n.ncr_no,n.severity,n.status,n.department||'—',n.created_at?.slice(0,10)||'—']),
+      y,[25,20,18,35,25]);
+
+  } else if(reportId==='kpi_scorecard_pdf'){
+    const [{data:projs},{data:invs},{data:ncrs}]=await Promise.all([
+      sb.from('projects').select('id,status,cpi,spi,pct,bac,ev,ac,pv').in('status',ACTIVE_STATUSES),
+      sb.from('invoices').select('invoice_type,status,net_amount,due_date'),
+      sb.from('ncrs').select('severity,status')
+    ]);
+    const active=projs||[], I=invs||[], N=ncrs||[];
+    const totalBAC=active.reduce((s,p)=>s+Number(p.bac),0);
+    const totalEV =active.reduce((s,p)=>s+Number(p.ev),0);
+    const totalAC =active.reduce((s,p)=>s+Number(p.ac),0);
+    const portCPI =totalAC>0?totalEV/totalAC:1;
+    const rev=I.filter(i=>i.invoice_type==='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+    const cost=I.filter(i=>i.invoice_type!=='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+    addHeader('EXECUTIVE KPI SCORECARD', today);
+    let y=45;
+    const kpiRows=[
+      ['Portfolio CPI',portCPI.toFixed(3),'≥1.000',portCPI>=1?'ON TRACK':'CRITICAL'],
+      ['Active Projects',active.length,'—','INFO'],
+      ['GP Margin',rev>0?((rev-cost)/rev*100).toFixed(1)+'%':'—','≥25%',rev>0&&(rev-cost)/rev>=0.25?'ON TRACK':'AT RISK'],
+      ['Open NCRs',N.filter(n=>n.status==='open').length,'0',N.filter(n=>n.status==='open').length===0?'ON TRACK':'AT RISK'],
+      ['Critical NCRs',N.filter(n=>n.severity==='critical'&&n.status==='open').length,'0',N.filter(n=>n.severity==='critical'&&n.status==='open').length===0?'ON TRACK':'CRITICAL'],
+    ];
+    addTable(['KPI','Actual','Target','Status'],kpiRows,y,[60,40,40,42]);
+  } else {
+    addHeader('REPORT', today);
+    doc.setFontSize(12); doc.setTextColor(100,116,139);
+    doc.text('Report data loading…',14,50);
+  }
+
+  // Footer
+  const pageCount = doc.getNumberOfPages();
+  for(let i=1;i<=pageCount;i++){
+    doc.setPage(i);
+    doc.setFontSize(8); doc.setTextColor(148,163,184);
+    doc.text(`Page ${i} of ${pageCount} · SP360 ERP v3.3 · Generated: ${today} · Confidential`,105,290,'center');
+  }
+
+  doc.save(`SP360_${reportId}_${new Date().toISOString().split('T')[0]}.pdf`);
+}
+
+async function _generateReportExcel(reportId){
+  const wb = new ExcelJS.Workbook();
+  wb.creator='SP360 ERP v3.3'; wb.created=new Date();
+  const ws = wb.addWorksheet(reportId.replace(/_/g,' ').toUpperCase());
+  const today = new Date().toLocaleDateString('en-GB');
+
+  xlTitleBlock(ws, `SP360 ERP v3.3 — ${reportId.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}`, `Generated: ${today}`, 6);
+
+  if(reportId==='portfolio_summary'){
+    const {data:projs}=await sb.from('projects').select('*').in('status',ACTIVE_STATUSES).order('project_no');
+    xlKPIBand(ws,[
+      ['Active Projects',(projs||[]).length,XL.gold],
+      ['On Track',(projs||[]).filter(p=>Number(p.cpi)>=1).length,XL.green],
+      ['At Risk',(projs||[]).filter(p=>Number(p.cpi)>=0.9&&Number(p.cpi)<1).length,XL.amber],
+      ['Critical',(projs||[]).filter(p=>Number(p.cpi)<0.9).length,XL.red]
+    ],6);
+    const hdr=ws.addRow(['Project No','Name','Client','Dept','Status','%','CPI','SPI','BAC','EV','AC','EAC','VAC']);
+    hdr.eachCell(c=>{c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1E3A5F'}};c.font={bold:true,color:{argb:'FFC9A84C'},name:'Calibri',size:10};c.border=XL.thinBorder;c.alignment={horizontal:'center'};});
+    ws.columns=[{width:12},{width:35},{width:20},{width:14},{width:12},{width:8},{width:8},{width:8},{width:14},{width:14},{width:14},{width:14},{width:14}];
+    (projs||[]).forEach((p,i)=>{
+      const cpi=Number(p.cpi||1), eac=cpi>0?Number(p.ac)+(Number(p.bac)-Number(p.ev))/cpi:Number(p.bac);
+      const row=ws.addRow([p.project_no,p.name,p.client,p.department,p.status,Number(p.pct||0),cpi,p.spi?Number(p.spi):null,Number(p.bac||0),Number(p.ev||0),Number(p.ac||0),eac,Number(p.bac||0)-eac]);
+      row.eachCell(c=>{c.border=XL.thinBorder;c.font={name:'Calibri',size:10};});
+      const cpiC=row.getCell(7);cpiC.numFmt='0.000';cpiC.alignment={horizontal:'right'};
+      cpiC.font={...cpiC.font,bold:true,color:{argb:cpi>=1?'FF10B981':cpi>=0.9?'FFF97316':'FFEF4444'}};
+      [9,10,11,12,13].forEach(n=>{row.getCell(n).numFmt='#,##0.000';row.getCell(n).alignment={horizontal:'right'};});
+      if(i%2===0) row.eachCell(c=>{if(!c.fill?.fgColor?.argb) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF8FAFC'}};});
+    });
+    ws.views=[{state:'frozen',ySplit:6}];
+    ws.autoFilter={from:{row:6,column:1},to:{row:6,column:13}};
+
+  } else if(reportId==='finance_monthly'){
+    const {data:invs}=await sb.from('invoices').select('*').order('created_at',{ascending:false});
+    const I=invs||[];
+    const rev=I.filter(i=>i.invoice_type==='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+    const cost=I.filter(i=>i.invoice_type!=='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+    xlKPIBand(ws,[['Revenue',Math.round(rev),XL.green],['Cost',Math.round(cost),XL.red],['GP',Math.round(rev-cost),(rev-cost)>=0?XL.gold:XL.red],['Invoices',I.length,XL.gold]],6);
+    const hdr=ws.addRow(['Invoice No','Type','Client/Vendor','Project','Amount','Status','Date']);
+    hdr.eachCell(c=>{c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1E3A5F'}};c.font={bold:true,color:{argb:'FFC9A84C'},name:'Calibri',size:10};c.border=XL.thinBorder;});
+    ws.columns=[{width:16},{width:12},{width:30},{width:14},{width:16},{width:12},{width:14}];
+    I.slice(0,200).forEach((inv,i)=>{
+      const row=ws.addRow([inv.invoice_no,inv.invoice_type,inv.client_name||inv.vendor_name||'—',inv.project_id||'—',Number(inv.net_amount||0),inv.status,inv.invoice_date||'—']);
+      row.eachCell(c=>{c.border=XL.thinBorder;c.font={name:'Calibri',size:10};});
+      row.getCell(5).numFmt='#,##0.000';row.getCell(5).alignment={horizontal:'right'};
+    });
+    ws.views=[{state:'frozen',ySplit:6}];
+  }
+
+  await xlSave(wb,`SP360_${reportId}_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P7-3 · DOCUMENT WORKFLOW (Review/Approve cycle)
+// ══════════════════════════════════════════════════════════════
+async function submitDocForReview(docId, docNo, docTitle){
+  const {data:users}=await sb.from('user_profiles').select('id,full_name,role').eq('is_active',true).order('full_name');
+  const reviewers = (users||[]).filter(u=>['Admin','PMO Manager','Finance Manager','Project Manager'].includes(u.role));
+  openModal(`📤 Submit for Review — ${docNo}`,`
+    <div style="margin-bottom:10px;font-size:11px;color:var(--muted)">${esc(docTitle)}</div>
+    <div class="form-field"><label>Reviewer *</label>
+      <select id="doc-rev-user" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+        <option value="">— Select Reviewer —</option>
+        ${reviewers.map(u=>`<option value="${u.id}">${esc(u.full_name)} (${esc(u.role)})</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-field"><label>Review Notes</label>
+      <textarea id="doc-rev-notes" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical" placeholder="Instructions or context for reviewer…"></textarea>
+    </div>
+    <div class="form-field"><label>Due Date</label>
+      <input id="doc-rev-due" type="date" value="${new Date(Date.now()+7*86400000).toISOString().split('T')[0]}"/>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveDocReviewRequest(event,'${docId}','${docNo}')">Submit for Review</button>
+    </div>`);
+}
+
+async function saveDocReviewRequest(e, docId, docNo){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Submitting…';}
+  try{
+    const reviewerId = document.getElementById('doc-rev-user').value;
+    const notes      = document.getElementById('doc-rev-notes').value.trim();
+    const dueDate    = document.getElementById('doc-rev-due').value;
+    if(!reviewerId){showToast('Reviewer required','error');return;}
+    // Create workflow item for document review
+    const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'DOC-REV'});
+    const {error}=await sb.from('workflow_items').insert({
+      ref_no:        no,
+      entity_type:   'document_review',
+      entity_id:     docId,
+      title:         `Review: ${docNo}`,
+      current_step:  'Reviewer Review',
+      status:        'pending',
+      assigned_to:   reviewerId,
+      due_date:      dueDate||null,
+      notes:         notes||null,
+      created_by:    currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    // Update document status
+    await sb.from('documents').update({status:'under_review'}).eq('id',docId);
+    await writeAudit('documents',docId,'SUBMITTED_FOR_REVIEW',{status:'draft'},{status:'under_review',reviewer:reviewerId},'Document submitted for review');
+    showToast(`${docNo} submitted for review — ${no} created ✓`);
+    closeModal();
+    loadDocs(curDocTab);
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Submit for Review';}}
+}
+
+async function approveDocument(docId, docNo, approve){
+  const action = approve ? 'approve' : 'reject';
+  if(!confirm(`${approve?'Approve':'Reject'} document ${docNo}?`)) return;
+  const reason = approve ? null : prompt('Rejection reason:');
+  if(!approve && (!reason||!reason.trim())) return;
+  const {error}=await sb.from('documents').update({
+    status: approve ? 'approved' : 'rejected',
+    approved_by: currentProfile?.id,
+    approved_at: new Date().toISOString()
+  }).eq('id',docId);
+  if(error){showToast('Error: '+error.message,'error');return;}
+  // Close related workflow items
+  await sb.from('workflow_items').update({status:approve?'approved':'rejected'})
+    .eq('entity_type','document_review').eq('entity_id',docId).eq('status','pending');
+  await writeAudit('documents',docId,approve?'DOCUMENT_APPROVED':'DOCUMENT_REJECTED',
+    {status:'under_review'},{status:approve?'approved':'rejected',reason:reason||null},
+    approve?`Document approved`:`Document rejected: ${reason}`);
+  showToast(`${docNo} ${approve?'approved':'rejected'} ✓`);
+  loadDocs(curDocTab);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P7-4 · TRAINING & CERTIFICATIONS
+// ══════════════════════════════════════════════════════════════
+async function loadTraining(tab='overview'){
+  const el = document.getElementById('page-training');
+  if(!el) return;
+  el.innerHTML = '<div class="loading">Loading Training…</div>';
+  try{
+    const today = new Date();
+    const [trR, certR, empR] = await Promise.all([
+      sb.from('training_records').select('*,employee:employees(full_name,employee_no,department)').order('training_date',{ascending:false}),
+      sb.from('employee_certifications').select('*,employee:employees(full_name,employee_no,department)').order('expiry_date'),
+      sb.from('employees').select('id,full_name,employee_no,department').eq('status','active').order('full_name')
+    ]);
+    const trainings = trR.data||[];
+    const certs     = certR.data||[];
+    const emps      = empR.data||[];
+
+    const expiringSoon = certs.filter(c=>c.expiry_date&&Math.ceil((new Date(c.expiry_date)-today)/86400000)<=30&&Math.ceil((new Date(c.expiry_date)-today)/86400000)>0);
+    const expired      = certs.filter(c=>c.expiry_date&&new Date(c.expiry_date)<today);
+    const dueTraining  = trainings.filter(t=>t.status==='planned'&&t.training_date&&new Date(t.training_date)>=today).sort((a,b)=>new Date(a.training_date)-new Date(b.training_date));
+
+    const tabBtns = `<div class="tabs">
+      <button class="tab${tab==='overview'?' act':''}" onclick="loadTraining('overview')">📊 Overview</button>
+      <button class="tab${tab==='records'?' act':''}" onclick="loadTraining('records')">📋 Training Records</button>
+      <button class="tab${tab==='certs'?' act':''}" onclick="loadTraining('certs')" style="color:${expiringSoon.length>0||expired.length>0?'#F97316':'inherit'}">🏆 Certifications</button>
+    </div>`;
+
+    let body='';
+
+    if(tab==='overview'){
+      const totalHours = trainings.filter(t=>t.status==='completed').reduce((s,t)=>s+Number(t.duration_hours||0),0);
+      const completedThisMonth = trainings.filter(t=>t.status==='completed'&&t.training_date?.startsWith(new Date().toISOString().slice(0,7))).length;
+      body=`
+      <div class="grid4" style="margin-bottom:14px">
+        ${kpi('Total Training Hours', Math.round(totalHours), '#C9A84C', 'Completed sessions')}
+        ${kpi('Certifications',        certs.length,          '#3B82F6', 'Across all employees')}
+        ${kpi('Expiring ≤30d',         expiringSoon.length,    expiringSoon.length>0?'#F97316':'#10B981', 'Need renewal')}
+        ${kpi('Expired',               expired.length,         expired.length>0?'#EF4444':'#10B981', 'Overdue renewal')}
+      </div>
+
+      ${expiringSoon.length>0||expired.length>0?`
+      <div class="card" style="border-left:3px solid #F97316;margin-bottom:14px">
+        <div class="sec-head"><div class="sec-title"><span>⚠️</span>Certification Alerts</div></div>
+        ${[...expired,...expiringSoon].slice(0,10).map(c=>{
+          const daysLeft=Math.ceil((new Date(c.expiry_date)-today)/86400000);
+          return`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--bdr)">
+            <span style="font-size:14px">${daysLeft<0?'🔴':'🟡'}</span>
+            <div style="flex:1">
+              <div style="font-size:11px;font-weight:700">${esc(c.certification_name||'—')}</div>
+              <div style="font-size:10px;color:var(--muted)">${esc(c.employee?.full_name||'—')} · ${esc(c.employee?.department||'—')}</div>
+            </div>
+            <div style="text-align:right;font-size:10px;color:${daysLeft<0?'#EF4444':'#F97316'};font-weight:700">
+              ${daysLeft<0?Math.abs(daysLeft)+'d expired':daysLeft+'d left'}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`:``}
+
+      ${dueTraining.length>0?`
+      <div class="card">
+        <div class="sec-head"><div class="sec-title"><span>📅</span>Upcoming Training Sessions</div></div>
+        ${dueTraining.slice(0,8).map(t=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--bdr)">
+          <div style="flex:1">
+            <div style="font-size:11px;font-weight:700">${esc(t.training_name||'—')}</div>
+            <div style="font-size:10px;color:var(--muted)">${esc(t.employee?.full_name||'All')} · ${esc(t.training_type||'—')}</div>
+          </div>
+          <div style="text-align:right;font-size:10px;color:var(--gold);font-weight:700">${t.training_date}</div>
+        </div>`).join('')}
+      </div>`:``}`;
+
+    } else if(tab==='records'){
+      body=`<table><thead><tr>
+        <th>Employee</th><th>Department</th><th>Training</th><th>Type</th><th>Date</th>
+        <th style="text-align:right">Hours</th><th style="text-align:center">Status</th>
+      </tr></thead><tbody>
+      ${trainings.slice(0,100).map(t=>`<tr>
+        <td style="font-weight:600">${esc(t.employee?.full_name||'—')}</td>
+        <td style="color:var(--muted)">${esc(t.employee?.department||'—')}</td>
+        <td style="font-size:11px">${esc(t.training_name||'—')}</td>
+        <td style="color:var(--muted)">${esc(t.training_type||'—')}</td>
+        <td style="color:var(--faint)">${t.training_date||'—'}</td>
+        <td style="text-align:right">${t.duration_hours||'—'}</td>
+        <td style="text-align:center">${pill(t.status||'planned',t.status==='completed'?'#10B981':t.status==='planned'?'#3B82F6':'#94A3B8')}</td>
+      </tr>`).join('')}
+      </tbody></table>`;
+
+    } else if(tab==='certs'){
+      body=`<table><thead><tr>
+        <th>Employee</th><th>Department</th><th>Certification</th><th>Issuer</th>
+        <th>Issue Date</th><th>Expiry</th><th style="text-align:center">Status</th>
+      </tr></thead><tbody>
+      ${certs.map(c=>{
+        const daysLeft=c.expiry_date?Math.ceil((new Date(c.expiry_date)-today)/86400000):null;
+        const col=daysLeft===null?'#94A3B8':daysLeft<0?'#EF4444':daysLeft<=30?'#F97316':'#10B981';
+        return`<tr>
+          <td style="font-weight:600">${esc(c.employee?.full_name||'—')}</td>
+          <td style="color:var(--muted)">${esc(c.employee?.department||'—')}</td>
+          <td style="font-weight:700;color:var(--text)">${esc(c.certification_name||'—')}</td>
+          <td style="color:var(--muted)">${esc(c.issuing_body||'—')}</td>
+          <td style="color:var(--faint)">${c.issue_date||'—'}</td>
+          <td style="color:${col};font-weight:700">${c.expiry_date||'No Expiry'}${daysLeft!==null&&daysLeft<=30?` <small>(${daysLeft<0?Math.abs(daysLeft)+'d ago':daysLeft+'d'})</small>`:''}</td>
+          <td style="text-align:center">${pill(daysLeft===null?'valid':daysLeft<0?'expired':daysLeft<=30?'expiring':'valid',daysLeft===null||daysLeft>30?'#10B981':daysLeft<=0?'#EF4444':'#F97316')}</td>
+        </tr>`;}).join('')}
+      </tbody></table>`;
+    }
+
+    el.innerHTML=`
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">🎓</span>
+        <div><h1>Training & Certifications</h1><div class="sub">Employee Development · Skill Tracking · Compliance</div></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        ${can('create')?`<button class="btn btn-ghost btn-sm" onclick="openAddTrainingModal()">+ Training</button>`:''}
+        ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openAddCertModal()">+ Certification</button>`:''}
+      </div>
+    </div>
+    <div class="card">${tabBtns}${body}</div>`;
+
+  }catch(err){
+    el.innerHTML=`<div class="empty">Error: ${err.message}</div>`;
+  }
+}
+
+function openAddTrainingModal(){
+  const emps=window._cachedEmployees||[];
+  const today=new Date().toISOString().split('T')[0];
+  openModal('+ Add Training Record',`
+    <div class="form-row">
+      <div class="form-field"><label>Employee *</label>
+        <select id="tr-emp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select —</option>
+          ${emps.map(e=>`<option value="${e.id}">${esc(e.full_name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Training Name *</label><input id="tr-name" placeholder="e.g. PMP Exam Prep"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Type</label>
+        <select id="tr-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          ${['Technical','Safety','Leadership','Compliance','Soft Skills','On-the-job'].map(t=>`<option>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Date *</label><input id="tr-date" type="date" value="${today}"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Duration (hours)</label><input id="tr-hours" type="number" min="0.5" step="0.5" placeholder="8"/></div>
+      <div class="form-field"><label>Status</label>
+        <select id="tr-status" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="completed">Completed</option><option value="planned">Planned</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTraining(event)">Save</button>
+    </div>`);
+}
+
+async function saveTraining(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const empId=document.getElementById('tr-emp').value;
+    const name =document.getElementById('tr-name').value.trim();
+    const date =document.getElementById('tr-date').value;
+    if(!empId||!name||!date){showToast('Employee, name, date required','error');return;}
+    const {error}=await sb.from('training_records').insert({
+      employee_id:document.getElementById('tr-emp').value, training_name:name,
+      training_type:document.getElementById('tr-type').value, training_date:date,
+      duration_hours:Number(document.getElementById('tr-hours').value)||null,
+      status:document.getElementById('tr-status').value, created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Training record saved ✓'); closeModal(); loadTraining();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save';}}
+}
+
+function openAddCertModal(){
+  const emps=window._cachedEmployees||[];
+  const today=new Date().toISOString().split('T')[0];
+  openModal('+ Add Certification',`
+    <div class="form-row">
+      <div class="form-field"><label>Employee *</label>
+        <select id="cert-emp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select —</option>
+          ${emps.map(e=>`<option value="${e.id}">${esc(e.full_name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Certification Name *</label><input id="cert-name" placeholder="e.g. PMP, ISO 9001 Lead Auditor"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Issuing Body</label><input id="cert-issuer" placeholder="e.g. PMI, BSI"/></div>
+      <div class="form-field"><label>Certificate No</label><input id="cert-no" placeholder="Cert ID"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Issue Date *</label><input id="cert-issue" type="date" value="${today}"/></div>
+      <div class="form-field"><label>Expiry Date</label><input id="cert-expiry" type="date"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCertification(event)">Save</button>
+    </div>`);
+}
+
+async function saveCertification(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const empId=document.getElementById('cert-emp').value;
+    const name =document.getElementById('cert-name').value.trim();
+    const issue=document.getElementById('cert-issue').value;
+    if(!empId||!name||!issue){showToast('Employee, name, issue date required','error');return;}
+    const {error}=await sb.from('employee_certifications').insert({
+      employee_id:empId, certification_name:name,
+      issuing_body:document.getElementById('cert-issuer').value.trim()||null,
+      certificate_no:document.getElementById('cert-no').value.trim()||null,
+      issue_date:issue, expiry_date:document.getElementById('cert-expiry').value||null,
+      status:'active', created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Certification saved ✓'); closeModal(); loadTraining('certs');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save';}}
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P7-5 · ASSET MANAGEMENT
+// ══════════════════════════════════════════════════════════════
+async function loadAssets(tab='assets'){
+  const el = document.getElementById('page-assets');
+  if(!el) return;
+  el.innerHTML = '<div class="loading">Loading Assets…</div>';
+  try{
+    const today = new Date();
+    const [assR, maintR] = await Promise.all([
+      sb.from('assets').select('*,project:projects(project_no,name),assigned_to:employees(full_name)').order('asset_no'),
+      sb.from('asset_maintenance').select('*,asset:assets(asset_no,asset_name)').order('scheduled_date').limit(50)
+    ]);
+    const assets = assR.data||[];
+    const maints = maintR.data||[];
+
+    const dueMaint   = maints.filter(m=>m.status==='scheduled'&&m.scheduled_date&&new Date(m.scheduled_date)<=new Date(today.getTime()+30*86400000));
+    const totalValue = assets.reduce((s,a)=>s+Number(a.purchase_value||0),0);
+    const bookValue  = assets.reduce((s,a)=>s+Number(a.book_value||a.purchase_value||0),0);
+
+    const tabBtns=`<div class="tabs">
+      <button class="tab${tab==='assets'?' act':''}" onclick="loadAssets('assets')">🔧 Assets (${assets.length})</button>
+      <button class="tab${tab==='maintenance'?' act':''}" onclick="loadAssets('maintenance')" style="color:${dueMaint.length>0?'#F97316':'inherit'}">🔨 Maintenance (${dueMaint.length} due)</button>
+    </div>`;
+
+    let body='';
+    if(tab==='assets'){
+      body=`
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+        ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openNewAssetModal()">+ New Asset</button>`:''}
+      </div>
+      ${assets.length===0
+        ? '<div class="empty">No assets registered yet</div>'
+        : `<table><thead><tr>
+            <th>Asset No</th><th>Name</th><th>Category</th><th>Location/Project</th>
+            <th>Assigned To</th><th style="text-align:right">Purchase Value</th><th style="text-align:right">Book Value</th>
+            <th style="text-align:center">Condition</th><th style="text-align:center">Status</th>
+          </tr></thead><tbody>
+          ${assets.map(a=>{
+            const condColor=a.condition==='good'?'#10B981':a.condition==='fair'?'#F97316':'#EF4444';
+            return`<tr>
+              <td style="color:var(--gold);font-weight:700;font-size:10px">${esc(a.asset_no||'—')}</td>
+              <td style="font-weight:600;font-size:11px">${esc(a.asset_name||'—')}</td>
+              <td style="color:var(--muted)">${esc(a.category||'—')}</td>
+              <td style="color:var(--muted);font-size:10px">${esc(a.location||a.project?.project_no||'—')}</td>
+              <td style="font-size:10px">${esc(a.assigned_to?.full_name||'Unassigned')}</td>
+              <td style="text-align:right">${fmtKWD(a.purchase_value||0)}</td>
+              <td style="text-align:right;color:${Number(a.book_value||a.purchase_value||0)<Number(a.purchase_value||0)*0.5?'#F97316':'var(--text)'}">${fmtKWD(a.book_value||a.purchase_value||0)}</td>
+              <td style="text-align:center"><span style="font-size:9px;background:${condColor}22;color:${condColor};border-radius:4px;padding:2px 7px;font-weight:700">${a.condition||'—'}</span></td>
+              <td style="text-align:center">${pill(a.status||'active',a.status==='active'?'#10B981':a.status==='in_maintenance'?'#F97316':'#94A3B8')}</td>
+            </tr>`;}).join('')}
+          </tbody></table>`}`;
+
+    } else {
+      body=`
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+        ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openNewMaintenanceModal()">+ Schedule Maintenance</button>`:''}
+      </div>
+      ${dueMaint.length>0?`<div style="margin-bottom:10px;padding:8px 12px;background:#F9731622;border:1px solid #F9731633;border-radius:6px;font-size:11px;color:#F97316;font-weight:700">⚠️ ${dueMaint.length} maintenance task(s) due within 30 days</div>`:''}
+      ${maints.length===0?'<div class="empty">No maintenance records</div>':`
+      <table><thead><tr>
+        <th>Asset</th><th>Type</th><th>Scheduled</th><th>Description</th>
+        <th style="text-align:right">Est. Cost</th><th style="text-align:center">Status</th>
+      </tr></thead><tbody>
+      ${maints.map(m=>{
+        const daysLeft=m.scheduled_date?Math.ceil((new Date(m.scheduled_date)-today)/86400000):null;
+        const col=m.status==='completed'?'#10B981':daysLeft!==null&&daysLeft<=0?'#EF4444':daysLeft!==null&&daysLeft<=7?'#F97316':'#94A3B8';
+        return`<tr>
+          <td style="color:var(--gold);font-weight:700">${esc(m.asset?.asset_no||'—')}<br><span style="color:var(--muted);font-size:10px">${esc(m.asset?.asset_name||'—')}</span></td>
+          <td>${esc(m.maintenance_type||'—')}</td>
+          <td style="color:${col};font-weight:700">${m.scheduled_date||'—'}${daysLeft!==null&&m.status!=='completed'?`<br><span style="font-size:9px">${daysLeft<0?Math.abs(daysLeft)+'d overdue':daysLeft+'d left'}</span>`:''}</td>
+          <td style="color:var(--muted);font-size:10px">${esc(m.description||'—')}</td>
+          <td style="text-align:right">${m.estimated_cost?fmtKWD(m.estimated_cost):'—'}</td>
+          <td style="text-align:center">${pill(m.status||'scheduled',m.status==='completed'?'#10B981':col)}</td>
+        </tr>`;}).join('')}
+      </tbody></table>`}`;
+    }
+
+    el.innerHTML=`
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">🔧</span>
+        <div><h1>Asset Management</h1><div class="sub">Equipment · Machinery · Vehicles · Tools</div></div>
+      </div>
+    </div>
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Total Assets',   assets.length,  '#C9A84C', 'Registered assets')}
+      ${kpi('Total Value',    fmtKWD(totalValue), '#10B981', 'Purchase value')}
+      ${kpi('Book Value',     fmtKWD(bookValue),  '#3B82F6', 'Current book value')}
+      ${kpi('Due Maintenance',dueMaint.length,     dueMaint.length>0?'#F97316':'#10B981', 'Within 30 days')}
+    </div>
+    <div class="card">${tabBtns}${body}</div>`;
+
+  }catch(err){
+    el.innerHTML=`<div class="empty">Error: ${err.message}</div>`;
+  }
+}
+
+function openNewAssetModal(){
+  const today=new Date().toISOString().split('T')[0];
+  openModal('+ New Asset',`
+    <div class="form-row">
+      <div class="form-field"><label>Asset Name *</label><input id="ast-name" placeholder="e.g. Tower Crane TC-01"/></div>
+      <div class="form-field"><label>Category *</label>
+        <select id="ast-cat" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          ${['Heavy Equipment','Vehicle','IT Equipment','Furniture','Tools','Measuring Instruments','Safety Equipment','Other'].map(c=>`<option>${c}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Serial Number</label><input id="ast-serial" placeholder="Manufacturer serial"/></div>
+      <div class="form-field"><label>Purchase Value (KWD)</label><input id="ast-value" type="number" step="0.001" placeholder="0.000"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Purchase Date</label><input id="ast-date" type="date" value="${today}"/></div>
+      <div class="form-field"><label>Location</label><input id="ast-loc" placeholder="Warehouse / Site / Office"/></div>
+    </div>
+    <div class="form-field"><label>Condition</label>
+      <select id="ast-cond" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+        <option value="good">Good</option><option value="fair">Fair</option><option value="poor">Poor</option>
+      </select>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAsset(event)">Save Asset</button>
+    </div>`);
+}
+
+async function saveAsset(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const name=document.getElementById('ast-name').value.trim();
+    if(!name){showToast('Asset name required','error');return;}
+    const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'AST'});
+    const {error}=await sb.from('assets').insert({
+      asset_no:no, asset_name:name,
+      category:document.getElementById('ast-cat').value,
+      serial_number:document.getElementById('ast-serial').value.trim()||null,
+      purchase_value:Number(document.getElementById('ast-value').value)||null,
+      book_value:Number(document.getElementById('ast-value').value)||null,
+      purchase_date:document.getElementById('ast-date').value||null,
+      location:document.getElementById('ast-loc').value.trim()||null,
+      condition:document.getElementById('ast-cond').value,
+      status:'active', created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Asset '+no+' registered ✓'); closeModal(); loadAssets();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save Asset';}}
+}
+
+function openNewMaintenanceModal(){
+  openModal('+ Schedule Maintenance',`
+    <div class="form-row">
+      <div class="form-field"><label>Asset No *</label><input id="mnt-asset-no" placeholder="AST-001"/></div>
+      <div class="form-field"><label>Type *</label>
+        <select id="mnt-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          ${['Preventive','Corrective','Inspection','Calibration','Overhaul'].map(t=>`<option>${t}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Scheduled Date *</label><input id="mnt-date" type="date"/></div>
+      <div class="form-field"><label>Estimated Cost (KWD)</label><input id="mnt-cost" type="number" step="0.001" placeholder="0.000"/></div>
+    </div>
+    <div class="form-field"><label>Description</label>
+      <textarea id="mnt-desc" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveMaintenance(event)">Schedule</button>
+    </div>`);
+}
+
+async function saveMaintenance(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const assetNo=document.getElementById('mnt-asset-no').value.trim();
+    const date   =document.getElementById('mnt-date').value;
+    if(!assetNo||!date){showToast('Asset No and date required','error');return;}
+    const {data:asset}=await sb.from('assets').select('id').eq('asset_no',assetNo).single();
+    if(!asset){showToast('Asset not found: '+assetNo,'error');return;}
+    const {error}=await sb.from('asset_maintenance').insert({
+      asset_id:asset.id, maintenance_type:document.getElementById('mnt-type').value,
+      scheduled_date:date, description:document.getElementById('mnt-desc').value.trim()||null,
+      estimated_cost:Number(document.getElementById('mnt-cost').value)||null,
+      status:'scheduled', created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Maintenance scheduled ✓'); closeModal(); loadAssets('maintenance');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Schedule';}}
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P7-6 · CLIENT PORTAL SUMMARY (PDF for external clients)
+// ══════════════════════════════════════════════════════════════
+async function exportClientPortal(projectId, projectNo){
+  try{
+    showToast('Generating Client Report…');
+    const [projR, snapR, invoiceR, wfR] = await Promise.all([
+      sb.from('projects').select('*').eq('id',projectId).single(),
+      sb.from('project_evm_snapshots').select('*').eq('project_id',projectId).order('snapshot_date').limit(8),
+      sb.from('invoices').select('invoice_no,net_amount,status,invoice_date,due_date').eq('project_id',projectId).eq('invoice_type','client').order('invoice_date',{ascending:false}).limit(10),
+      sb.from('workflow_items').select('ref_no,title,status,current_step').eq('entity_id',projectId).in('status',['pending','approved']).limit(5)
+    ]);
+    const p     = projR.data||{};
+    const snaps = snapR.data||[];
+    const invs  = invoiceR.data||[];
+    const today = new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+
+    // Header
+    doc.setFillColor(30,58,95);
+    doc.rect(0,0,210,45,'F');
+    doc.setTextColor(201,168,76); doc.setFontSize(20); doc.setFont('helvetica','bold');
+    doc.text('PROJECT STATUS REPORT',14,18);
+    doc.setTextColor(255,255,255); doc.setFontSize(13);
+    doc.text(p.name||'—',14,28);
+    doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(148,163,184);
+    doc.text(`${p.project_no||'—'} · Prepared: ${today} · Smart Projects 360 · Kuwait`,14,36);
+    doc.text(`Client: ${p.client||'—'}`,14,42);
+
+    // Project Overview
+    let y=55;
+    doc.setFillColor(241,245,249); doc.rect(14,y-5,182,8,'F');
+    doc.setTextColor(30,58,95); doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text('PROJECT OVERVIEW',16,y); y+=10;
+
+    const cpi=Number(p.cpi||1), eac=cpi>0?Number(p.ac)+(Number(p.bac)-Number(p.ev))/cpi:Number(p.bac);
+    const infoRows=[
+      ['Contract Value', `KD ${Number(p.contract_value||0).toLocaleString('en-US',{minimumFractionDigits:3})}`,'Start Date', p.start_date||'—'],
+      ['Budget (BAC)',   `KD ${Number(p.bac||0).toLocaleString('en-US',{minimumFractionDigits:3})}`,'End Date',   p.end_date||'—'],
+      ['% Complete',    `${p.pct||0}%`,'Status', (p.status||'—').toUpperCase()],
+      ['EAC',           `KD ${eac.toLocaleString('en-US',{minimumFractionDigits:3})}`,'CPI', cpi.toFixed(3)],
+    ];
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    infoRows.forEach(([l1,v1,l2,v2])=>{
+      doc.setTextColor(100,116,139); doc.text(l1+':',16,y); doc.setTextColor(15,23,42); doc.text(v1,55,y);
+      if(l2){doc.setTextColor(100,116,139); doc.text(l2+':',116,y); doc.setTextColor(15,23,42); doc.text(String(v2),150,y);}
+      y+=6;
+    });
+
+    // Progress bar
+    y+=4;
+    const pct=Math.min(Number(p.pct||0),100);
+    doc.setFillColor(220,230,240); doc.rect(14,y,182,6,'F');
+    doc.setFillColor(cpi>=1?16:cpi>=0.9?249:239, cpi>=1?185:cpi>=0.9?115:68, cpi>=1?129:cpi>=0.9?22:68);
+    doc.rect(14,y,182*pct/100,6,'F');
+    doc.setTextColor(30,58,95); doc.setFontSize(8); doc.setFont('helvetica','bold');
+    doc.text(`${pct}% Complete`,105,y+4.5,'center');
+    y+=14;
+
+    // Invoice summary
+    doc.setFillColor(241,245,249); doc.rect(14,y-5,182,8,'F');
+    doc.setTextColor(30,58,95); doc.setFontSize(11); doc.setFont('helvetica','bold');
+    doc.text('INVOICE SUMMARY',16,y); y+=8;
+    doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.setTextColor(100,116,139);
+    doc.text('Invoice No',16,y); doc.text('Date',60,y); doc.text('Amount',100,y); doc.text('Due Date',140,y); doc.text('Status',175,y);
+    y+=5;
+    doc.setTextColor(15,23,42);
+    invs.slice(0,8).forEach((inv,i)=>{
+      if(i%2===0){doc.setFillColor(248,250,252); doc.rect(14,y-3,182,5,'F');}
+      doc.text(inv.invoice_no||'—',16,y); doc.text(inv.invoice_date||'—',60,y);
+      doc.text(`KD ${Number(inv.net_amount||0).toFixed(3)}`,100,y); doc.text(inv.due_date||'—',140,y);
+      const sc=inv.status==='paid'?[16,185,129]:inv.status==='overdue'?[239,68,68]:[249,115,22];
+      doc.setTextColor(sc[0],sc[1],sc[2]); doc.text((inv.status||'—').toUpperCase(),175,y);
+      doc.setTextColor(15,23,42); y+=5;
+    });
+
+    // EVM trend
+    if(snaps.length>1){
+      y+=6;
+      doc.setFillColor(241,245,249); doc.rect(14,y-5,182,8,'F');
+      doc.setTextColor(30,58,95); doc.setFontSize(11); doc.setFont('helvetica','bold');
+      doc.text('EVM PERFORMANCE TREND',16,y); y+=8;
+      doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(100,116,139);
+      doc.text('Date',16,y); doc.text('PV (KD)',55,y); doc.text('EV (KD)',90,y); doc.text('AC (KD)',125,y); doc.text('CPI',160,y); doc.text('SPI',175,y); y+=5;
+      doc.setTextColor(15,23,42);
+      snaps.forEach((s,i)=>{
+        if(i%2===0){doc.setFillColor(248,250,252); doc.rect(14,y-3,182,5,'F');}
+        const sc=Number(s.ac)>0?Number(s.ev)/Number(s.ac):1;
+        doc.text(s.snapshot_date||'—',16,y);
+        doc.text(Math.round(s.pv||0).toLocaleString(),55,y); doc.text(Math.round(s.ev||0).toLocaleString(),90,y); doc.text(Math.round(s.ac||0).toLocaleString(),125,y);
+        doc.setTextColor(sc>=1?16:sc>=0.9?249:239, sc>=1?185:sc>=0.9?115:68, sc>=1?129:sc>=0.9?22:68);
+        doc.text(sc.toFixed(2),160,y); doc.setTextColor(15,23,42); y+=5;
+      });
+    }
+
+    // Footer
+    doc.setFontSize(8); doc.setTextColor(148,163,184);
+    doc.line(14,282,196,282);
+    doc.text('This report was generated by SP360 ERP v3.3. Smart Projects 360 · Kuwait. For client use only.',105,288,'center');
+
+    doc.save(`ClientReport_${p.project_no||'Project'}_${new Date().toISOString().split('T')[0]}.pdf`);
+    showToast('Client report exported ✓');
+  }catch(e){
+    showToast('Client report error: '+e.message,'error');
+    logError('Reports','exportClientPortal',e);
+  }
 }
 
 async function installPWA(){
