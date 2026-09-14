@@ -549,6 +549,7 @@ img,canvas,svg{max-width:100%;height:auto}
         <div style="font-size:12px;font-weight:700;line-height:1.2" id="user-name">—</div>
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:.3px;font-weight:700" id="user-role">—</div>
       </div>
+      <button onclick="toggleLanguage()" style="background:none;border:1px solid var(--bdr);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer" title="Toggle Arabic/English">🌐 AR/EN</button>
       <button class="btn-logout" onclick="doLogout()">Sign out</button>
       <button id="pwa-install-btn" onclick="installPWA()" style="display:none;background:#C9A84C;color:#0D1B2A;border:none;border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">📱 Install</button>
     </div>
@@ -584,6 +585,8 @@ img,canvas,svg{max-width:100%;height:auto}
         <button class="nav-btn" id="nav-reports" onclick="navTo('reports',this)"><span class="nav-icon">📑</span>Reports</button>
         <button class="nav-btn" id="nav-training" onclick="navTo('training',this)"><span class="nav-icon">🎓</span>Training</button>
         <button class="nav-btn" id="nav-assets" onclick="navTo('assets',this)"><span class="nav-icon">🔧</span>Assets</button>
+        <button class="nav-btn" id="nav-subcon" onclick="navTo('subcon',this)"><span class="nav-icon">🏢</span>Subcon</button>
+        <button class="nav-btn" id="nav-meetings" onclick="navTo('meetings',this)"><span class="nav-icon">📝</span>Meetings</button>
         <button class="nav-btn" id="nav-system" onclick="navTo('system',this)"><span class="nav-icon">⚙️</span>System</button>
       </nav>
       <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v3.3 · Production<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
@@ -610,6 +613,8 @@ img,canvas,svg{max-width:100%;height:auto}
       <div class="page" id="page-reports"></div>
       <div class="page" id="page-training"></div>
       <div class="page" id="page-assets"></div>
+      <div class="page" id="page-subcon"></div>
+      <div class="page" id="page-meetings"></div>
       <div class="page" id="page-system"></div>
       <div class="page" id="page-resources"></div>
       <div class="page" id="page-scorecard"></div>
@@ -750,12 +755,12 @@ var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 // Page visibility per role
 const ROLE_PAGES = {
-  'Admin':             ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets'],
-  'PMO Manager':       ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets'],
-  'CEO':               ['dashboard','ceo','projects','gantt','resources','scorecard','bizdev','finance','contracts','lessons','forecast','reports'],
-  'Finance Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','finance','inventory','workflow','audit','contracts','lessons','forecast','reports','assets'],
-  'Project Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','inventory','qhse','documents','workflow','contracts','lessons','forecast','reports','training','assets'],
-  'Procurement Lead':  ['dashboard','projects','gantt','procurement','inventory','workflow','contracts','lessons','assets'],
+  'Admin':             ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings'],
+  'PMO Manager':       ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings'],
+  'CEO':               ['dashboard','ceo','projects','gantt','resources','scorecard','bizdev','finance','contracts','lessons','forecast','reports','subcon','meetings'],
+  'Finance Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','finance','inventory','workflow','audit','contracts','lessons','forecast','reports','assets','subcon','meetings'],
+  'Project Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','inventory','qhse','documents','workflow','contracts','lessons','forecast','reports','training','assets','subcon','meetings'],
+  'Procurement Lead':  ['dashboard','projects','gantt','procurement','inventory','workflow','contracts','lessons','assets','subcon','meetings'],
   'BD Manager':        ['dashboard','bizdev','projects','gantt','contracts','lessons'],
   'QHSE Engineer':     ['dashboard','projects','gantt','qhse','documents','contracts','lessons'],
   'HR Manager':        ['dashboard','hr','documents','contracts','lessons','training'],
@@ -1136,7 +1141,7 @@ function enterApp(){
 
   // ── Apply role-based nav visibility ──────────────────────
   const allowed = ROLE_PAGES[currentProfile?.role] || ['dashboard'];
-  ['bizdev','projects','gantt','resources','scorecard','contracts','lessons','forecast','reports','training','assets','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system'].forEach(p=>{
+  ['bizdev','projects','gantt','resources','scorecard','contracts','lessons','forecast','reports','training','assets','subcon','meetings','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system'].forEach(p=>{
     const btn = document.getElementById('nav-'+p);
     if(btn) btn.style.display = allowed.includes(p) ? '' : 'none';
   });
@@ -1381,7 +1386,7 @@ function navTo(id,btn){
     procurement:()=>loadProc(curProcTab),finance:loadFinance,
     hr:()=>loadHR(curHRTab),qhse:()=>loadQHSE(curQHSETab),
     inventory:loadInventory,documents:()=>loadDocs(curDocTab),workflow:loadWorkflow,audit:loadAudit,
-    users:loadUsers,ceo:loadCEO,system:loadSystem,resources:loadResources,scorecard:loadScorecard,contracts:loadContracts,lessons:loadLessons,forecast:loadForecast,reports:loadReports,training:loadTraining,assets:loadAssets
+    users:loadUsers,ceo:loadCEO,system:loadSystem,resources:loadResources,scorecard:loadScorecard,contracts:loadContracts,lessons:loadLessons,forecast:loadForecast,reports:loadReports,training:loadTraining,assets:loadAssets,subcon:loadSubcon,meetings:loadMeetings
   };
   if(loaders[id])loaders[id]();
 }
@@ -2028,6 +2033,7 @@ async function loadProjects(tab){
             <button class="btn btn-primary btn-sm" onclick="saveProgress(event,'${p.id}',${p.bac})">Save</button>
             <button onclick="openRiskRegister('${p.id}','${p.project_no}')" style="background:#EF444411;border:1px solid #EF444433;color:#EF4444;border-radius:5px;padding:3px 7px;font-size:9px;font-weight:700;cursor:pointer" title="Risk Register">⚠️</button>
             <button onclick="exportClientPortal('${p.id}','${p.project_no}')" style="background:#C9A84C11;border:1px solid #C9A84C33;color:#C9A84C;border-radius:5px;padding:3px 7px;font-size:9px;font-weight:700;cursor:pointer" title="Client Report">📤</button>
+            <button onclick="openCloseoutChecklist('${p.id}','${p.project_no}')" style="background:#10B98111;border:1px solid #10B98133;color:#10B981;border-radius:5px;padding:3px 7px;font-size:9px;font-weight:700;cursor:pointer" title="Closeout Checklist">✅</button>
           </div>
         </td>
       </tr>`;
@@ -5438,6 +5444,7 @@ async function loadCEO(){
       <button class="btn btn-ghost btn-sm" onclick="exportCEOPDF()">📄 Export PDF</button>
       <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 Print</button>
       <button class="btn btn-ghost btn-sm" onclick="openBIPanel()" style="background:#3B82F611;border-color:#3B82F644;color:#3B82F6">📡 BI Export</button>
+      <button class="btn btn-ghost btn-sm" onclick="loadCODashboard()" style="background:#F9731611;border-color:#F9731633;color:#F97316">📊 CO Dashboard</button>
     </div>
   </div>
 
@@ -11665,6 +11672,698 @@ async function exportClientPortal(projectId, projectNo){
     showToast('Client report error: '+e.message,'error');
     logError('Reports','exportClientPortal',e);
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P8-1 · SUBCONTRACTOR MANAGEMENT
+// ══════════════════════════════════════════════════════════════
+async function loadSubcon(tab='list'){
+  const el=document.getElementById('page-subcon');
+  if(!el) return;
+  el.innerHTML='<div class="loading">Loading Subcontractors…</div>';
+  try{
+    const today=new Date();
+    const [subR,projR,payR]=await Promise.all([
+      sb.from('subcontractors').select('*,project:projects(project_no,name)').order('created_at',{ascending:false}),
+      sb.from('projects').select('id,project_no,name').in('status',ACTIVE_STATUSES).order('project_no'),
+      sb.from('subcontractor_payments').select('*,subcon:subcontractors(subcon_no,subcon_name)').order('payment_date',{ascending:false}).limit(50)
+    ]);
+    const subs=subR.data||[], projs=projR.data||[], pays=payR.data||[];
+
+    const active=subs.filter(s=>s.status==='active');
+    const totalContract=subs.reduce((s,x)=>s+Number(x.contract_value||0),0);
+    const totalPaid=pays.filter(p=>p.status==='paid').reduce((s,p)=>s+Number(p.amount||0),0);
+    const totalPending=subs.reduce((s,x)=>s+Number(x.contract_value||0),0)-totalPaid;
+
+    const tabBtns=`<div class="tabs">
+      <button class="tab${tab==='list'?' act':''}" onclick="loadSubcon('list')">🏢 Subcontractors (${subs.length})</button>
+      <button class="tab${tab==='payments'?' act':''}" onclick="loadSubcon('payments')">💳 Payments (${pays.length})</button>
+    </div>`;
+
+    let body='';
+    if(tab==='list'){
+      body=`
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+        ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openNewSubconModal()">+ New Subcontractor</button>`:''}
+      </div>
+      ${subs.length===0?'<div class="empty">No subcontractors registered</div>':`
+      <table><thead><tr>
+        <th>Subcon No</th><th>Name</th><th>Scope</th><th>Project</th>
+        <th style="text-align:right">Contract Value</th><th>Start</th><th>End</th>
+        <th style="text-align:center">Status</th><th></th>
+      </tr></thead><tbody>
+      ${subs.map(s=>{
+        const paid=pays.filter(p=>p.subcontractor_id===s.id&&p.status==='paid').reduce((t,p)=>t+Number(p.amount||0),0);
+        const pct=Number(s.contract_value)>0?Math.round(paid/Number(s.contract_value)*100):0;
+        return`<tr>
+          <td style="color:var(--gold);font-weight:700;font-size:10px">${esc(s.subcon_no||'—')}</td>
+          <td style="font-weight:600">${esc(s.subcon_name||'—')}</td>
+          <td style="color:var(--muted);font-size:10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.scope||'—')}</td>
+          <td style="font-size:10px;color:var(--gold)">${esc(s.project?.project_no||'—')}</td>
+          <td style="text-align:right;font-weight:700">${fmtKWD(s.contract_value||0)}</td>
+          <td style="font-size:10px;color:var(--faint)">${s.start_date||'—'}</td>
+          <td style="font-size:10px;color:var(--faint)">${s.end_date||'—'}</td>
+          <td style="text-align:center">${pill(s.status||'active',s.status==='active'?'#10B981':s.status==='completed'?'#3B82F6':'#94A3B8')}</td>
+          <td>
+            <button onclick="openSubconDetail('${s.id}')" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:11px" title="View detail">👁</button>
+            ${can('create')?`<button onclick="openAddSubconPayment('${s.id}','${esc(s.subcon_no)}','${esc(s.subcon_name)}')" style="background:none;border:none;color:#10B981;cursor:pointer;font-size:11px" title="Add payment">💳</button>`:''}
+          </td>
+        </tr>`;}).join('')}
+      </tbody></table>`}`;
+    } else {
+      body=`
+      ${pays.length===0?'<div class="empty">No payments recorded</div>':`
+      <table><thead><tr>
+        <th>Payment No</th><th>Subcontractor</th><th>Description</th>
+        <th style="text-align:right">Amount</th><th>Date</th>
+        <th style="text-align:center">Status</th>
+      </tr></thead><tbody>
+      ${pays.map(p=>`<tr>
+        <td style="color:var(--gold);font-size:10px;font-weight:700">${esc(p.payment_no||'—')}</td>
+        <td style="font-weight:600">${esc(p.subcon?.subcon_name||'—')}</td>
+        <td style="color:var(--muted);font-size:10px">${esc(p.description||'—')}</td>
+        <td style="text-align:right;font-weight:700;color:#10B981">${fmtKWD(p.amount||0)}</td>
+        <td style="font-size:10px;color:var(--faint)">${p.payment_date||'—'}</td>
+        <td style="text-align:center">${pill(p.status||'pending',p.status==='paid'?'#10B981':'#F97316')}</td>
+      </tr>`).join('')}
+      </tbody></table>`}`;
+    }
+
+    el.innerHTML=`
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">🏢</span>
+        <div><h1>Subcontractor Management</h1><div class="sub">Contracts · Payments · Performance</div></div>
+      </div>
+    </div>
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Active Subcons',  active.length,    '#C9A84C', 'Currently active')}
+      ${kpi('Total Contract',  fmtKWD(totalContract), '#3B82F6', 'Combined value')}
+      ${kpi('Total Paid',      fmtKWD(totalPaid),     '#10B981', 'Payments released')}
+      ${kpi('Balance Due',     fmtKWD(Math.max(totalContract-totalPaid,0)), '#F97316', 'Remaining')}
+    </div>
+    <div class="card">${tabBtns}${body}</div>`;
+  }catch(err){ el.innerHTML=`<div class="empty">Error: ${err.message}</div>`; }
+}
+
+function openNewSubconModal(){
+  const projs=window._cachedProjects||[];
+  const today=new Date().toISOString().split('T')[0];
+  openModal('+ New Subcontractor',`
+    <div class="form-row">
+      <div class="form-field"><label>Company Name *</label><input id="sc-name" placeholder="Subcontractor company name"/></div>
+      <div class="form-field"><label>Contact Person</label><input id="sc-contact" placeholder="Name"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Project *</label>
+        <select id="sc-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select Project —</option>
+          ${projs.map(p=>`<option value="${p.id}">${esc(p.project_no)} — ${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Contract Value (KWD)</label><input id="sc-val" type="number" step="0.001" placeholder="0.000"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Start Date</label><input id="sc-start" type="date" value="${today}"/></div>
+      <div class="form-field"><label>End Date</label><input id="sc-end" type="date"/></div>
+    </div>
+    <div class="form-field"><label>Scope of Work</label>
+      <textarea id="sc-scope" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSubcon(event)">Create</button>
+    </div>`);
+}
+
+async function saveSubcon(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const name=document.getElementById('sc-name').value.trim();
+    const projId=document.getElementById('sc-proj').value;
+    if(!name){showToast('Company name required','error');return;}
+    if(!projId){showToast('Project required','error');return;}
+    const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'SC'});
+    const {error}=await sb.from('subcontractors').insert({
+      subcon_no:no, subcon_name:name,
+      contact_person:document.getElementById('sc-contact').value.trim()||null,
+      project_id:projId,
+      contract_value:Number(document.getElementById('sc-val').value)||0,
+      start_date:document.getElementById('sc-start').value||null,
+      end_date:document.getElementById('sc-end').value||null,
+      scope:document.getElementById('sc-scope').value.trim()||null,
+      status:'active', created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('subcontractors',null,'SUBCON_CREATED',null,{subcon_no:no,name},'Subcontractor created');
+    showToast(no+' created ✓'); closeModal(); loadSubcon();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Create';}}
+}
+
+async function openSubconDetail(id){
+  const {data:s}=await sb.from('subcontractors').select('*,project:projects(project_no,name)').eq('id',id).single();
+  const {data:pays}=await sb.from('subcontractor_payments').select('*').eq('subcontractor_id',id).order('payment_date',{ascending:false});
+  if(!s) return;
+  const totalPaid=(pays||[]).filter(p=>p.status==='paid').reduce((t,p)=>t+Number(p.amount||0),0);
+  const pct=Number(s.contract_value)>0?Math.round(totalPaid/Number(s.contract_value)*100):0;
+  openModal(`🏢 ${s.subcon_no} — ${s.subcon_name}`,`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      ${[['Project',s.project?.project_no||'—'],['Status',pill(s.status||'active',s.status==='active'?'#10B981':'#94A3B8')],
+         ['Contract',fmtKWD(s.contract_value||0)],['Paid So Far',fmtKWD(totalPaid)],
+         ['Start',s.start_date||'—'],['End',s.end_date||'—']
+      ].map(([l,v])=>`<div style="background:var(--n3);border-radius:6px;padding:8px">
+        <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase">${l}</div>
+        <div style="font-size:12px;color:var(--text);margin-top:2px">${v}</div>
+      </div>`).join('')}
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px">
+        <span>Payment Progress</span><span>${pct}% paid</span>
+      </div>
+      <div style="background:var(--bdr);border-radius:4px;height:8px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:#10B981;border-radius:4px"></div>
+      </div>
+    </div>
+    ${s.scope?`<div style="padding:8px;background:var(--n3);border-radius:6px;font-size:11px;color:var(--muted);margin-bottom:12px"><b>Scope:</b> ${esc(s.scope)}</div>`:''}
+    <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:6px">Payment History</div>
+    ${(pays||[]).length===0?'<div style="color:var(--faint);font-size:10px">No payments yet</div>':
+      (pays||[]).map(p=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bdr);font-size:10px">
+        <span style="color:var(--muted)">${p.description||p.payment_no}</span>
+        <span style="font-weight:700;color:#10B981">${fmtKWD(p.amount||0)}</span>
+        <span style="color:var(--faint)">${p.payment_date||'—'}</span>
+        <span>${pill(p.status||'pending',p.status==='paid'?'#10B981':'#F97316')}</span>
+      </div>`).join('')}
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      ${can('create')?`<button class="btn btn-primary" onclick="openAddSubconPayment('${id}','${esc(s.subcon_no)}','${esc(s.subcon_name)}');closeModal()">💳 Add Payment</button>`:''}
+    </div>`);
+}
+
+function openAddSubconPayment(subconId, subconNo, subconName){
+  openModal(`💳 Payment — ${subconNo}`,`
+    <div style="margin-bottom:10px;font-size:11px;color:var(--muted)">${esc(subconName)}</div>
+    <div class="form-row">
+      <div class="form-field"><label>Amount (KWD) *</label><input id="sp-amt" type="number" step="0.001" placeholder="0.000"/></div>
+      <div class="form-field"><label>Payment Date *</label><input id="sp-date" type="date" value="${new Date().toISOString().split('T')[0]}"/></div>
+    </div>
+    <div class="form-field"><label>Description *</label><input id="sp-desc" placeholder="e.g. Progress Payment #1 — 30%"/></div>
+    <div class="form-field"><label>Status</label>
+      <select id="sp-status" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+        <option value="paid">Paid</option><option value="pending">Pending</option>
+      </select>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSubconPayment(event,'${subconId}')">Save Payment</button>
+    </div>`);
+}
+
+async function saveSubconPayment(e,subconId){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const amt=Number(document.getElementById('sp-amt').value);
+    const date=document.getElementById('sp-date').value;
+    const desc=document.getElementById('sp-desc').value.trim();
+    if(!amt||!date||!desc){showToast('Amount, date and description required','error');return;}
+    const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'SPY'});
+    const {error}=await sb.from('subcontractor_payments').insert({
+      payment_no:no, subcontractor_id:subconId, amount:amt,
+      payment_date:date, description:desc,
+      status:document.getElementById('sp-status').value,
+      created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Payment recorded ✓'); closeModal(); loadSubcon('payments');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save Payment';}}
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P8-2 · MEETING MINUTES
+// ══════════════════════════════════════════════════════════════
+async function loadMeetings(tab='list'){
+  const el=document.getElementById('page-meetings');
+  if(!el) return;
+  el.innerHTML='<div class="loading">Loading Meetings…</div>';
+  try{
+    const [meetR,projR]=await Promise.all([
+      sb.from('meeting_minutes').select('*,project:projects(project_no,name)').order('meeting_date',{ascending:false}),
+      sb.from('projects').select('id,project_no,name').in('status',ACTIVE_STATUSES).order('project_no')
+    ]);
+    const meets=meetR.data||[], projs=projR.data||[];
+    const today=new Date();
+    const thisMonth=today.toISOString().slice(0,7);
+    const thisMonthMeets=meets.filter(m=>m.meeting_date?.startsWith(thisMonth));
+    const withActions=meets.filter(m=>m.action_items&&m.action_items.length>0);
+
+    el.innerHTML=`
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">📝</span>
+        <div><h1>Meeting Minutes</h1><div class="sub">Site Meetings · Progress Reviews · Technical Discussions</div></div>
+      </div>
+      ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openNewMeetingModal()">+ Record Meeting</button>`:''}
+    </div>
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Total Meetings',  meets.length,           '#C9A84C', 'All recorded')}
+      ${kpi('This Month',      thisMonthMeets.length,  '#3B82F6', today.toLocaleDateString('en-GB',{month:'long'}))}
+      ${kpi('With Actions',    withActions.length,     '#F97316', 'Have action items')}
+      ${kpi('Projects',        new Set(meets.map(m=>m.project_id).filter(Boolean)).size, '#10B981', 'Covered')}
+    </div>
+    <div class="card">
+      ${meets.length===0?'<div class="empty">No meetings recorded yet</div>':`
+      <table><thead><tr>
+        <th>Meeting No</th><th>Title</th><th>Type</th><th>Project</th><th>Date</th><th>Attendees</th><th>Actions</th><th></th>
+      </tr></thead><tbody>
+      ${meets.map(m=>`<tr>
+        <td style="color:var(--gold);font-weight:700;font-size:10px">${esc(m.meeting_no||'—')}</td>
+        <td style="font-weight:600;font-size:11px">${esc(m.title||'—')}</td>
+        <td><span style="font-size:9px;background:#3B82F622;color:#3B82F6;border-radius:4px;padding:2px 6px">${esc(m.meeting_type||'General')}</span></td>
+        <td style="font-size:10px;color:var(--gold)">${esc(m.project?.project_no||'General')}</td>
+        <td style="font-size:10px;color:var(--faint)">${m.meeting_date||'—'}</td>
+        <td style="font-size:10px;color:var(--muted)">${m.attendee_count||'—'}</td>
+        <td style="text-align:center"><span style="font-size:11px;font-weight:700;color:${(m.action_items||[]).length>0?'#F97316':'var(--faint)'}">${(m.action_items||[]).length}</span></td>
+        <td><button onclick="openMeetingDetail('${m.id}')" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:11px">👁</button></td>
+      </tr>`).join('')}
+      </tbody></table>`}
+    </div>`;
+  }catch(err){ el.innerHTML=`<div class="empty">Error: ${err.message}</div>`; }
+}
+
+function openNewMeetingModal(){
+  const projs=window._cachedProjects||[];
+  const today=new Date().toISOString().split('T')[0];
+  openModal('📝 Record Meeting Minutes',`
+    <div class="form-row">
+      <div class="form-field"><label>Meeting Title *</label><input id="mt-title" placeholder="e.g. Weekly Progress Meeting"/></div>
+      <div class="form-field"><label>Type</label>
+        <select id="mt-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          ${['Progress Review','Technical','Safety','Kickoff','Closeout','Client','Internal','Emergency'].map(t=>`<option>${t}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Project</label>
+        <select id="mt-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— General / None —</option>
+          ${projs.map(p=>`<option value="${p.id}">${esc(p.project_no)} — ${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Meeting Date *</label><input id="mt-date" type="date" value="${today}"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Location</label><input id="mt-loc" placeholder="e.g. Site Office / Teams"/></div>
+      <div class="form-field"><label>No. of Attendees</label><input id="mt-att" type="number" min="1" placeholder="5"/></div>
+    </div>
+    <div class="form-field"><label>Attendees (names)</label>
+      <textarea id="mt-names" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical" placeholder="Ibrahim Al-Rashidi, Ahmed Hassan, …"></textarea>
+    </div>
+    <div class="form-field"><label>Discussion Points *</label>
+      <textarea id="mt-disc" rows="4" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical" placeholder="1. Progress update reviewed\n2. Issues discussed\n3. Decisions made"></textarea>
+    </div>
+    <div class="form-field"><label>Action Items (one per line: Action | Owner | Due Date)</label>
+      <textarea id="mt-actions" rows="3" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical" placeholder="Submit drawings | Ahmed | 2026-10-01\nUpdate schedule | Ibrahim | 2026-10-05"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportMeetingPDF_preview()">👁 Preview PDF</button>
+      <button class="btn btn-primary" onclick="saveMeeting(event)">Save Minutes</button>
+    </div>`);
+}
+
+async function saveMeeting(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const title=document.getElementById('mt-title').value.trim();
+    const date =document.getElementById('mt-date').value;
+    const disc =document.getElementById('mt-disc').value.trim();
+    if(!title||!date||!disc){showToast('Title, date and discussion required','error');return;}
+    // Parse action items
+    const actionsRaw=document.getElementById('mt-actions').value.trim();
+    const actions=actionsRaw?actionsRaw.split('\n').filter(l=>l.trim()).map(l=>{
+      const parts=l.split('|').map(p=>p.trim());
+      return {action:parts[0]||l, owner:parts[1]||null, due_date:parts[2]||null, status:'open'};
+    }):[];
+    const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'MTG'});
+    const {error}=await sb.from('meeting_minutes').insert({
+      meeting_no:no, title,
+      meeting_type:document.getElementById('mt-type').value,
+      project_id:document.getElementById('mt-proj').value||null,
+      meeting_date:date,
+      location:document.getElementById('mt-loc').value.trim()||null,
+      attendee_count:Number(document.getElementById('mt-att').value)||null,
+      attendee_names:document.getElementById('mt-names').value.trim()||null,
+      discussion_points:disc,
+      action_items:actions,
+      created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('meeting_minutes',null,'MEETING_RECORDED',null,{meeting_no:no,title},'Meeting minutes recorded');
+    showToast(no+' saved ✓'); closeModal(); loadMeetings();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save Minutes';}}
+}
+
+async function openMeetingDetail(id){
+  const {data:m}=await sb.from('meeting_minutes').select('*,project:projects(project_no,name)').eq('id',id).single();
+  if(!m) return;
+  const actions=m.action_items||[];
+  openModal(`📝 ${m.meeting_no} — ${m.title}`,`
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <span style="font-size:10px;background:#3B82F622;color:#3B82F6;border-radius:4px;padding:3px 8px">${esc(m.meeting_type||'General')}</span>
+      <span style="font-size:10px;color:var(--muted)">📅 ${m.meeting_date||'—'}</span>
+      ${m.project?.project_no?`<span style="font-size:10px;color:var(--gold)">🏗 ${esc(m.project.project_no)}</span>`:''}
+      ${m.location?`<span style="font-size:10px;color:var(--muted)">📍 ${esc(m.location)}</span>`:''}
+      ${m.attendee_count?`<span style="font-size:10px;color:var(--muted)">👥 ${m.attendee_count} attendees</span>`:''}
+    </div>
+    ${m.attendee_names?`<div style="padding:8px;background:var(--n3);border-radius:6px;font-size:10px;color:var(--muted);margin-bottom:10px"><b>Attendees:</b> ${esc(m.attendee_names)}</div>`:''}
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:6px">Discussion Points</div>
+      <div style="background:var(--n3);border-radius:6px;padding:10px;font-size:11px;color:var(--text);white-space:pre-wrap">${esc(m.discussion_points||'—')}</div>
+    </div>
+    ${actions.length>0?`
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:6px">Action Items (${actions.length})</div>
+      ${actions.map((a,i)=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bdr)">
+        <span style="font-size:14px">${a.status==='closed'?'✅':'🔲'}</span>
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:600">${esc(a.action||'—')}</div>
+          <div style="font-size:9px;color:var(--muted)">${a.owner?'Owner: '+esc(a.owner):''}${a.due_date?' · Due: '+a.due_date:''}</div>
+        </div>
+        ${pill(a.status||'open',a.status==='closed'?'#10B981':'#F97316')}
+      </div>`).join('')}
+    </div>`:''}
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      <button class="btn btn-primary" onclick="exportMeetingPDF('${id}')">📄 Export PDF</button>
+    </div>`);
+}
+
+async function exportMeetingPDF(id){
+  const {data:m}=await sb.from('meeting_minutes').select('*,project:projects(project_no,name)').eq('id',id).single();
+  if(!m){ showToast('Meeting not found','error'); return; }
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const today=new Date().toLocaleDateString('en-GB');
+
+  // Header
+  doc.setFillColor(30,58,95); doc.rect(0,0,210,38,'F');
+  doc.setTextColor(201,168,76); doc.setFontSize(16); doc.setFont('helvetica','bold');
+  doc.text('MEETING MINUTES',14,14);
+  doc.setTextColor(255,255,255); doc.setFontSize(12);
+  doc.text(m.title||'—',14,24);
+  doc.setTextColor(148,163,184); doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text(`${m.meeting_no} · ${m.meeting_type||'General'} · ${m.meeting_date||'—'} · SP360 ERP v3.3`,14,33);
+
+  let y=48;
+  // Meta info
+  doc.setFillColor(241,245,249); doc.rect(14,y-5,182,8,'F');
+  doc.setTextColor(30,58,95); doc.setFontSize(9); doc.setFont('helvetica','bold');
+  doc.text('MEETING INFORMATION',16,y); y+=8;
+  doc.setFont('helvetica','normal'); doc.setTextColor(71,85,105); doc.setFontSize(9);
+  [['Date',m.meeting_date||'—'],['Location',m.location||'N/A'],['Project',m.project?.project_no||'General'],
+   ['Attendees',String(m.attendee_count||'—')],['Recorded by',currentProfile?.full_name||'—'],['Generated',today]
+  ].forEach(([l,v],i)=>{
+    const x=i%2===0?14:110;
+    if(i%2===0&&i>0) y+=5;
+    doc.setTextColor(100,116,139); doc.text(l+': ',x,y);
+    doc.setTextColor(15,23,42); doc.text(v,x+25,y);
+    if(i%2===1) y+=0;
+  });
+  y+=10;
+
+  if(m.attendee_names){
+    doc.setFillColor(241,245,249); doc.rect(14,y-5,182,8,'F');
+    doc.setTextColor(30,58,95); doc.setFont('helvetica','bold'); doc.text('ATTENDEES',16,y); y+=8;
+    doc.setFont('helvetica','normal'); doc.setTextColor(71,85,105);
+    const lines=doc.splitTextToSize(m.attendee_names,178);
+    lines.forEach(l=>{ doc.text(l,16,y); y+=5; }); y+=4;
+  }
+
+  // Discussion
+  doc.setFillColor(241,245,249); doc.rect(14,y-5,182,8,'F');
+  doc.setTextColor(30,58,95); doc.setFont('helvetica','bold'); doc.text('DISCUSSION POINTS',16,y); y+=8;
+  doc.setFont('helvetica','normal'); doc.setTextColor(15,23,42);
+  const discLines=doc.splitTextToSize(m.discussion_points||'—',178);
+  discLines.forEach(l=>{ if(y>270){doc.addPage();y=20;} doc.text(l,16,y); y+=5; });
+  y+=6;
+
+  // Action items
+  const actions=m.action_items||[];
+  if(actions.length>0){
+    if(y>250){doc.addPage();y=20;}
+    doc.setFillColor(30,58,95); doc.rect(14,y-5,182,8,'F');
+    doc.setTextColor(201,168,76); doc.setFont('helvetica','bold'); doc.text('ACTION ITEMS',16,y);
+    doc.text('OWNER',100,y); doc.text('DUE DATE',140,y); doc.text('STATUS',175,y); y+=6;
+    actions.forEach((a,i)=>{
+      if(y>270){doc.addPage();y=20;}
+      if(i%2===0){doc.setFillColor(248,250,252);doc.rect(14,y-3,182,7,'F');}
+      doc.setFont('helvetica','normal'); doc.setTextColor(15,23,42); doc.setFontSize(8);
+      doc.text(String(i+1)+'. '+((a.action||'').substring(0,45)),16,y);
+      doc.text(a.owner||'—',100,y); doc.text(a.due_date||'—',140,y);
+      const sc=a.status==='closed'?[16,185,129]:[249,115,22];
+      doc.setTextColor(sc[0],sc[1],sc[2]); doc.text((a.status||'open').toUpperCase(),175,y);
+      doc.setTextColor(15,23,42); y+=7;
+    });
+  }
+
+  // Footer
+  const pages=doc.getNumberOfPages();
+  for(let i=1;i<=pages;i++){
+    doc.setPage(i); doc.setFontSize(8); doc.setTextColor(148,163,184);
+    doc.text(`${m.meeting_no} · Page ${i}/${pages} · SP360 ERP v3.3 · Smart Projects 360 Kuwait · Confidential`,105,290,'center');
+  }
+  doc.save(`MeetingMinutes_${m.meeting_no}_${m.meeting_date||'draft'}.pdf`);
+  showToast('Meeting minutes PDF exported ✓');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P8-3 · PROJECT CLOSEOUT CHECKLIST
+// ══════════════════════════════════════════════════════════════
+const CLOSEOUT_CHECKLIST = [
+  {id:'scope_complete',    cat:'Technical',    label:'All scope items completed & verified'},
+  {id:'punch_list',        cat:'Technical',    label:'Punch list items resolved'},
+  {id:'drawings_asbuilt',  cat:'Technical',    label:'As-built drawings submitted'},
+  {id:'manuals_submitted', cat:'Technical',    label:'O&M manuals and warranties submitted'},
+  {id:'testing_complete',  cat:'Technical',    label:'Testing & commissioning completed'},
+  {id:'handing_over',      cat:'Technical',    label:'Handover certificate signed'},
+  {id:'final_invoice',     cat:'Financial',    label:'Final invoice issued'},
+  {id:'retention_released',cat:'Financial',    label:'Retention release requested'},
+  {id:'variation_settled', cat:'Financial',    label:'All variations settled'},
+  {id:'subcon_paid',       cat:'Financial',    label:'Subcontractor final payments released'},
+  {id:'po_closed',         cat:'Financial',    label:'All POs closed'},
+  {id:'final_account',     cat:'Financial',    label:'Final account agreed with client'},
+  {id:'ncr_closed',        cat:'QHSE',         label:'All NCRs closed'},
+  {id:'incident_closed',   cat:'QHSE',         label:'All safety incidents closed'},
+  {id:'waste_disposed',    cat:'QHSE',         label:'Waste disposal completed'},
+  {id:'docs_archived',     cat:'Documents',    label:'All project documents archived'},
+  {id:'lessons_recorded',  cat:'Documents',    label:'Lessons learned recorded'},
+  {id:'evm_snapshot',      cat:'Documents',    label:'Final EVM snapshot taken'},
+  {id:'contract_closed',   cat:'Documents',    label:'Contract formally closed'},
+  {id:'staff_released',    cat:'Resources',    label:'Project team released / reallocated'},
+];
+
+async function openCloseoutChecklist(projectId, projectNo){
+  // Load existing checklist
+  const {data:existing}=await sb.from('project_closeout').select('*').eq('project_id',projectId).single();
+  const checks=existing?.checklist||{};
+  const signedOff=existing?.signed_off||false;
+
+  const cats=[...new Set(CLOSEOUT_CHECKLIST.map(i=>i.cat))];
+  const total=CLOSEOUT_CHECKLIST.length;
+  const done=CLOSEOUT_CHECKLIST.filter(i=>checks[i.id]?.checked).length;
+  const pct=Math.round(done/total*100);
+
+  openModal(`✅ Closeout Checklist — ${projectNo}`,`
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px">
+        <span>Completion: ${done}/${total} items</span>
+        <span style="font-weight:700;color:${pct===100?'#10B981':'#F97316'}">${pct}%</span>
+      </div>
+      <div style="background:var(--bdr);border-radius:4px;height:8px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${pct===100?'#10B981':'#C9A84C'};border-radius:4px;transition:width .3s"></div>
+      </div>
+    </div>
+    ${signedOff?'<div style="padding:8px;background:#10B98122;border:1px solid #10B98133;border-radius:6px;margin-bottom:10px;font-size:11px;color:#10B981;font-weight:700">✅ This checklist has been signed off</div>':''}
+    <div style="max-height:380px;overflow-y:auto" id="closeout-items">
+    ${cats.map(cat=>`
+      <div style="margin-bottom:12px">
+        <div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${cat}</div>
+        ${CLOSEOUT_CHECKLIST.filter(i=>i.cat===cat).map(item=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;background:${checks[item.id]?.checked?'#10B98111':'var(--n3)'};margin-bottom:3px">
+          <input type="checkbox" id="cl-${item.id}" ${checks[item.id]?.checked?'checked':''} ${signedOff?'disabled':''}
+            onchange="updateCloseoutItem('${projectId}','${item.id}',this.checked)"
+            style="width:16px;height:16px;accent-color:#10B981;cursor:pointer;flex-shrink:0"/>
+          <label for="cl-${item.id}" style="font-size:11px;color:${checks[item.id]?.checked?'var(--muted)':'var(--text)'};cursor:pointer;text-decoration:${checks[item.id]?.checked?'line-through':''};flex:1">${item.label}</label>
+          ${checks[item.id]?.checked?`<span style="font-size:9px;color:var(--faint)">${checks[item.id]?.by||''}</span>`:''}
+        </div>`).join('')}
+      </div>`).join('')}
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      ${!signedOff&&pct===100?`<button class="btn btn-primary" onclick="signOffCloseout('${projectId}','${projectNo}')">✅ Sign Off & Close Project</button>`:
+        !signedOff?`<button class="btn btn-ghost btn-sm" onclick="saveCloseout('${projectId}')">💾 Save Progress</button>`:''}
+    </div>`);
+
+  // Store project ID for inline updates
+  window._closeoutProjectId = projectId;
+}
+
+async function updateCloseoutItem(projectId, itemId, checked){
+  // Get existing
+  const {data:existing}=await sb.from('project_closeout').select('*').eq('project_id',projectId).single();
+  const checks=existing?.checklist||{};
+  checks[itemId]={checked, by:currentProfile?.full_name||'—', at:new Date().toISOString()};
+  if(existing){
+    await sb.from('project_closeout').update({checklist:checks,updated_at:new Date().toISOString()}).eq('project_id',projectId);
+  } else {
+    await sb.from('project_closeout').insert({project_id:projectId,checklist:checks,created_by:currentProfile?.id});
+  }
+  // Update progress bar
+  const done=CLOSEOUT_CHECKLIST.filter(i=>checks[i.id]?.checked).length;
+  const pct=Math.round(done/CLOSEOUT_CHECKLIST.length*100);
+  const bar=document.querySelector('#closeout-items')?.previousElementSibling?.querySelector('div:last-child div');
+  if(bar) bar.style.width=pct+'%';
+}
+
+async function signOffCloseout(projectId, projectNo){
+  if(!confirm(`Sign off closeout for ${projectNo} and close the project?`)) return;
+  const {data:existing}=await sb.from('project_closeout').select('*').eq('project_id',projectId).single();
+  await sb.from('project_closeout').upsert({project_id:projectId,checklist:existing?.checklist||{},signed_off:true,signed_by:currentProfile?.id,signed_at:new Date().toISOString()});
+  await sb.from('projects').update({status:'closeout',updated_at:new Date().toISOString()}).eq('id',projectId);
+  await writeAudit('projects',projectId,'CLOSEOUT_SIGNED_OFF',{status:'execution'},{status:'closeout'},'Project closeout signed off');
+  showToast(`${projectNo} closeout signed off ✓`);
+  closeModal();
+  loadProjects();
+}
+
+async function saveCloseout(projectId){
+  showToast('Progress saved ✓');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P8-4 · ARABIC LANGUAGE SUPPORT
+// ══════════════════════════════════════════════════════════════
+let _currentLang = localStorage.getItem('sp360_lang') || 'en';
+
+const TRANSLATIONS = {
+  en:{
+    dashboard:'Dashboard', projects:'Projects', finance:'Finance', hr:'HR',
+    qhse:'QHSE', procurement:'Procurement', inventory:'Inventory',
+    documents:'Doc Control', workflow:'Workflow', audit:'Audit Trail',
+    users:'Users', ceo:'CEO Report', system:'System', gantt:'Gantt',
+    resources:'Resources', scorecard:'Scorecard', contracts:'Contracts',
+    lessons:'Lessons', forecast:'Forecast', reports:'Reports',
+    training:'Training', assets:'Assets', subcon:'Subcon', meetings:'Meetings',
+    bizdev:'Business Dev',
+    // Common actions
+    save:'Save', cancel:'Cancel', close:'Close', add:'Add', edit:'Edit',
+    delete:'Delete', export:'Export', refresh:'Refresh', search:'Search',
+    approve:'Approve', reject:'Reject', submit:'Submit',
+    // KPI labels
+    portfolio_value:'Portfolio Value', portfolio_cpi:'Portfolio CPI',
+    gross_profit:'Gross Profit', outstanding_ar:'Outstanding AR',
+  },
+  ar:{
+    dashboard:'لوحة التحكم', projects:'المشاريع', finance:'المالية', hr:'الموارد البشرية',
+    qhse:'الجودة والسلامة', procurement:'المشتريات', inventory:'المخزون',
+    documents:'إدارة الوثائق', workflow:'سير العمل', audit:'سجل المراجعة',
+    users:'المستخدمون', ceo:'تقرير المدير', system:'النظام', gantt:'الجانت',
+    resources:'الموارد', scorecard:'بطاقة الأداء', contracts:'العقود',
+    lessons:'الدروس المستفادة', forecast:'التوقعات', reports:'التقارير',
+    training:'التدريب', assets:'الأصول', subcon:'المقاولون الفرعيون', meetings:'محاضر الاجتماعات',
+    bizdev:'تطوير الأعمال',
+    // Common actions
+    save:'حفظ', cancel:'إلغاء', close:'إغلاق', add:'إضافة', edit:'تعديل',
+    delete:'حذف', export:'تصدير', refresh:'تحديث', search:'بحث',
+    approve:'موافقة', reject:'رفض', submit:'إرسال',
+    // KPI labels
+    portfolio_value:'قيمة المحفظة', portfolio_cpi:'مؤشر التكلفة',
+    gross_profit:'إجمالي الربح', outstanding_ar:'الذمم المدينة',
+  }
+};
+
+function t(key){ return TRANSLATIONS[_currentLang]?.[key] || TRANSLATIONS.en[key] || key; }
+
+function toggleLanguage(){
+  _currentLang = _currentLang==='en' ? 'ar' : 'en';
+  localStorage.setItem('sp360_lang', _currentLang);
+  const isAr = _currentLang==='ar';
+  document.documentElement.setAttribute('dir', isAr ? 'rtl' : 'ltr');
+  document.documentElement.setAttribute('lang', _currentLang);
+  document.body.style.fontFamily = isAr ? "'Noto Sans Arabic', 'Segoe UI', sans-serif" : "'Inter', 'Segoe UI', sans-serif";
+  // Update nav labels
+  Object.entries(TRANSLATIONS[_currentLang]).forEach(([key,val])=>{
+    const btn=document.getElementById('nav-'+key);
+    if(btn){
+      const icon=btn.querySelector('.nav-icon');
+      btn.textContent=val;
+      if(icon){ btn.insertBefore(icon,btn.firstChild); }
+    }
+  });
+  showToast(isAr?'تم التبديل إلى العربية':'Switched to English');
+  // Reload current page
+  const activePage=document.querySelector('.page.active');
+  if(activePage){ const pageId=activePage.id.replace('page-',''); navTo(pageId,document.getElementById('nav-'+pageId)); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P8-5 · CHANGE ORDER DASHBOARD ENHANCEMENT
+// ══════════════════════════════════════════════════════════════
+async function loadCODashboard(){
+  const {data:cos}=await sb.from('change_orders').select('*,project:projects(project_no,name)').order('created_at',{ascending:false}).limit(200);
+  const C=cos||[];
+  const pending  =C.filter(c=>c.status==='pending'||c.workflow_status==='submitted');
+  const approved =C.filter(c=>c.status==='approved');
+  const rejected =C.filter(c=>c.status==='rejected');
+  const totalAmt =approved.reduce((s,c)=>s+Number(c.amount||0),0);
+  const pendingAmt=pending.reduce((s,c)=>s+Number(c.amount||0),0);
+
+  // By project
+  const byProj={};
+  C.forEach(c=>{ const k=c.project?.project_no||'General'; if(!byProj[k]){byProj[k]={count:0,amt:0,proj_no:k};} byProj[k].count++; byProj[k].amt+=Number(c.amount||0); });
+  const topProjs=Object.values(byProj).sort((a,b)=>b.amt-a.amt).slice(0,5);
+
+  openModal('📊 Change Order Dashboard',`
+    <div class="grid4" style="margin-bottom:12px">
+      ${[
+        ['Total COs',C.length,'#C9A84C','All change orders'],
+        ['Pending',pending.length,'#F97316',fmtKWD(pendingAmt)+' pending'],
+        ['Approved',approved.length,'#10B981',fmtKWD(totalAmt)+' approved'],
+        ['Rejected',rejected.length,'#EF4444','Not proceeding']
+      ].map(([l,v,col,sub])=>`<div style="background:${col}11;border:1px solid ${col}33;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase">${l}</div>
+        <div style="font-size:20px;font-weight:900;color:${col}">${v}</div>
+        <div style="font-size:9px;color:var(--faint)">${sub}</div>
+      </div>`).join('')}
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:8px">Top Projects by CO Value</div>
+      ${topProjs.map(p=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--bdr)">
+        <span style="font-size:11px;color:var(--text);font-weight:600">${esc(p.proj_no)}</span>
+        <div style="display:flex;gap:12px;font-size:10px">
+          <span style="color:var(--muted)">${p.count} COs</span>
+          <span style="color:var(--gold);font-weight:700">${fmtKWD(p.amt)}</span>
+        </div>
+      </div>`).join('')}
+    </div>
+    ${pending.length>0?`
+    <div>
+      <div style="font-size:11px;font-weight:700;color:#F97316;margin-bottom:6px">⚡ Pending Approval</div>
+      ${pending.slice(0,5).map(c=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:#F9731611;border-radius:5px;margin-bottom:4px">
+        <div>
+          <span style="font-size:11px;font-weight:700;color:var(--gold)">${esc(c.co_no||'—')}</span>
+          <span style="font-size:10px;color:var(--muted);margin-left:6px">${esc(c.project?.project_no||'—')}</span>
+        </div>
+        <span style="font-size:11px;font-weight:700;color:#F97316">${fmtKWD(c.amount||0)}</span>
+      </div>`).join('')}
+    </div>`:''}
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      <button class="btn btn-primary" onclick="closeModal();navTo('projects',document.getElementById('nav-projects'))">Go to Projects</button>
+    </div>`);
 }
 
 async function installPWA(){
