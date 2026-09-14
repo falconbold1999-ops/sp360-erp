@@ -276,6 +276,133 @@ tr:hover td{background:#1A366010}
   .logo-sq{width:28px;height:28px;font-size:13px}
 }
 
+/* ══════════════════════════════════════════
+   P3-2 · MOBILE OPTIMIZATION
+   ══════════════════════════════════════════ */
+
+/* ── Touch targets — min 44px ── */
+@media(max-width:600px){
+  .btn{min-height:36px;display:inline-flex;align-items:center;justify-content:center}
+  .btn-sm{min-height:32px}
+  .nav-btn{min-height:44px}
+
+  /* Page-head buttons wrap neatly */
+  .page-head > div:last-child{flex-wrap:wrap;gap:6px;justify-content:flex-start}
+
+  /* CEO Report — fix grid3 on mobile */
+  .grid3{grid-template-columns:1fr!important}
+
+  /* Upcoming Deadlines — 1 col on mobile */
+  #page-ceo [style*="grid-template-columns:repeat(3,1fr)"]{
+    grid-template-columns:1fr!important
+  }
+
+  /* AR Aging — 2 cols on mobile */
+  #page-ceo [style*="grid-template-columns:repeat(4,1fr)"]{
+    grid-template-columns:repeat(2,1fr)!important
+  }
+
+  /* User cards — always 1 col */
+  #page-users [style*="grid-template-columns:repeat(auto-fill"]{
+    grid-template-columns:1fr!important
+  }
+
+  /* BI Panel — full width */
+  #bi-panel{width:100vw!important}
+
+  /* Section head — wrap buttons */
+  .sec-head{flex-wrap:wrap;gap:6px}
+  .sec-head > div:last-child{flex-wrap:wrap;gap:4px}
+
+  /* Form fields — full width on mobile */
+  .form-field input,
+  .form-field select,
+  .form-field textarea{font-size:16px!important} /* prevents iOS zoom */
+
+  /* Fix inline grid overrides — catch-all */
+  [style*="grid-template-columns:repeat(2,1fr)"],
+  [style*="grid-template-columns:repeat(3,1fr)"],
+  [style*="grid-template-columns:repeat(5,1fr)"],
+  [style*="grid-template-columns:repeat(6,1fr)"]{
+    grid-template-columns:1fr!important
+  }
+
+  /* Charts min-height */
+  canvas{min-height:160px}
+
+  /* KPI grid — 2 cols always on mobile */
+  .grid4{grid-template-columns:repeat(2,1fr)!important}
+
+  /* Notif drawer full width */
+  #notif-drawer{width:100vw!important}
+
+  /* Prevent horizontal scroll on main */
+  main{max-width:100vw;overflow-x:hidden}
+
+  /* Stack action buttons in cards */
+  .card [style*="display:flex"][style*="gap"]{flex-wrap:wrap}
+
+  /* Hide non-essential table columns */
+  .hide-mobile{display:none!important}
+
+  /* Bottom safe area for iOS */
+  main{padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+}
+
+/* ── Mobile sidebar overlay drawer ── */
+@media(max-width:600px){
+  aside{
+    position:fixed!important;
+    left:-100%!important;
+    top:0!important;
+    height:100vh!important;
+    width:220px!important;
+    flex-direction:column!important;
+    border-bottom:none!important;
+    border-right:1px solid var(--bdr)!important;
+    z-index:900!important;
+    transition:left .25s cubic-bezier(.4,0,.2,1)!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+  }
+  aside.mob-open{left:0!important}
+  aside nav{flex-direction:column!important;padding:8px!important;gap:2px!important;overflow:visible!important}
+  aside .nav-section{display:block!important}
+  aside .nav-btn span:last-child{display:inline!important}
+  aside .sidebar-foot{display:flex!important}
+  .nav-btn{flex-direction:row!important;justify-content:flex-start!important;padding:8px 12px!important;min-width:unset!important;font-size:11px!important;white-space:normal!important}
+  .nav-icon{font-size:16px!important;margin-right:8px!important}
+  main{padding-top:10px}
+}
+
+
+#bi-overlay,
+#notif-overlay{-webkit-tap-highlight-color:transparent}
+
+/* ── Smooth scrolling everywhere ── */
+*{-webkit-overflow-scrolling:touch}
+
+/* ── Prevent text resize on orientation change ── */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+
+/* ── Image/canvas overflow fix ── */
+img,canvas,svg{max-width:100%;height:auto}
+
+/* ── Mobile-friendly horizontal scroll indicator ── */
+@media(max-width:600px){
+  .card > div > table::after,
+  .card > table::after{
+    content:'← Scroll →';
+    display:block;
+    text-align:center;
+    font-size:9px;
+    color:var(--faint);
+    padding:4px 0
+  }
+}
+
+
+
 /* ═══════════════════════════════════════════
    PRINT STYLES — CEO Report & Portfolio
    ═══════════════════════════════════════════ */
@@ -1167,12 +1294,36 @@ async function loadWfBadge(){
 }
 
 // ── NAVIGATION ───────────────────────────────────────────────
-function toggleSide(){document.getElementById('sidebar').classList.toggle('collapsed');}
+function toggleSide(){
+  const side = document.getElementById('sidebar');
+  if(window.innerWidth <= 600){
+    // Mobile: overlay drawer from left
+    const isOpen = side.classList.contains('mob-open');
+    if(isOpen){
+      side.classList.remove('mob-open');
+      document.getElementById('mob-side-overlay')?.remove();
+    } else {
+      side.classList.add('mob-open');
+      const ov = document.createElement('div');
+      ov.id = 'mob-side-overlay';
+      ov.style.cssText = 'position:fixed;inset:0;background:#00000066;z-index:899;';
+      ov.onclick = toggleSide;
+      document.body.appendChild(ov);
+    }
+  } else {
+    side.classList.toggle('collapsed');
+  }
+}
 function navTo(id,btn){
   // ── RBAC guard ─────────────────────────────────────────────
   if(window._rbacReady && id !== 'dashboard' && !canView(id)){
     showToast(`⛔ Access denied — your role (${currentProfile?.role||'Unknown'}) cannot view this page`,'error');
     return;
+  }
+  // ── Auto-close mobile sidebar ─────────────────────────────
+  if(window.innerWidth <= 600){
+    const side = document.getElementById('sidebar');
+    if(side?.classList.contains('mob-open')) toggleSide();
   }
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
