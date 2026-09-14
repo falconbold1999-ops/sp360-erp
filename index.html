@@ -420,7 +420,7 @@ tr:hover td{background:#1A366010}
       <div class="av" id="user-av">?</div>
       <div>
         <div style="font-size:12px;font-weight:700;line-height:1.2" id="user-name">—</div>
-        <div style="font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:.3px" id="user-role">—</div>
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.3px;font-weight:700" id="user-role">—</div>
       </div>
       <button class="btn-logout" onclick="doLogout()">Sign out</button>
       <button id="pwa-install-btn" onclick="installPWA()" style="display:none;background:#C9A84C;color:#0D1B2A;border:none;border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">📱 Install</button>
@@ -572,13 +572,61 @@ var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 
 // ── ROLE-BASED ACCESS ────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  P3-1 · ROLE-BASED ACCESS CONTROL (RBAC)
+// ══════════════════════════════════════════════════════════════
+
+// Page visibility per role
 const ROLE_PAGES = {
+  'Admin':             ['dashboard','bizdev','projects','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo'],
   'PMO Manager':       ['dashboard','bizdev','projects','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo'],
-  'Finance Manager':   ['dashboard','projects','procurement','finance','inventory','workflow','audit','ceo'],
+  'CEO':               ['dashboard','ceo','projects','bizdev','finance'],
+  'Finance Manager':   ['dashboard','projects','procurement','finance','inventory','workflow','audit'],
+  'Project Manager':   ['dashboard','projects','procurement','qhse','documents','workflow'],
   'Procurement Lead':  ['dashboard','projects','procurement','inventory','workflow'],
   'BD Manager':        ['dashboard','bizdev','projects'],
-  'QHSE Engineer':     ['dashboard','projects','qhse','documents']
+  'QHSE Engineer':     ['dashboard','projects','qhse','documents'],
+  'HR Manager':        ['dashboard','hr','documents'],
+  'Viewer':            ['dashboard','projects']
 };
+
+// Action permissions per role
+const ROLE_PERMS = {
+  'Admin':           {create:true,  edit:true,  delete:true,  approve:true,  export:true,  viewFinance:true,  viewHR:true,  manageUsers:true},
+  'PMO Manager':     {create:true,  edit:true,  delete:false, approve:true,  export:true,  viewFinance:true,  viewHR:true,  manageUsers:true},
+  'CEO':             {create:false, edit:false, delete:false, approve:false, export:true,  viewFinance:true,  viewHR:true,  manageUsers:false},
+  'Finance Manager': {create:true,  edit:true,  delete:false, approve:true,  export:true,  viewFinance:true,  viewHR:false, manageUsers:false},
+  'Project Manager': {create:true,  edit:true,  delete:false, approve:false, export:true,  viewFinance:false, viewHR:false, manageUsers:false},
+  'Procurement Lead':{create:true,  edit:true,  delete:false, approve:true,  export:true,  viewFinance:false, viewHR:false, manageUsers:false},
+  'BD Manager':      {create:true,  edit:true,  delete:false, approve:false, export:true,  viewFinance:false, viewHR:false, manageUsers:false},
+  'QHSE Engineer':   {create:true,  edit:true,  delete:false, approve:false, export:false, viewFinance:false, viewHR:false, manageUsers:false},
+  'HR Manager':      {create:true,  edit:true,  delete:false, approve:true,  export:true,  viewFinance:false, viewHR:true,  manageUsers:false},
+  'Viewer':          {create:false, edit:false, delete:false, approve:false, export:false, viewFinance:false, viewHR:false, manageUsers:false}
+};
+
+// Permission check helper — use throughout the app
+function can(action){
+  const perms = ROLE_PERMS[currentProfile?.role];
+  if(!perms) return false;
+  return perms[action] === true;
+}
+
+// Page access check
+function canView(page){
+  const allowed = ROLE_PAGES[currentProfile?.role] || ['dashboard'];
+  return allowed.includes(page);
+}
+
+// Role badge color
+function roleBadgeColor(role){
+  const map = {
+    'Admin':'#8B5CF6','PMO Manager':'#C9A84C','CEO':'#EF4444',
+    'Finance Manager':'#10B981','Project Manager':'#3B82F6',
+    'Procurement Lead':'#F97316','BD Manager':'#06B6D4',
+    'QHSE Engineer':'#84CC16','HR Manager':'#EC4899','Viewer':'#94A3B8'
+  };
+  return map[role]||'#94A3B8';
+}
 
 // ── WORKFLOW APPROVAL RULES ──────────────────────────────────
 // Segregation of Duties — each role approves only their step
@@ -913,12 +961,33 @@ async function loadProfile(){
 function enterApp(){
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app').style.display='flex';
-  // Show/hide nav based on role
-  const allowed=ROLE_PAGES[currentProfile?.role]||['dashboard'];
+
+  // ── Apply role-based nav visibility ──────────────────────
+  const allowed = ROLE_PAGES[currentProfile?.role] || ['dashboard'];
   ['bizdev','projects','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo'].forEach(p=>{
-    const btn=document.getElementById('nav-'+p);
-    if(btn)btn.style.display=allowed.includes(p)?'':'none';
+    const btn = document.getElementById('nav-'+p);
+    if(btn) btn.style.display = allowed.includes(p) ? '' : 'none';
   });
+
+  // ── Apply role badge color in sidebar ─────────────────────
+  const roleEl = document.getElementById('user-role');
+  if(roleEl){
+    roleEl.style.display = '';
+    roleEl.style.color   = roleBadgeColor(currentProfile?.role);
+    roleEl.style.fontWeight = '700';
+  }
+
+  // ── Hide action buttons based on permissions ──────────────
+  // Delete buttons
+  document.querySelectorAll('.btn-delete,[data-perm="delete"]').forEach(el=>{
+    el.style.display = can('delete') ? '' : 'none';
+  });
+  // Manage Users link
+  const navUsers = document.getElementById('nav-users');
+  if(navUsers) navUsers.style.display = can('manageUsers') ? '' : 'none';
+
+  // ── Access denied guard for direct navTo calls ────────────
+  window._rbacReady = true;
   // Pre-cache lookups for modals
   Promise.all([
     sb.from('employees').select('id,full_name,employee_no').eq('status','active').order('full_name'),
@@ -1100,6 +1169,11 @@ async function loadWfBadge(){
 // ── NAVIGATION ───────────────────────────────────────────────
 function toggleSide(){document.getElementById('sidebar').classList.toggle('collapsed');}
 function navTo(id,btn){
+  // ── RBAC guard ─────────────────────────────────────────────
+  if(window._rbacReady && id !== 'dashboard' && !canView(id)){
+    showToast(`⛔ Access denied — your role (${currentProfile?.role||'Unknown'}) cannot view this page`,'error');
+    return;
+  }
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -4291,8 +4365,8 @@ async function verifyMFA(e){
 }
 
 async function loadUsers(){
-  if(currentProfile?.role!=='PMO Manager'){
-    document.getElementById('page-users').innerHTML='<div class="empty">Access restricted — PMO Manager only.</div>';
+  if(!can('manageUsers')){
+    document.getElementById('page-users').innerHTML='<div class="empty">⛔ Access restricted — Admin or PMO Manager only.</div>';
     return;
   }
   const el=document.getElementById('page-users');
@@ -4301,8 +4375,7 @@ async function loadUsers(){
     sb.from('user_profiles').select('*').order('full_name')
   ]);
   const users=profiles||[];
-  const roleColors={'PMO Manager':'#C9A84C','Finance Manager':'#10B981','Procurement Lead':'#3B82F6','BD Manager':'#8B5CF6','QHSE Engineer':'#EF4444'};
-  const roleList=['PMO Manager','Finance Manager','Procurement Lead','BD Manager','QHSE Engineer'];
+  const roleList=Object.keys(ROLE_PAGES);
 
   el.innerHTML=`
   <div class="page-head">
@@ -4338,7 +4411,7 @@ async function loadUsers(){
   <!-- User Cards Grid -->
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:16px">
     ${users.map(u=>{
-      const rc=roleColors[u.role]||'#94A3B8';
+      const rc=roleBadgeColor(u.role);
       const isActive=u.is_active!==false;
       return`
       <div class="card" style="padding:16px;border-left:3px solid ${rc};margin-bottom:0">
@@ -4373,26 +4446,22 @@ async function loadUsers(){
     <table style="min-width:600px">
       <thead><tr>
         <th>Module</th>
-        ${roleList.map(r=>`<th style="text-align:center;color:${roleColors[r]||'#94A3B8'};white-space:nowrap">${r.replace(' ','\n')}</th>`).join('')}
+        ${roleList.map(r=>`<th style="text-align:center;color:${roleBadgeColor(r)};white-space:nowrap;font-size:9px">${r}</th>`).join('')}
       </tr></thead>
       <tbody>
-      ${[
-        ['Dashboard',       [1,1,1,1,1]],
-        ['Business Dev',    [1,0,0,1,0]],
-        ['Projects',        [1,1,1,1,1]],
-        ['Procurement',     [1,1,1,0,0]],
-        ['Finance',         [1,1,0,0,0]],
-        ['HR',              [1,0,0,0,0]],
-        ['QHSE',            [1,0,0,0,1]],
-        ['Doc Control',     [1,0,0,0,1]],
-        ['Workflow',        [1,1,1,0,0]],
-        ['Audit Trail',     [1,1,0,0,0]],
-        ['User Mgmt',       [1,0,0,0,0]],
-        ['CEO Report',      [1,1,0,0,0]]
-      ].map(([mod,perms],i)=>`<tr style="background:${i%2===0?'var(--card)':'transparent'}">
-        <td style="font-weight:600;font-size:11px">${mod}</td>
-        ${perms.map((p,pi)=>`<td style="text-align:center;font-size:14px">${p?`<span style="color:${roleColors[roleList[pi]]||'#10B981'}">✓</span>`:'<span style="color:var(--faint)">–</span>'}</td>`).join('')}
-      </tr>`).join('')}
+      ${(()=>{
+        // Dynamic matrix from ROLE_PAGES
+        const pages = ['dashboard','bizdev','projects','procurement','finance','hr','qhse','documents','workflow','audit','users','ceo'];
+        const labels= ['Dashboard','Business Dev','Projects','Procurement','Finance','HR','QHSE','Doc Control','Workflow','Audit Trail','User Mgmt','CEO Report'];
+        return pages.map((pg,i)=>{
+          const cols = roleList.map(r=>{
+            const ok = (ROLE_PAGES[r]||[]).includes(pg);
+            return `<td style="text-align:center;font-size:13px">${ok?`<span style="color:#10B981;font-weight:700">✓</span>`:'<span style="color:var(--faint)">–</span>'}</td>`;
+          }).join('');
+          return `<tr style="background:${i%2===0?'var(--card)':'transparent'}">
+            <td style="font-weight:600;font-size:11px;white-space:nowrap">${labels[i]}</td>${cols}</tr>`;
+        }).join('');
+      })()}
       </tbody>
     </table>
     </div>
@@ -4416,7 +4485,7 @@ function openNewUserModal(){
   <div class="form-row">
     <div class="form-field"><label>Role *</label>
       <select id="nu-role">
-        ${['PMO Manager','Finance Manager','Procurement Lead','BD Manager','QHSE Engineer','Staff'].map(r=>`<option value="${r}">${r}</option>`).join('')}
+        ${Object.keys(ROLE_PAGES).map(r=>`<option value="${r}">${r}</option>`).join('')}
       </select>
     </div>
     <div class="form-field"><label>Initials (auto)</label>
@@ -4499,7 +4568,7 @@ async function openEditUserModal(userId){
   </div>
   <div class="form-field"><label>Role</label>
     <select id="eu-role">
-      ${['PMO Manager','Finance Manager','Procurement Lead','BD Manager','QHSE Engineer','Staff'].map(r=>`<option${r===u.role?' selected':''}>${r}</option>`).join('')}
+      ${Object.keys(ROLE_PAGES).map(r=>`<option${r===u.role?' selected':''}>${r}</option>`).join('')}
     </select>
   </div>
   <div style="padding:8px 12px;background:#F97316
