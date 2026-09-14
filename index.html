@@ -562,6 +562,7 @@ img,canvas,svg{max-width:100%;height:auto}
         <div class="nav-section">Business</div>
         <button class="nav-btn" id="nav-bizdev" onclick="navTo('bizdev',this)"><span class="nav-icon">🎯</span>Business Dev</button>
         <button class="nav-btn" id="nav-projects" onclick="navTo('projects',this)"><span class="nav-icon">🏗</span>Projects</button>
+        <button class="nav-btn" id="nav-gantt" onclick="navTo('gantt',this)"><span class="nav-icon">📅</span>Gantt</button>
         <div class="nav-section">Operations</div>
         <button class="nav-btn" id="nav-procurement" onclick="navTo('procurement',this)"><span class="nav-icon">📦</span>Procurement</button>
         <button class="nav-btn" id="nav-finance" onclick="navTo('finance',this)"><span class="nav-icon">💰</span>Finance</button>
@@ -593,6 +594,7 @@ img,canvas,svg{max-width:100%;height:auto}
       <div class="page" id="page-audit"></div>
       <div class="page" id="page-users"></div>
       <div class="page" id="page-ceo"></div>
+      <div class="page" id="page-gantt"></div>
     </main>
   </div>
 </div>
@@ -607,7 +609,32 @@ img,canvas,svg{max-width:100%;height:auto}
 
 <div class="toast" id="toast"></div>
 
-<!-- ── BI EXPORT PANEL ──────────────────────────────────── -->
+<!-- ── EMAIL NOTIFICATION CENTER ───────────────────────────── -->
+<div id="email-center-overlay" onclick="closeEmailCenter()" style="display:none;position:fixed;inset:0;background:#00000055;z-index:1100;backdrop-filter:blur(2px)"></div>
+<div id="email-center-panel" style="display:none;position:fixed;top:0;right:0;width:520px;max-width:98vw;height:100vh;background:var(--card);border-left:1px solid var(--bdr);z-index:1101;flex-direction:column;box-shadow:-8px 0 32px #0008;transition:transform .25s cubic-bezier(.4,0,.2,1)">
+  <div style="padding:16px 18px 12px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px">
+    <span style="font-size:20px">📧</span>
+    <div style="flex:1">
+      <div style="font-size:14px;font-weight:800;color:var(--text)">Email Notification Center</div>
+      <div id="email-center-status" style="font-size:10px;color:var(--muted)">Checking Resend connection…</div>
+    </div>
+    <button onclick="closeEmailCenter()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button>
+  </div>
+  <div id="email-conn-banner" style="margin:12px 16px 0;padding:10px 12px;border-radius:8px;font-size:10px;line-height:1.6"></div>
+  <div style="flex:1;overflow-y:auto;padding:12px 16px">
+    <div style="font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Quick Send</div>
+    <div id="email-templates-list"></div>
+    <div style="font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 10px">Recent History</div>
+    <div id="email-history-list" style="font-size:10px;color:var(--muted)">Loading…</div>
+  </div>
+  <div style="padding:12px 16px;border-top:1px solid var(--bdr)">
+    <button onclick="openEmailDeployModal()" style="width:100%;background:var(--n3);border:1px solid var(--bdr);color:var(--muted);border-radius:8px;padding:8px;font-size:10px;font-weight:600;cursor:pointer">
+      ⚙️ Setup — Deploy Edge Function
+    </button>
+  </div>
+</div>
+
+<!-- ── BI EXPORT PANEL ──────────────────────────────────────── -->
 <div id="bi-overlay" onclick="closeBIPanel()" style="display:none;position:fixed;inset:0;background:#00000055;z-index:1100;backdrop-filter:blur(2px)"></div>
 <div id="bi-panel" style="display:none;position:fixed;top:0;left:0;width:480px;max-width:98vw;height:100vh;background:var(--card);border-right:1px solid var(--bdr);z-index:1101;flex-direction:column;box-shadow:8px 0 32px #0008;transition:transform .25s">
   <div style="padding:16px 18px 12px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px">
@@ -705,16 +732,16 @@ var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 // Page visibility per role
 const ROLE_PAGES = {
-  'Admin':             ['dashboard','bizdev','projects','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo'],
-  'PMO Manager':       ['dashboard','bizdev','projects','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo'],
-  'CEO':               ['dashboard','ceo','projects','bizdev','finance'],
-  'Finance Manager':   ['dashboard','projects','procurement','finance','inventory','workflow','audit'],
-  'Project Manager':   ['dashboard','projects','procurement','qhse','documents','workflow'],
-  'Procurement Lead':  ['dashboard','projects','procurement','inventory','workflow'],
-  'BD Manager':        ['dashboard','bizdev','projects'],
-  'QHSE Engineer':     ['dashboard','projects','qhse','documents'],
+  'Admin':             ['dashboard','bizdev','projects','gantt','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo'],
+  'PMO Manager':       ['dashboard','bizdev','projects','gantt','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo'],
+  'CEO':               ['dashboard','ceo','projects','gantt','bizdev','finance'],
+  'Finance Manager':   ['dashboard','projects','gantt','procurement','finance','inventory','workflow','audit'],
+  'Project Manager':   ['dashboard','projects','gantt','procurement','qhse','documents','workflow'],
+  'Procurement Lead':  ['dashboard','projects','gantt','procurement','inventory','workflow'],
+  'BD Manager':        ['dashboard','bizdev','projects','gantt'],
+  'QHSE Engineer':     ['dashboard','projects','gantt','qhse','documents'],
   'HR Manager':        ['dashboard','hr','documents'],
-  'Viewer':            ['dashboard','projects']
+  'Viewer':            ['dashboard','projects','gantt']
 };
 
 // Action permissions per role
@@ -1091,7 +1118,7 @@ function enterApp(){
 
   // ── Apply role-based nav visibility ──────────────────────
   const allowed = ROLE_PAGES[currentProfile?.role] || ['dashboard'];
-  ['bizdev','projects','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo'].forEach(p=>{
+  ['bizdev','projects','gantt','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo'].forEach(p=>{
     const btn = document.getElementById('nav-'+p);
     if(btn) btn.style.display = allowed.includes(p) ? '' : 'none';
   });
@@ -1332,6 +1359,7 @@ function navTo(id,btn){
   if(pg)pg.classList.add('active');
   const loaders={
     dashboard:loadDashboard,bizdev:loadBizdev,projects:loadProjects,
+    gantt:loadGantt,
     procurement:()=>loadProc(curProcTab),finance:loadFinance,
     hr:()=>loadHR(curHRTab),qhse:()=>loadQHSE(curQHSETab),
     inventory:loadInventory,documents:()=>loadDocs(curDocTab),workflow:loadWorkflow,audit:loadAudit,
@@ -4534,6 +4562,7 @@ async function loadUsers(){
       <div><h1>User Management</h1><div class="sub">Profiles · Roles · Access Control · Notifications</div></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="openEmailCenter()">📧 Notification Center</button>
       <button class="btn btn-ghost btn-sm" onclick="openEmailAllModal()">📧 Email All</button>
       <button class="btn btn-primary btn-sm" onclick="openNewUserModal()">+ New User</button>
     </div>
@@ -5791,6 +5820,269 @@ async function loadCEO(){
     if(el)el.innerHTML=`<div class="empty">Error loading CEO Report: ${err.message}</div>`;
     console.error('loadCEO error:',err);
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P3-4 · PROJECT GANTT CHART
+//  Pure CSS/HTML — no external library needed
+// ══════════════════════════════════════════════════════════════
+
+let _ganttZoom = 'month'; // week | month | quarter
+let _ganttFilter = 'active';
+
+async function loadGantt(){
+  const el = document.getElementById('page-gantt');
+  if(!el) return;
+  el.innerHTML = '<div class="loading">Loading Gantt…</div>';
+
+  try{
+    const {data:projs} = await sb.from('projects')
+      .select('id,project_no,name,status,department,pct,cpi,rag_status,start_date,end_date,client')
+      .order('start_date',{ascending:true});
+
+    const all = projs||[];
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    // ── Filter ─────────────────────────────────────────────────
+    let filtered = all;
+    if(_ganttFilter==='active')   filtered = all.filter(p=>ACTIVE_STATUSES.includes(p.status));
+    if(_ganttFilter==='completed') filtered = all.filter(p=>p.status==='completed');
+    if(_ganttFilter==='all')      filtered = all;
+
+    // Projects with no dates — show placeholder
+    const withDates    = filtered.filter(p=>p.start_date&&p.end_date);
+    const withoutDates = filtered.filter(p=>!p.start_date||!p.end_date);
+
+    // ── Timeline range ────────────────────────────────────────
+    let minDate = withDates.length ? new Date(Math.min(...withDates.map(p=>new Date(p.start_date)))) : today;
+    let maxDate = withDates.length ? new Date(Math.max(...withDates.map(p=>new Date(p.end_date))))   : new Date(today.getFullYear(), today.getMonth()+6, 1);
+    // Pad by 1 month each side
+    minDate = new Date(minDate.getFullYear(), minDate.getMonth()-1, 1);
+    maxDate = new Date(maxDate.getFullYear(), maxDate.getMonth()+2, 1);
+
+    const totalDays = Math.ceil((maxDate-minDate)/86400000);
+
+    // ── Build time columns ────────────────────────────────────
+    const months = [];
+    let cur = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    while(cur < maxDate){
+      months.push(new Date(cur));
+      cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
+    }
+
+    // ── Helpers ────────────────────────────────────────────────
+    const dayOffset = d => Math.max(0, Math.ceil((new Date(d)-minDate)/86400000));
+    const dayPct    = d => (dayOffset(d)/totalDays*100).toFixed(3)+'%';
+    const dayWidth  = (s,e) => (Math.max(1,Math.ceil((new Date(e)-new Date(s))/86400000))/totalDays*100).toFixed(3)+'%';
+    const todayPct  = (dayOffset(today)/totalDays*100).toFixed(3)+'%';
+
+    const ragCol = r => r==='green'?'#10B981':r==='red'?'#EF4444':'#F97316';
+    const cpiCol = c => Number(c)>=1?'#10B981':Number(c)>=0.9?'#F97316':'#EF4444';
+
+    const fmtDate = d => d ? new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'}) : '—';
+    const daysLeft= (e) => { const d=Math.ceil((new Date(e)-today)/86400000); return d<0?`${Math.abs(d)}d overdue`:d===0?'Today!':d+'d left'; };
+
+    el.innerHTML = `
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">📅</span>
+        <div><h1>Project Gantt Chart</h1><div class="sub">${withDates.length} projects · Timeline view · ${today.toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</div></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select onchange="_ganttFilter=this.value;loadGantt()" style="background:var(--card);border:1px solid var(--bdr);color:var(--text);border-radius:6px;padding:5px 8px;font-size:11px">
+          <option value="active"${_ganttFilter==='active'?' selected':''}>Active Projects</option>
+          <option value="all"${_ganttFilter==='all'?' selected':''}>All Projects</option>
+          <option value="completed"${_ganttFilter==='completed'?' selected':''}>Completed</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="loadGantt()">🔄 Refresh</button>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase">Legend:</div>
+      ${[['#10B981','On Track (CPI ≥ 1.0)'],['#F97316','At Risk (0.9–0.99)'],['#EF4444','Critical (< 0.9)'],['#94A3B8','No EVM Data']].map(([c,l])=>
+        `<div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)">
+          <div style="width:14px;height:8px;background:${c};border-radius:2px"></div>${l}
+        </div>`).join('')}
+      <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)">
+        <div style="width:2px;height:14px;background:#C9A84C"></div>Today
+      </div>
+    </div>
+
+    <!-- Gantt Container -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch">
+        <div style="min-width:900px">
+
+          <!-- Month header -->
+          <div style="display:flex;border-bottom:1px solid var(--bdr);background:var(--n3)">
+            <!-- Row label col -->
+            <div style="width:240px;flex-shrink:0;padding:8px 14px;font-size:10px;font-weight:700;color:var(--muted);border-right:1px solid var(--bdr)">PROJECT</div>
+            <!-- Timeline header -->
+            <div style="flex:1;position:relative;height:32px">
+              ${months.map(m=>{
+                const w = (new Date(m.getFullYear(),m.getMonth()+1,1)-Math.max(m,minDate))/(maxDate-minDate)*100;
+                const left = (Math.max(m,minDate)-minDate)/(maxDate-minDate)*100;
+                return `<div style="position:absolute;left:${left.toFixed(2)}%;height:100%;display:flex;align-items:center;padding-left:6px;font-size:9px;font-weight:700;color:var(--muted);border-left:1px solid var(--bdr);white-space:nowrap">
+                  ${m.toLocaleDateString('en-GB',{month:'short',year:'2-digit'})}
+                </div>`;
+              }).join('')}
+              <!-- Today line header -->
+              <div style="position:absolute;left:${todayPct};top:0;height:100%;width:2px;background:#C9A84C;z-index:2"></div>
+            </div>
+          </div>
+
+          <!-- Project rows -->
+          ${withDates.map((p,i)=>{
+            const barLeft  = dayPct(p.start_date);
+            const barWidth = dayWidth(p.start_date, p.end_date);
+            const barColor = Number(p.cpi)>0 ? cpiCol(p.cpi) : '#94A3B8';
+            const rag      = ragCol(p.rag_status||'amber');
+            const isOverdue= new Date(p.end_date)<today && p.status!=='completed';
+            const pct      = Math.min(Number(p.pct)||0, 100);
+
+            return `
+            <div style="display:flex;border-bottom:1px solid var(--bdr);background:${i%2===0?'var(--card)':'var(--n3)'}">
+              <!-- Label -->
+              <div style="width:240px;flex-shrink:0;padding:8px 14px;border-right:1px solid var(--bdr);cursor:pointer" onclick="openGanttDetail('${p.id}')">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <div style="width:8px;height:8px;border-radius:50%;background:${rag};flex-shrink:0"></div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:11px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name||'—')}</div>
+                    <div style="font-size:9px;color:var(--gold)">${esc(p.project_no)}</div>
+                  </div>
+                </div>
+                <div style="margin-top:4px;display:flex;justify-content:space-between">
+                  <span style="font-size:9px;color:var(--muted)">${pct}%</span>
+                  <span style="font-size:9px;color:${isOverdue?'#EF4444':'var(--muted)'}">${daysLeft(p.end_date)}</span>
+                </div>
+              </div>
+
+              <!-- Bar area -->
+              <div style="flex:1;position:relative;height:52px">
+                <!-- Today line -->
+                <div style="position:absolute;left:${todayPct};top:0;height:100%;width:2px;background:#C9A84C55;z-index:2"></div>
+
+                <!-- Background bar (planned) -->
+                <div style="position:absolute;left:${barLeft};width:${barWidth};top:50%;transform:translateY(-50%);height:18px;background:${barColor}22;border:1px solid ${barColor}44;border-radius:4px;overflow:hidden">
+                  <!-- Progress fill -->
+                  <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px;transition:width .3s"></div>
+                </div>
+
+                <!-- Date labels -->
+                <div style="position:absolute;left:${barLeft};top:4px;font-size:8px;color:var(--faint);white-space:nowrap;padding-left:2px">${fmtDate(p.start_date)}</div>
+                <div style="position:absolute;left:${barLeft};bottom:4px;font-size:8px;color:var(--faint);white-space:nowrap;padding-left:2px">${fmtDate(p.end_date)}</div>
+              </div>
+            </div>`;
+          }).join('')}
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Missing dates section — outside scroll container -->
+    ${withoutDates.length ? `
+    <div style="margin-top:12px;padding:14px 16px;background:var(--card);border:1px solid #F9731633;border-radius:10px">
+      <div style="font-size:11px;font-weight:700;color:#F97316;margin-bottom:10px">⚠️ ${withoutDates.length} project(s) missing start/end dates — set dates to show on Gantt:</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">
+        ${withoutDates.map(p=>`
+        <div style="display:flex;align-items:center;gap:8px;background:var(--n3);border:1px solid var(--bdr);border-radius:6px;padding:8px 12px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;font-weight:700;color:var(--gold)">${esc(p.project_no)}</div>
+            <div style="font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name||'')}</div>
+          </div>
+          <button onclick="openGanttDateModal('${p.id}','${esc(p.project_no)}','${esc(p.name||'')}')"
+            style="background:#C9A84C22;border:1px solid #C9A84C44;color:#C9A84C;border-radius:5px;padding:5px 12px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">
+            📅 Set Dates
+          </button>
+        </div>`).join('')}
+      </div>
+    </div>` : ''}
+
+    <!-- Summary cards -->
+    <div class="grid4" style="margin-top:14px">
+      ${kpi('Total Projects', withDates.length, '#C9A84C', _ganttFilter+' with dates')}
+      ${kpi('On Track', withDates.filter(p=>Number(p.cpi)>=1).length, '#10B981', 'CPI ≥ 1.00')}
+      ${kpi('At Risk', withDates.filter(p=>Number(p.cpi)>=0.9&&Number(p.cpi)<1).length, '#F97316', '0.90–0.99 CPI')}
+      ${kpi('Overdue', withDates.filter(p=>new Date(p.end_date)<today&&p.status!=='completed').length, '#EF4444', 'Past end date')}
+    </div>`;
+
+  }catch(err){
+    el.innerHTML = `<div class="empty">Error loading Gantt: ${err.message}</div>`;
+    console.error('loadGantt error:',err);
+  }
+}
+
+// ── Gantt project detail popup ────────────────────────────────
+async function openGanttDetail(id){
+  const {data:p} = await sb.from('projects')
+    .select('*').eq('id',id).single();
+  if(!p) return;
+  const today = new Date();
+  const daysLeft = p.end_date ? Math.ceil((new Date(p.end_date)-today)/86400000) : null;
+  const eac = Number(p.cpi)>0 ? Number(p.ac)+(Number(p.bac)-Number(p.ev))/Number(p.cpi) : Number(p.bac);
+  openModal(`📅 ${p.project_no} — ${p.name}`,`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      ${[
+        ['Client',      p.client||'—'],
+        ['Department',  p.department||'—'],
+        ['Status',      pill(p.status)],
+        ['Progress',    (p.pct||0)+'%'],
+        ['Start Date',  p.start_date ? new Date(p.start_date).toLocaleDateString('en-GB') : '—'],
+        ['End Date',    p.end_date   ? new Date(p.end_date).toLocaleDateString('en-GB') : '—'],
+        ['Days Left',   daysLeft!==null ? (daysLeft<0?`<span style="color:#EF4444">${Math.abs(daysLeft)}d overdue</span>`:daysLeft+'d') : '—'],
+        ['Contract',    fmtKWD(p.contract_value||0)],
+        ['CPI',         `<span style="color:${cpiColor(p.cpi)};font-weight:700">${Number(p.cpi||1).toFixed(2)}</span>`],
+        ['SPI',         `<span style="color:${cpiColor(p.spi)};font-weight:700">${Number(p.spi||1).toFixed(2)}</span>`],
+        ['BAC',         fmtKWD(p.bac||0)],
+        ['EAC',         fmtKWD(eac)],
+        ['VAC',         fmtKWD((p.bac||0)-eac)],
+        ['RAG',         p.rag_status ? `<span style="color:${ragScore(p)>=1?'#10B981':ragScore(p)>=0.9?'#F97316':'#EF4444'};font-weight:700;text-transform:capitalize">${p.rag_status}</span>` : '—']
+      ].map(([l,v])=>`<div style="background:var(--n3);border-radius:6px;padding:8px 10px">
+        <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">${l}</div>
+        <div style="font-size:12px;color:var(--text)">${v}</div>
+      </div>`).join('')}
+    </div>
+    <!-- Progress bar -->
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px">
+        <span>Progress</span><span>${p.pct||0}%</span>
+      </div>
+      <div style="background:var(--bdr);border-radius:4px;height:8px;overflow:hidden">
+        <div style="height:100%;width:${Math.min(p.pct||0,100)}%;background:${cpiColor(p.cpi)};border-radius:4px;transition:width .3s"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      <button class="btn btn-primary" onclick="closeModal();navTo('projects',document.getElementById('nav-projects'))">Open Projects</button>
+    </div>`);
+}
+
+// ── Set dates for project from Gantt ─────────────────────────
+function openGanttDateModal(id, projNo, name){
+  openModal(`📅 Set Dates — ${projNo}`,`
+    <div style="margin-bottom:12px;font-size:11px;color:var(--muted)">${esc(name)}</div>
+    <div class="form-row">
+      <div class="form-field"><label>Start Date *</label><input id="gd-start" type="date"/></div>
+      <div class="form-field"><label>End Date *</label><input id="gd-end" type="date"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveGanttDates('${id}','${projNo}')">Save Dates</button>
+    </div>`);
+}
+
+async function saveGanttDates(id, projNo){
+  const start = document.getElementById('gd-start').value;
+  const end   = document.getElementById('gd-end').value;
+  if(!start||!end){ showToast('Both dates required','error'); return; }
+  if(end<start){ showToast('End date must be after start date','error'); return; }
+  const {error} = await sb.from('projects').update({start_date:start, end_date:end}).eq('id',id);
+  if(error){ showToast('Error: '+error.message,'error'); return; }
+  showToast(`${projNo} dates saved ✓`);
+  closeModal();
+  loadGantt();
 }
 
 async function loadAudit(filterAction=''){
@@ -8196,6 +8488,286 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
     if(document.getElementById('bi-panel')?.style.display==='flex') closeBIPanel();
   }
+},{passive:true});
+
+// ══════════════════════════════════════════════════════════════
+//  P3-3 · EMAIL NOTIFICATION CENTER
+// ══════════════════════════════════════════════════════════════
+
+const EMAIL_TEMPLATES = [
+  { id:'pending_approvals', icon:'⚡', name:'Pending Approvals Alert',  desc:'All users — pending/overdue workflow items',      color:'#F97316' },
+  { id:'weekly_evm',        icon:'📊', name:'Weekly EVM Summary',        desc:'PM + PMO — portfolio CPI, SPI, project status',   color:'#3B82F6' },
+  { id:'ceo_report',        icon:'👔', name:'CEO Flash Report Ready',    desc:'CEO + Management — report updated notification',  color:'#C9A84C' },
+  { id:'overdue_invoices',  icon:'💰', name:'Overdue AR Invoice Alert',  desc:'Finance team — overdue AR invoices summary',      color:'#EF4444' },
+  { id:'ncr_alert',         icon:'🛡', name:'Critical NCR Alert',        desc:'QHSE team — open critical NCRs requiring action', color:'#8B5CF6' },
+];
+
+// ── Open / Close ──────────────────────────────────────────────
+function openEmailCenter(){
+  const overlay = document.getElementById('email-center-overlay');
+  const panel   = document.getElementById('email-center-panel');
+  overlay.style.display = 'block';
+  panel.style.display   = 'flex';
+  panel.style.transform = 'translateX(100%)';
+  requestAnimationFrame(()=>{ panel.style.transform = 'translateX(0)'; });
+  renderEmailTemplates();
+  checkEmailConnection();
+  loadEmailHistory();
+}
+
+function closeEmailCenter(){
+  const panel   = document.getElementById('email-center-panel');
+  const overlay = document.getElementById('email-center-overlay');
+  if(panel){ panel.style.transform='translateX(100%)'; setTimeout(()=>{ panel.style.display='none'; },250); }
+  if(overlay) overlay.style.display='none';
+}
+
+// ── Render template cards ─────────────────────────────────────
+function renderEmailTemplates(){
+  const el = document.getElementById('email-templates-list');
+  if(!el) return;
+  el.innerHTML = EMAIL_TEMPLATES.map(t=>`
+    <div style="border:1px solid var(--bdr);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--card2)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:18px">${t.icon}</span>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;color:${t.color}">${t.name}</div>
+          <div style="font-size:10px;color:var(--muted)">${t.desc}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="previewEmailNotif('${t.id}')"
+          style="background:var(--n4);border:1px solid var(--bdr);color:var(--muted);border-radius:6px;padding:5px 10px;font-size:10px;cursor:pointer">
+          👁 Preview
+        </button>
+        <button onclick="triggerEmailNotif('${t.id}',this)"
+          style="flex:1;background:${t.color}22;border:1px solid ${t.color}44;color:${t.color};border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer">
+          📤 Send Now
+        </button>
+      </div>
+      <div id="email-status-${t.id}" style="font-size:9px;color:var(--faint);margin-top:4px;min-height:14px"></div>
+    </div>`).join('');
+}
+
+// ── Check edge function connection ────────────────────────────
+async function checkEmailConnection(){
+  const statusEl = document.getElementById('email-center-status');
+  const bannerEl = document.getElementById('email-conn-banner');
+  try{
+    const {data:{session}} = await sb.auth.getSession();
+    if(!session){ throw new Error('No session'); }
+    const res = await fetch(EMAIL_EDGE_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.access_token}`,'apikey':SUPABASE_KEY},
+      body: JSON.stringify({to:['test@test.com'],subject:'ping',text:'ping',_test:true})
+    });
+    if(res.status===404){
+      _edgeFnAvailable=false;
+      if(statusEl) statusEl.textContent='Edge Function not deployed — using mailto fallback';
+      if(bannerEl) bannerEl.innerHTML='<span style="color:#F97316">⚠️ Edge Function not deployed.</span> Emails will open your local mail client. <a href="#" onclick="openEmailDeployModal();return false" style="color:#C9A84C">Setup instructions →</a>';
+      bannerEl.style.background='#F9731611'; bannerEl.style.border='1px solid #F9731633';
+    } else {
+      _edgeFnAvailable=true;
+      if(statusEl) statusEl.textContent='✓ Connected to Resend API via Edge Function';
+      if(bannerEl) bannerEl.innerHTML='<span style="color:#10B981">✓ Resend API connected</span> — emails send directly without opening mail client.';
+      bannerEl.style.background='#10B98111'; bannerEl.style.border='1px solid #10B98133';
+    }
+  }catch(e){
+    _edgeFnAvailable=false;
+    if(statusEl) statusEl.textContent='Connection check failed — using mailto fallback';
+  }
+}
+
+// ── Trigger notification with status feedback ─────────────────
+async function triggerEmailNotif(type, btn){
+  const statusEl = document.getElementById('email-status-'+type);
+  if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+  if(statusEl) statusEl.textContent='⏳ Sending…';
+  try{
+    await sendEmailNotification(type);
+    if(statusEl) statusEl.innerHTML='<span style="color:#10B981">✓ Sent successfully</span> · '+new Date().toLocaleTimeString('en-GB');
+    loadEmailHistory(); // refresh history
+  }catch(e){
+    if(statusEl) statusEl.innerHTML='<span style="color:#EF4444">✗ '+e.message+'</span>';
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent='📤 Send Now'; }
+  }
+}
+
+// ── Preview email before sending ──────────────────────────────
+async function previewEmailNotif(type){
+  const t = EMAIL_TEMPLATES.find(x=>x.id===type);
+  if(!t) return;
+  // Build preview data
+  const [projR,wfR,invR,ncrR] = await Promise.all([
+    sb.from('projects').select('name,cpi,spi,status,ev,ac'),
+    sb.from('workflow_items').select('ref_no,current_step,status').in('status',['pending','overdue']),
+    sb.from('invoices').select('invoice_no,net_amount,due_date,status').eq('invoice_type','client').neq('status','paid').neq('status','cancelled'),
+    sb.from('ncrs').select('ncr_no,severity,status').eq('status','open').eq('severity','critical')
+  ]);
+  const projs=projR.data||[], wfs=wfR.data||[], invs=invR.data||[], ncrs=ncrR.data||[];
+  const today=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  let subject='',body='';
+
+  if(type==='pending_approvals'){
+    subject=`⚡ ${wfs.length} Pending Approvals — SP360 ERP — ${today}`;
+    body=`${wfs.length} item(s) awaiting approval:\n\n`+wfs.slice(0,5).map(w=>`• ${w.ref_no} — ${w.current_step} [${w.status.toUpperCase()}]`).join('\n')+(wfs.length>5?`\n…and ${wfs.length-5} more`:'');
+  } else if(type==='weekly_evm'){
+    const active=projs.filter(p=>['planning','execution','monitoring','closeout'].includes(p.status));
+    const cpi=active.length>0?(active.reduce((s,p)=>s+Number(p.ev||0),0)/Math.max(active.reduce((s,p)=>s+Number(p.ac||0),0),1)).toFixed(2):'—';
+    subject=`📊 Weekly EVM Summary — SP360 ERP — ${today}`;
+    body=`Portfolio CPI: ${cpi}\nActive Projects: ${active.length}\n\n`+active.slice(0,5).map(p=>`• ${(p.name||'').split('—')[0].trim()} | CPI: ${Number(p.cpi||1).toFixed(2)}`).join('\n');
+  } else if(type==='ceo_report'){
+    subject=`👔 CEO Flash Report Ready — SP360 ERP — ${today}`;
+    body=`The CEO Flash Report for ${today} has been updated.\n\nLog in → CEO Report → Export PDF`;
+  } else if(type==='overdue_invoices'){
+    const overdue=invs.filter(i=>i.due_date&&new Date(i.due_date)<new Date());
+    subject=`💰 ${overdue.length} Overdue AR Invoices — SP360 ERP — ${today}`;
+    body=`${overdue.length} AR invoice(s) are overdue:\n\n`+overdue.slice(0,5).map(i=>`• ${i.invoice_no} — KWD ${Number(i.net_amount).toLocaleString()} (due ${new Date(i.due_date).toLocaleDateString('en-GB')})`).join('\n');
+  } else if(type==='ncr_alert'){
+    subject=`🛡 ${ncrs.length} Critical NCR(s) Open — SP360 ERP — ${today}`;
+    body=`${ncrs.length} critical NCR(s) require immediate action:\n\n`+ncrs.slice(0,5).map(n=>`• ${n.ncr_no} — CRITICAL / OPEN`).join('\n');
+  }
+
+  openModal(`📧 Preview — ${t.name}`,`
+    <div style="margin-bottom:12px;padding:10px;background:var(--n3);border-radius:6px">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px">SUBJECT</div>
+      <div style="font-size:12px;font-weight:700;color:var(--text)">${esc(subject)}</div>
+    </div>
+    <div style="margin-bottom:12px;padding:10px;background:var(--n3);border-radius:6px">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px">BODY PREVIEW</div>
+      <pre style="font-size:11px;color:var(--text);white-space:pre-wrap;font-family:inherit;margin:0">${esc(body)}</pre>
+    </div>
+    <div style="margin-bottom:12px;padding:10px;background:#C9A84C11;border:1px solid #C9A84C33;border-radius:6px;font-size:10px;color:var(--muted)">
+      Recipients: all active users in their respective roles
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="sendEmailNotification('${type}');closeModal()">📤 Send Now</button>
+    </div>`);
+}
+
+// ── Load email history from audit trail ───────────────────────
+async function loadEmailHistory(){
+  const el = document.getElementById('email-history-list');
+  if(!el) return;
+  try{
+    const {data} = await sb.from('audit_log')
+      .select('created_at,action,new_data,performed_by')
+      .eq('table_name','email_notifications')
+      .order('created_at',{ascending:false})
+      .limit(10);
+    if(!data||data.length===0){ el.innerHTML='<div style="color:var(--faint);font-style:italic">No emails sent yet</div>'; return; }
+    el.innerHTML = data.map(r=>{
+      const d=r.new_data||{};
+      const ts=new Date(r.created_at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--bdr)">
+        <div>
+          <div style="font-size:11px;color:var(--text)">${esc(d.subject||d.type||'Email Sent')}</div>
+          <div style="font-size:9px;color:var(--faint)">${d.recipients||'—'} recipients · ${ts}</div>
+        </div>
+        <span style="font-size:9px;background:#10B98122;color:#10B981;border:1px solid #10B98133;border-radius:4px;padding:2px 6px">✓ Sent</span>
+      </div>`;
+    }).join('');
+  }catch(e){
+    el.innerHTML='<div style="color:var(--faint)">History unavailable</div>';
+  }
+}
+
+// ── Deploy instructions modal ─────────────────────────────────
+function openEmailDeployModal(){
+  openModal('⚙️ Deploy Resend Edge Function',`
+    <div style="font-size:11px;line-height:1.8;color:var(--text)">
+      <div style="font-weight:700;color:var(--gold);margin-bottom:8px">3 steps to enable real email sending:</div>
+
+      <div style="background:var(--n3);border-radius:8px;padding:12px;margin-bottom:12px">
+        <div style="font-weight:700;color:var(--text);margin-bottom:6px">① Get a free Resend API key</div>
+        <div style="color:var(--muted)">Sign up at <a href="https://resend.com" target="_blank" style="color:#C9A84C">resend.com</a> → create API key</div>
+        <div style="color:var(--muted);margin-top:4px">Free plan: <b>100 emails/day</b> · No credit card required</div>
+      </div>
+
+      <div style="background:var(--n3);border-radius:8px;padding:12px;margin-bottom:12px">
+        <div style="font-weight:700;color:var(--text);margin-bottom:6px">② Deploy the Edge Function</div>
+        <div style="background:#0D1B2A;border-radius:6px;padding:8px;font-family:monospace;font-size:10px;color:#10B981;line-height:1.8">
+          # Install Supabase CLI<br>
+          npm install -g supabase<br><br>
+          # Login & link project<br>
+          supabase login<br>
+          supabase link --project-ref sqizirpsatofcoqshwer<br><br>
+          # Deploy send-email function<br>
+          supabase functions deploy send-email<br><br>
+          # Set Resend API key<br>
+          supabase secrets set RESEND_API_KEY=re_xxxxxxxxxxxx
+        </div>
+      </div>
+
+      <div style="background:var(--n3);border-radius:8px;padding:12px;margin-bottom:12px">
+        <div style="font-weight:700;color:var(--text);margin-bottom:6px">③ Verify your sending domain (optional)</div>
+        <div style="color:var(--muted)">In Resend dashboard → Domains → Add <b>sp360.io</b> or your domain</div>
+        <div style="color:var(--muted);margin-top:4px">Until verified, emails send from <b>onboarding@resend.dev</b> (testing only)</div>
+      </div>
+
+      <div style="background:#10B98111;border:1px solid #10B98133;border-radius:8px;padding:10px;font-size:10px;color:#10B981">
+        The Edge Function code is in the downloaded <b>supabase/functions/send-email/index.ts</b> file
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      <a href="https://resend.com" target="_blank" class="btn btn-primary" style="text-decoration:none">🔗 Open Resend</a>
+    </div>`);
+}
+
+// ── Additional notification types ─────────────────────────────
+// Extend sendEmailNotification to handle new types
+const _origSendEmailNotification = sendEmailNotification;
+async function sendEmailNotification(type){
+  const today = new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+
+  // New types added in P3-3
+  if(type==='overdue_invoices'){
+    const [{data:invs},{data:users}] = await Promise.all([
+      sb.from('invoices').select('invoice_no,net_amount,due_date,client').eq('invoice_type','client').neq('status','paid').neq('status','cancelled'),
+      sb.from('user_profiles').select('email,role').eq('is_active',true)
+    ]);
+    const overdue=(invs||[]).filter(i=>i.due_date&&new Date(i.due_date)<new Date());
+    const recipients=(users||[]).filter(u=>['Finance Manager','PMO Manager','Admin'].includes(u.role)).map(u=>u.email).filter(Boolean);
+    if(!recipients.length){ showToast('No Finance recipients found','error'); return; }
+    const subject=`💰 ${overdue.length} Overdue AR Invoices — SP360 ERP — ${today}`;
+    const body=`Dear Finance Team,\n\n${overdue.length} AR invoice(s) are overdue:\n\n`
+      +overdue.slice(0,10).map(i=>`  • ${i.invoice_no} — KWD ${Number(i.net_amount).toLocaleString()} (due ${new Date(i.due_date).toLocaleDateString('en-GB')})`).join('\n')
+      +`\n\nLog in to SP360 ERP:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
+    showToast(`Sending Overdue AR Alert to ${recipients.length} users…`);
+    const sent=await sendViaEdge(recipients,subject,body);
+    if(sent){ showToast('Overdue AR Alert sent ✓'); await writeAudit('email_notifications',null,'EMAIL_SENT',null,{type,recipients:recipients.length,subject},'Overdue AR alert sent'); }
+    else { fallbackMailto(recipients,subject,body); showToast('Email client opened'); }
+    return;
+  }
+
+  if(type==='ncr_alert'){
+    const [{data:ncrs},{data:users}] = await Promise.all([
+      sb.from('ncrs').select('ncr_no,severity,department,description').eq('status','open').eq('severity','critical'),
+      sb.from('user_profiles').select('email,role').eq('is_active',true)
+    ]);
+    const recipients=(users||[]).filter(u=>['QHSE Engineer','PMO Manager','Admin'].includes(u.role)).map(u=>u.email).filter(Boolean);
+    if(!recipients.length){ showToast('No QHSE recipients found','error'); return; }
+    const subject=`🛡 ${(ncrs||[]).length} Critical NCR(s) Open — SP360 ERP — ${today}`;
+    const body=`Dear QHSE Team,\n\n${(ncrs||[]).length} critical NCR(s) require immediate action:\n\n`
+      +(ncrs||[]).slice(0,10).map(n=>`  • ${n.ncr_no} — ${n.department||'N/A'} — CRITICAL / OPEN`).join('\n')
+      +`\n\nLog in to SP360 ERP:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
+    showToast(`Sending Critical NCR Alert to ${recipients.length} users…`);
+    const sent=await sendViaEdge(recipients,subject,body);
+    if(sent){ showToast('Critical NCR Alert sent ✓'); await writeAudit('email_notifications',null,'EMAIL_SENT',null,{type,recipients:recipients.length,subject},'Critical NCR alert sent'); }
+    else { fallbackMailto(recipients,subject,body); showToast('Email client opened'); }
+    return;
+  }
+
+  // Delegate original types to original function
+  return _origSendEmailNotification(type);
+}
+
+// ── ESC closes Email Center ───────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape' && document.getElementById('email-center-panel')?.style.display==='flex') closeEmailCenter();
 },{passive:true});
 
 async function installPWA(){
