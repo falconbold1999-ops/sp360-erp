@@ -593,6 +593,13 @@ img,canvas,svg{max-width:100%;height:auto}
         <button class="nav-btn" id="nav-insurance" onclick="navTo('insurance',this)"><span class="nav-icon">🛡</span>Insurance</button>
         <button class="nav-btn" id="nav-appraisal" onclick="navTo('appraisal',this)"><span class="nav-icon">⭐</span>Appraisal</button>
         <button class="nav-btn" id="nav-budget" onclick="navTo('budget',this)"><span class="nav-icon">💵</span>Budget</button>
+        <button class="nav-btn" id="nav-correspondence" onclick="navTo('correspondence',this)"><span class="nav-icon">✉️</span>Correspondence</button>
+        <button class="nav-btn" id="nav-benchmark" onclick="navTo('benchmark',this)"><span class="nav-icon">📐</span>Benchmark</button>
+        <button class="nav-btn" id="nav-import" onclick="navTo('import',this)"><span class="nav-icon">📥</span>Import/Export</button>
+        <button class="nav-btn" id="nav-sitediary" onclick="navTo('sitediary',this)"><span class="nav-icon">📔</span>Site Diary</button>
+        <button class="nav-btn" id="nav-punchlist" onclick="navTo('punchlist',this)"><span class="nav-icon">📌</span>Punch List</button>
+        <button class="nav-btn" id="nav-expenses" onclick="navTo('expenses',this)"><span class="nav-icon">🧾</span>Expenses</button>
+        <button class="nav-btn" id="nav-ai" onclick="navTo('ai',this)"><span class="nav-icon">🤖</span>AI Assistant</button>
         <button class="nav-btn" id="nav-system" onclick="navTo('system',this)"><span class="nav-icon">⚙️</span>System</button>
       </nav>
       <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v3.3 · Production<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
@@ -626,6 +633,13 @@ img,canvas,svg{max-width:100%;height:auto}
       <div class="page" id="page-insurance"></div>
       <div class="page" id="page-appraisal"></div>
       <div class="page" id="page-budget"></div>
+      <div class="page" id="page-correspondence"></div>
+      <div class="page" id="page-benchmark"></div>
+      <div class="page" id="page-import"></div>
+      <div class="page" id="page-sitediary"></div>
+      <div class="page" id="page-punchlist"></div>
+      <div class="page" id="page-expenses"></div>
+      <div class="page" id="page-ai"></div>
       <div class="page" id="page-system"></div>
       <div class="page" id="page-resources"></div>
       <div class="page" id="page-scorecard"></div>
@@ -766,15 +780,15 @@ var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 // Page visibility per role
 const ROLE_PAGES = {
-  'Admin':             ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget'],
-  'PMO Manager':       ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget'],
-  'CEO':               ['dashboard','ceo','projects','gantt','resources','scorecard','bizdev','finance','contracts','lessons','forecast','reports','subcon','meetings','analytics','tender','insurance','budget'],
-  'Finance Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','finance','inventory','workflow','audit','contracts','lessons','forecast','reports','assets','subcon','meetings','analytics','insurance','budget'],
-  'Project Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','inventory','qhse','documents','workflow','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','budget'],
-  'Procurement Lead':  ['dashboard','projects','gantt','procurement','inventory','workflow','contracts','lessons','assets','subcon','meetings'],
-  'BD Manager':        ['dashboard','bizdev','projects','gantt','contracts','lessons','tender'],
-  'QHSE Engineer':     ['dashboard','projects','gantt','qhse','documents','contracts','lessons'],
-  'HR Manager':        ['dashboard','hr','documents','contracts','lessons','training','appraisal'],
+  'Admin':             ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','correspondence','benchmark','import','sitediary','punchlist','expenses','ai'],
+  'PMO Manager':       ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','correspondence','benchmark','import','sitediary','punchlist','expenses','ai'],
+  'CEO':               ['dashboard','ceo','projects','gantt','resources','scorecard','bizdev','finance','contracts','lessons','forecast','reports','subcon','meetings','analytics','tender','insurance','budget','correspondence','benchmark','ai'],
+  'Finance Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','finance','inventory','workflow','audit','contracts','lessons','forecast','reports','assets','subcon','meetings','analytics','insurance','budget','correspondence','benchmark','expenses','ai'],
+  'Project Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','inventory','qhse','documents','workflow','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','budget','correspondence','benchmark','sitediary','punchlist','expenses','ai'],
+  'Procurement Lead':  ['dashboard','projects','gantt','procurement','inventory','workflow','contracts','lessons','assets','subcon','meetings','correspondence'],
+  'BD Manager':        ['dashboard','bizdev','projects','gantt','contracts','lessons','tender','correspondence'],
+  'QHSE Engineer':     ['dashboard','projects','gantt','qhse','documents','contracts','lessons','sitediary','punchlist'],
+  'HR Manager':        ['dashboard','hr','documents','contracts','lessons','training','appraisal','expenses'],
   'Viewer':            ['dashboard','projects','gantt']
 };
 
@@ -1152,7 +1166,7 @@ function enterApp(){
 
   // ── Apply role-based nav visibility ──────────────────────
   const allowed = ROLE_PAGES[currentProfile?.role] || ['dashboard'];
-  ['bizdev','projects','gantt','resources','scorecard','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system'].forEach(p=>{
+  ['bizdev','projects','gantt','resources','scorecard','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','correspondence','benchmark','import','sitediary','punchlist','expenses','ai','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system'].forEach(p=>{
     const btn = document.getElementById('nav-'+p);
     if(btn) btn.style.display = allowed.includes(p) ? '' : 'none';
   });
@@ -1398,7 +1412,7 @@ function navTo(id,btn){
     procurement:()=>loadProc(curProcTab),finance:loadFinance,
     hr:()=>loadHR(curHRTab),qhse:()=>loadQHSE(curQHSETab),
     inventory:loadInventory,documents:()=>loadDocs(curDocTab),workflow:loadWorkflow,audit:loadAudit,
-    users:loadUsers,ceo:loadCEO,system:loadSystem,resources:loadResources,scorecard:loadScorecard,contracts:loadContracts,lessons:loadLessons,forecast:loadForecast,reports:loadReports,training:loadTraining,assets:loadAssets,subcon:loadSubcon,meetings:loadMeetings,analytics:loadAnalytics,tender:loadTender,insurance:loadInsurance,appraisal:loadAppraisal,budget:loadBudget
+    users:loadUsers,ceo:loadCEO,system:loadSystem,resources:loadResources,scorecard:loadScorecard,contracts:loadContracts,lessons:loadLessons,forecast:loadForecast,reports:loadReports,training:loadTraining,assets:loadAssets,subcon:loadSubcon,meetings:loadMeetings,analytics:loadAnalytics,tender:loadTender,insurance:loadInsurance,appraisal:loadAppraisal,budget:loadBudget,correspondence:loadCorrespondence,benchmark:loadBenchmark,import:loadImportExport,sitediary:loadSiteDiary,punchlist:loadPunchList,expenses:loadExpenses,ai:loadAI
   };
   if(loaders[id])loaders[id]();
 }
@@ -2046,6 +2060,7 @@ async function loadProjects(tab){
             <button onclick="openRiskRegister('${p.id}','${p.project_no}')" style="background:#EF444411;border:1px solid #EF444433;color:#EF4444;border-radius:5px;padding:3px 7px;font-size:9px;font-weight:700;cursor:pointer" title="Risk Register">⚠️</button>
             <button onclick="exportClientPortal('${p.id}','${p.project_no}')" style="background:#C9A84C11;border:1px solid #C9A84C33;color:#C9A84C;border-radius:5px;padding:3px 7px;font-size:9px;font-weight:700;cursor:pointer" title="Client Report">📤</button>
             <button onclick="openCloseoutChecklist('${p.id}','${p.project_no}')" style="background:#10B98111;border:1px solid #10B98133;color:#10B981;border-radius:5px;padding:3px 7px;font-size:9px;font-weight:700;cursor:pointer" title="Closeout Checklist">✅</button>
+            <button onclick="loadProjectDependencies('${p.id}','${p.project_no}')" style="background:#8B5CF611;border:1px solid #8B5CF633;color:#8B5CF6;border-radius:5px;padding:3px 7px;font-size:9px;font-weight:700;cursor:pointer" title="Dependencies">🔗</button>
           </div>
         </td>
       </tr>`;
@@ -2097,7 +2112,8 @@ async function loadProjects(tab){
         <td style="text-align:center;white-space:nowrap">
           ${canSubmit?`<button class="btn btn-ghost btn-sm" onclick="submitCO('${c.id}')">Submit</button>`:''}
           ${canReview?`<button class="btn btn-primary btn-sm" style="background:#10B981" onclick="reviewCO('${c.id}','approve')">✓ Approve</button> <button class="btn btn-danger btn-sm" onclick="reviewCO('${c.id}','reject')">✗ Reject</button>`:''}
-          ${!canSubmit&&!canReview?`<span style="color:var(--faint);font-size:10px">—</span>`:''}
+          <button onclick="openVariationOrderDetail('${c.id}')" style="background:none;border:none;color:#8B5CF6;cursor:pointer;font-size:11px" title="VO Detail">📋</button>
+          ${!canSubmit&&!canReview?`<span style="color:var(--faint);font-size:10px"></span>`:''}
         </td>
       </tr>`;
     }).join('')}
@@ -2435,6 +2451,7 @@ async function loadProjects(tab){
       <button class="btn btn-ghost btn-sm" onclick="exportPortfolioExcel()">📊 Export Excel</button>
       <button class="btn btn-ghost btn-sm" onclick="loadBudgetVsActual(null)" style="background:#3B82F611;border-color:#3B82F644;color:#3B82F6">📈 Budget vs Actual</button>
       <button class="btn btn-ghost btn-sm" onclick="navTo('lessons',document.getElementById('nav-lessons'))" style="background:#10B98111;border-color:#10B98133;color:#10B981">📚 Lessons</button>
+      <button class="btn btn-ghost btn-sm" onclick="loadEquipmentTracking()" style="background:#84CC1611;border-color:#84CC1633;color:#84CC16">🚧 Equipment</button>
       <button class="btn btn-primary btn-sm" onclick="openNewProjectModal()">+ New Project</button>
     </div>
   </div>
@@ -3204,6 +3221,7 @@ async function loadFinance(tab='overview'){
         <td style="text-align:center">${pill(i.status)}</td>
         <td style="text-align:center">
           ${canPay?`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:2px 7px" onclick="markInvoicePaid(event,'${i.id}')">Pay ✓</button>`:''}
+          <button onclick="openInvoiceMatchingModal('${i.id}')" style="background:none;border:none;color:#8B5CF6;cursor:pointer;font-size:11px" title="Invoice Matching">🔗</button>
         </td>
       </tr>`;
     }).join('')}
@@ -13436,6 +13454,1563 @@ async function runScheduledNotifications(){
 
 // Hook into enterApp
 const _origEnterApp_notif = typeof enterApp === 'function' ? enterApp : null;
+
+// ══════════════════════════════════════════════════════════════
+//  P10-1 · PROJECT DEPENDENCIES
+//  Finish-to-Start / Start-to-Start linking in Gantt
+// ══════════════════════════════════════════════════════════════
+async function loadProjectDependencies(projectId, projectNo){
+  const [{data:tasks},{data:deps}] = await Promise.all([
+    sb.from('project_tasks').select('id,task_no,title,start_date,end_date,status,pct,predecessor_id').eq('project_id',projectId).order('task_no'),
+    sb.from('project_dependencies').select('*').eq('project_id',projectId)
+  ]);
+  const T=tasks||[], D=deps||[];
+
+  openModal(`🔗 Project Dependencies — ${projectNo}`,`
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">
+      Define task dependencies to control project sequencing and critical path.
+    </div>
+    ${T.length===0?`<div class="empty">No tasks found. Add tasks to this project first.</div>`:`
+    <div style="overflow-x:auto;max-height:350px;overflow-y:auto">
+      <table><thead><tr>
+        <th>Task</th><th>Title</th><th>Start</th><th>End</th><th>Status</th><th>Predecessor</th><th>Type</th>
+      </tr></thead><tbody>
+      ${T.map(t=>{
+        const dep=D.find(d=>d.successor_id===t.id);
+        const pred=dep?T.find(p=>p.id===dep.predecessor_id):null;
+        return`<tr>
+          <td style="color:var(--gold);font-size:10px;font-weight:700">${esc(t.task_no||'—')}</td>
+          <td style="font-size:11px;font-weight:600">${esc(t.title||'—')}</td>
+          <td style="font-size:10px;color:var(--faint)">${t.start_date||'—'}</td>
+          <td style="font-size:10px;color:var(--faint)">${t.end_date||'—'}</td>
+          <td>${pill(t.status||'pending',t.status==='completed'?'#10B981':t.status==='in_progress'?'#3B82F6':'#94A3B8')}</td>
+          <td style="font-size:10px;color:var(--muted)">${pred?esc(pred.task_no+' — '+pred.title.substring(0,20)):'<span style="color:var(--faint)">None</span>'}</td>
+          <td style="font-size:10px;color:var(--muted)">${dep?esc(dep.dependency_type||'FS'):'—'}</td>
+        </tr>`;}).join('')}
+      </tbody></table>
+    </div>
+    <div style="margin-top:10px;padding:8px;background:var(--n3);border-radius:6px">
+      <div style="font-size:10px;font-weight:700;color:var(--gold);margin-bottom:6px">Add Dependency</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select id="dep-pred" style="flex:1;min-width:120px;background:var(--card);border:1px solid var(--bdr);border-radius:6px;padding:6px;color:var(--text);font-size:10px">
+          <option value="">Predecessor task</option>
+          ${T.map(t=>`<option value="${t.id}">${esc(t.task_no)} — ${esc(t.title.substring(0,25))}</option>`).join('')}
+        </select>
+        <select id="dep-succ" style="flex:1;min-width:120px;background:var(--card);border:1px solid var(--bdr);border-radius:6px;padding:6px;color:var(--text);font-size:10px">
+          <option value="">Successor task</option>
+          ${T.map(t=>`<option value="${t.id}">${esc(t.task_no)} — ${esc(t.title.substring(0,25))}</option>`).join('')}
+        </select>
+        <select id="dep-type" style="background:var(--card);border:1px solid var(--bdr);border-radius:6px;padding:6px;color:var(--text);font-size:10px">
+          <option value="FS">FS — Finish to Start</option>
+          <option value="SS">SS — Start to Start</option>
+          <option value="FF">FF — Finish to Finish</option>
+          <option value="SF">SF — Start to Finish</option>
+        </select>
+        <button onclick="saveDependency('${projectId}','${projectNo}')" class="btn btn-primary btn-sm">Link</button>
+      </div>
+    </div>`}
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+    </div>`);
+}
+
+async function saveDependency(projectId, projectNo){
+  const predId=document.getElementById('dep-pred').value;
+  const succId=document.getElementById('dep-succ').value;
+  const type  =document.getElementById('dep-type').value;
+  if(!predId||!succId){showToast('Select both predecessor and successor','error');return;}
+  if(predId===succId){showToast('Task cannot depend on itself','error');return;}
+  const {error}=await sb.from('project_dependencies').insert({
+    project_id:projectId, predecessor_id:predId, successor_id:succId,
+    dependency_type:type, created_by:currentProfile?.id
+  });
+  if(error){showToast('Error: '+error.message,'error');return;}
+  showToast('Dependency linked ✓');
+  loadProjectDependencies(projectId, projectNo);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P10-2 · EQUIPMENT TRACKING (extends Assets)
+// ══════════════════════════════════════════════════════════════
+async function loadEquipmentTracking(){
+  const [{data:assets},{data:projs}] = await Promise.all([
+    sb.from('assets').select('*,assigned_project:projects(project_no,name)').eq('category','Heavy Equipment').order('asset_no'),
+    sb.from('projects').select('id,project_no,name').in('status',ACTIVE_STATUSES).order('project_no')
+  ]);
+  const equip=assets||[];
+
+  openModal('🚧 Equipment Tracking',`
+    <div style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:11px;color:var(--muted)">${equip.length} equipment item(s)</div>
+      ${can('edit')?`<button class="btn btn-primary btn-sm" onclick="openAssignEquipmentModal()">📍 Assign to Site</button>`:''}
+    </div>
+    ${equip.length===0?'<div class="empty">No heavy equipment registered — add via Assets page</div>':`
+    <div style="overflow-x:auto;max-height:380px;overflow-y:auto">
+      <table><thead><tr>
+        <th>Asset No</th><th>Equipment</th><th>Serial</th><th>Current Site / Project</th>
+        <th style="text-align:center">Condition</th><th style="text-align:center">Status</th>
+      </tr></thead><tbody>
+      ${equip.map(a=>`<tr>
+        <td style="color:var(--gold);font-weight:700;font-size:10px">${esc(a.asset_no||'—')}</td>
+        <td style="font-weight:600">${esc(a.asset_name||'—')}</td>
+        <td style="font-size:10px;color:var(--faint)">${esc(a.serial_number||'—')}</td>
+        <td style="font-size:10px;color:var(--muted)">${esc(a.location||a.assigned_project?.project_no||'Unassigned')}</td>
+        <td style="text-align:center"><span style="font-size:9px;background:${a.condition==='good'?'#10B98122':a.condition==='fair'?'#F9731622':'#EF444422'};color:${a.condition==='good'?'#10B981':a.condition==='fair'?'#F97316':'#EF4444'};border-radius:4px;padding:2px 7px;font-weight:700;text-transform:capitalize">${a.condition||'—'}</span></td>
+        <td style="text-align:center">${pill(a.status||'active',a.status==='active'?'#10B981':a.status==='in_maintenance'?'#F97316':'#94A3B8')}</td>
+      </tr>`).join('')}
+      </tbody></table>
+    </div>`}
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal();navTo('assets',document.getElementById('nav-assets'))">Go to Assets</button>
+    </div>`);
+}
+
+async function openAssignEquipmentModal(){
+  const [{data:assets},{data:projs}]=await Promise.all([
+    sb.from('assets').select('id,asset_no,asset_name').eq('category','Heavy Equipment').eq('status','active'),
+    sb.from('projects').select('id,project_no,name').in('status',ACTIVE_STATUSES).order('project_no')
+  ]);
+  openModal('📍 Assign Equipment to Site',`
+    <div class="form-field"><label>Equipment *</label>
+      <select id="eq-asset" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+        <option value="">— Select Equipment —</option>
+        ${(assets||[]).map(a=>`<option value="${a.id}">${esc(a.asset_no)} — ${esc(a.asset_name)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-field"><label>Project / Site *</label>
+      <select id="eq-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+        <option value="">— Select Project —</option>
+        ${(projs||[]).map(p=>`<option value="${p.id}">${esc(p.project_no)} — ${esc(p.name)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Deployment Date</label><input id="eq-date" type="date" value="${new Date().toISOString().split('T')[0]}"/></div>
+      <div class="form-field"><label>Notes</label><input id="eq-notes" placeholder="Deployment notes"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="loadEquipmentTracking()">← Back</button>
+      <button class="btn btn-primary" onclick="assignEquipment(event)">Assign</button>
+    </div>`);
+}
+
+async function assignEquipment(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Assigning…';}
+  try{
+    const assetId=document.getElementById('eq-asset').value;
+    const projId =document.getElementById('eq-proj').value;
+    if(!assetId||!projId){showToast('Equipment and project required','error');return;}
+    const {data:proj}=await sb.from('projects').select('project_no').eq('id',projId).single();
+    const {error}=await sb.from('assets').update({
+      project_id:projId, location:proj?.project_no||'Site',
+      updated_at:new Date().toISOString()
+    }).eq('id',assetId);
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('assets',assetId,'EQUIPMENT_ASSIGNED',null,{project_id:projId},'Equipment assigned to site');
+    showToast('Equipment assigned ✓');
+    loadEquipmentTracking();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Assign';}}
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P10-3 · CORRESPONDENCE LOG
+// ══════════════════════════════════════════════════════════════
+async function loadCorrespondence(tab='all'){
+  const el=document.getElementById('page-correspondence');
+  if(!el) return;
+  el.innerHTML='<div class="loading">Loading Correspondence…</div>';
+  try{
+    const today=new Date();
+    const [corrR,projR]=await Promise.all([
+      sb.from('correspondence').select('*,project:projects(project_no,name)').order('correspondence_date',{ascending:false}),
+      sb.from('projects').select('id,project_no,name').in('status',ACTIVE_STATUSES).order('project_no')
+    ]);
+    const corrs=corrR.data||[], projs=projR.data||[];
+    const incoming=corrs.filter(c=>c.direction==='incoming');
+    const outgoing=corrs.filter(c=>c.direction==='outgoing');
+    const pending  =corrs.filter(c=>c.status==='pending_reply');
+
+    const tabBtns=`<div class="tabs">
+      <button class="tab${tab==='all'?' act':''}" onclick="loadCorrespondence('all')">📨 All (${corrs.length})</button>
+      <button class="tab${tab==='incoming'?' act':''}" onclick="loadCorrespondence('incoming')">📥 Incoming (${incoming.length})</button>
+      <button class="tab${tab==='outgoing'?' act':''}" onclick="loadCorrespondence('outgoing')">📤 Outgoing (${outgoing.length})</button>
+      <button class="tab${tab==='pending'?' act':''}" onclick="loadCorrespondence('pending')" style="color:${pending.length>0?'#F97316':'inherit'}">⏳ Pending Reply (${pending.length})</button>
+    </div>`;
+
+    const list=tab==='incoming'?incoming:tab==='outgoing'?outgoing:tab==='pending'?pending:corrs;
+
+    const typeColors={'letter':'#3B82F6','email':'#10B981','fax':'#8B5CF6','notice':'#EF4444','memo':'#C9A84C','report':'#F97316'};
+
+    el.innerHTML=`
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">✉️</span>
+        <div><h1>Correspondence Log</h1><div class="sub">Letters · Emails · Notices · Memos · Formal Communications</div></div>
+      </div>
+      ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openNewCorrModal()">+ Log Correspondence</button>`:''}
+    </div>
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Total',        corrs.length,    '#C9A84C', 'All correspondence')}
+      ${kpi('Incoming',     incoming.length, '#3B82F6', 'Received')}
+      ${kpi('Outgoing',     outgoing.length, '#10B981', 'Sent')}
+      ${kpi('Pending Reply',pending.length,   pending.length>0?'#F97316':'#10B981', 'Awaiting response')}
+    </div>
+    <div class="card">
+      ${tabBtns}
+      ${list.length===0?'<div class="empty">No correspondence found</div>':`
+      <table><thead><tr>
+        <th>Ref No</th><th>Subject</th><th>Type</th><th>Direction</th><th>Party</th>
+        <th>Project</th><th>Date</th><th style="text-align:center">Status</th><th></th>
+      </tr></thead><tbody>
+      ${list.map(c=>`<tr>
+        <td style="color:var(--gold);font-weight:700;font-size:10px">${esc(c.ref_no||'—')}</td>
+        <td style="font-weight:600;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.subject||'—')}</td>
+        <td><span style="font-size:9px;background:${(typeColors[c.corr_type]||'#94A3B8')}22;color:${typeColors[c.corr_type]||'#94A3B8'};border-radius:4px;padding:2px 6px;text-transform:capitalize">${esc(c.corr_type||'—')}</span></td>
+        <td><span style="font-size:9px;background:${c.direction==='incoming'?'#3B82F622':'#10B98122'};color:${c.direction==='incoming'?'#3B82F6':'#10B981'};border-radius:4px;padding:2px 6px">${c.direction==='incoming'?'📥 In':'📤 Out'}</span></td>
+        <td style="font-size:10px;color:var(--muted)">${esc(c.party_name||'—')}</td>
+        <td style="font-size:10px;color:var(--gold)">${esc(c.project?.project_no||'General')}</td>
+        <td style="font-size:10px;color:var(--faint)">${c.correspondence_date||'—'}</td>
+        <td style="text-align:center">${pill(c.status||'filed',c.status==='pending_reply'?'#F97316':c.status==='replied'?'#10B981':'#94A3B8')}</td>
+        <td><button onclick="openCorrDetail('${c.id}')" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:11px">👁</button></td>
+      </tr>`).join('')}
+      </tbody></table>`}
+    </div>`;
+  }catch(err){ el.innerHTML=`<div class="empty">Error: ${err.message}</div>`; }
+}
+
+function openNewCorrModal(){
+  const projs=window._cachedProjects||[];
+  const today=new Date().toISOString().split('T')[0];
+  openModal('+ Log Correspondence',`
+    <div class="form-row">
+      <div class="form-field"><label>Subject *</label><input id="cor-subj" placeholder="Correspondence subject"/></div>
+      <div class="form-field"><label>Type *</label>
+        <select id="cor-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          ${['letter','email','fax','notice','memo','report'].map(t=>`<option value="${t}">${t.charAt(0).toUpperCase()+t.slice(1)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Direction *</label>
+        <select id="cor-dir" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="incoming">📥 Incoming (Received)</option>
+          <option value="outgoing">📤 Outgoing (Sent)</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Party (From/To) *</label><input id="cor-party" placeholder="Company or person name"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Date *</label><input id="cor-date" type="date" value="${today}"/></div>
+      <div class="form-field"><label>Project</label>
+        <select id="cor-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— General —</option>
+          ${projs.map(p=>`<option value="${p.id}">${esc(p.project_no)} — ${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>External Ref No</label><input id="cor-extref" placeholder="Other party's reference"/></div>
+      <div class="form-field"><label>Status</label>
+        <select id="cor-status" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="filed">Filed</option>
+          <option value="pending_reply">Pending Reply</option>
+          <option value="replied">Replied</option>
+          <option value="closed">Closed</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-field"><label>Summary / Key Points</label>
+      <textarea id="cor-summary" rows="3" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCorrespondence(event)">Save</button>
+    </div>`);
+}
+
+async function saveCorrespondence(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const subj=document.getElementById('cor-subj').value.trim();
+    const party=document.getElementById('cor-party').value.trim();
+    const date=document.getElementById('cor-date').value;
+    if(!subj||!party||!date){showToast('Subject, party and date required','error');return;}
+    const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'COR'});
+    const {error}=await sb.from('correspondence').insert({
+      ref_no:no, subject:subj,
+      corr_type:document.getElementById('cor-type').value,
+      direction:document.getElementById('cor-dir').value,
+      party_name:party,
+      correspondence_date:date,
+      project_id:document.getElementById('cor-proj').value||null,
+      external_ref:document.getElementById('cor-extref').value.trim()||null,
+      status:document.getElementById('cor-status').value,
+      summary:document.getElementById('cor-summary').value.trim()||null,
+      created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('correspondence',null,'CORRESPONDENCE_LOGGED',null,{ref_no:no,subject:subj},'Correspondence logged');
+    showToast(no+' logged ✓'); closeModal(); loadCorrespondence();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save';}}
+}
+
+async function openCorrDetail(id){
+  const {data:c}=await sb.from('correspondence').select('*,project:projects(project_no,name)').eq('id',id).single();
+  if(!c) return;
+  const typeColors={'letter':'#3B82F6','email':'#10B981','fax':'#8B5CF6','notice':'#EF4444','memo':'#C9A84C','report':'#F97316'};
+  openModal(`✉️ ${c.ref_no} — ${c.subject}`,`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      ${[['Type',`<span style="color:${typeColors[c.corr_type]||'#94A3B8'};font-weight:700;text-transform:capitalize">${c.corr_type||'—'}</span>`],
+         ['Direction',c.direction==='incoming'?'📥 Incoming':'📤 Outgoing'],
+         ['Party',c.party_name||'—'],['Date',c.correspondence_date||'—'],
+         ['Project',c.project?.project_no||'General'],['External Ref',c.external_ref||'—'],
+         ['Status',pill(c.status||'filed',c.status==='pending_reply'?'#F97316':c.status==='replied'?'#10B981':'#94A3B8')],
+         ['Logged by',c.created_by||'—']
+      ].map(([l,v])=>`<div style="background:var(--n3);border-radius:6px;padding:8px">
+        <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase">${l}</div>
+        <div style="font-size:12px;color:var(--text);margin-top:2px">${v}</div>
+      </div>`).join('')}
+    </div>
+    ${c.summary?`<div style="padding:10px;background:var(--n3);border-radius:6px;font-size:11px;color:var(--text);white-space:pre-wrap">${esc(c.summary)}</div>`:''}
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      ${can('edit')&&c.status==='pending_reply'?`<button class="btn btn-primary" onclick="markCorrReplied('${id}');closeModal()">✅ Mark Replied</button>`:''}
+    </div>`);
+}
+
+async function markCorrReplied(id){
+  await sb.from('correspondence').update({status:'replied',updated_at:new Date().toISOString()}).eq('id',id);
+  showToast('Marked as replied ✓');
+  loadCorrespondence();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P10-4 · KPI CUSTOM TARGETS + BENCHMARKING
+// ══════════════════════════════════════════════════════════════
+async function loadBenchmark(){
+  const el=document.getElementById('page-benchmark');
+  if(!el) return;
+  el.innerHTML='<div class="loading">Loading Benchmark…</div>';
+  try{
+    const today=new Date();
+    const [projR,invR,wfR,ncrR]=await Promise.all([
+      sb.from('projects').select('id,status,cpi,spi,pct,bac,ev,ac').in('status',ACTIVE_STATUSES),
+      sb.from('invoices').select('invoice_type,status,net_amount,due_date'),
+      sb.from('workflow_items').select('id,status'),
+      sb.from('ncrs').select('id,status,severity')
+    ]);
+    const projs=projR.data||[], invs=invR.data||[], wfs=wfR.data||[], ncrs=ncrR.data||[];
+
+    // Load custom targets
+    const savedTargets=JSON.parse(localStorage.getItem('sp360_kpi_targets')||'{}');
+
+    const totalEV=projs.reduce((s,p)=>s+Number(p.ev),0);
+    const totalAC=projs.reduce((s,p)=>s+Number(p.ac),0);
+    const totalPV=projs.reduce((s,p)=>s+Number(p.pv||0),0);
+    const portCPI=totalAC>0?totalEV/totalAC:1;
+    const portSPI=totalPV>0?totalEV/totalPV:1;
+    const rev=invs.filter(i=>i.invoice_type==='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+    const cost=invs.filter(i=>i.invoice_type!=='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+    const gpPct=rev>0?((rev-cost)/rev*100):0;
+    const overdueAR=invs.filter(i=>i.invoice_type==='client'&&!['paid','cancelled'].includes(i.status)&&i.due_date&&new Date(i.due_date)<today).length;
+    const wfSLA=wfs.length>0?Math.round((1-wfs.filter(w=>w.status==='overdue').length/wfs.length)*100):100;
+    const openNCR=ncrs.filter(n=>n.status==='open').length;
+    const critNCR=ncrs.filter(n=>n.status==='open'&&n.severity==='critical').length;
+    const avgPct=projs.length?projs.reduce((s,p)=>s+Number(p.pct||0),0)/projs.length:0;
+
+    // Industry benchmarks
+    const INDUSTRY_BENCHMARKS={
+      cpi:{label:'Portfolio CPI', value:portCPI.toFixed(3), target:savedTargets.cpi||1.00, industry:1.00, unit:'ratio', higher:true},
+      spi:{label:'Portfolio SPI', value:portSPI.toFixed(3), target:savedTargets.spi||1.00, industry:1.00, unit:'ratio', higher:true},
+      gp_pct:{label:'GP Margin %',   value:gpPct.toFixed(1),  target:savedTargets.gp_pct||25, industry:20,  unit:'%',    higher:true},
+      wf_sla:{label:'Workflow SLA %',value:wfSLA,             target:savedTargets.wf_sla||90, industry:85,  unit:'%',    higher:true},
+      overdue_ar:{label:'Overdue AR', value:overdueAR,        target:savedTargets.overdue_ar||0,industry:0,  unit:'invoices',higher:false},
+      open_ncr:{label:'Open NCRs',   value:openNCR,           target:savedTargets.open_ncr||0,industry:2,   unit:'count',higher:false},
+      crit_ncr:{label:'Critical NCRs',value:critNCR,          target:savedTargets.crit_ncr||0,industry:0,   unit:'count',higher:false},
+      avg_progress:{label:'Avg % Complete',value:avgPct.toFixed(1),target:savedTargets.avg_progress||50,industry:50,unit:'%',higher:true},
+    };
+
+    const compareColor=(val,target,higher)=>{
+      const v=Number(val), t=Number(target);
+      return higher?(v>=t?'#10B981':v>=t*0.9?'#F97316':'#EF4444'):(v<=t?'#10B981':v<=t*1.1?'#F97316':'#EF4444');
+    };
+
+    el.innerHTML=`
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">📐</span>
+        <div><h1>Benchmarking & KPI Targets</h1><div class="sub">SP360 Actuals vs Custom Targets vs Industry Standards</div></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="openCustomTargetsModal()">⚙️ Set Targets</button>
+    </div>
+
+    <!-- Legend -->
+    <div style="display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap;font-size:10px;color:var(--muted)">
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#1E3A5F;border:2px solid #C9A84C;border-radius:2px"></span>SP360 Actual</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#3B82F622;border:2px solid #3B82F6;border-radius:2px"></span>Your Target</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;background:#8B5CF622;border:2px solid #8B5CF6;border-radius:2px"></span>Industry Standard</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+      ${Object.entries(INDUSTRY_BENCHMARKS).map(([key,kpi])=>{
+        const col=compareColor(kpi.value,kpi.target,kpi.higher);
+        const maxVal=Math.max(Number(kpi.value),Number(kpi.target),Number(kpi.industry))||1;
+        const actPct=Math.min(Number(kpi.value)/maxVal*100,100);
+        const tgtPct=Math.min(Number(kpi.target)/maxVal*100,100);
+        const indPct=Math.min(Number(kpi.industry)/maxVal*100,100);
+        return`<div style="border:1px solid var(--bdr);border-left:3px solid ${col};border-radius:8px;padding:14px;background:var(--card2)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase">${kpi.label}</div>
+            <div style="font-size:18px;font-weight:900;color:${col}">${kpi.value}${kpi.unit==='%'?'%':''}</div>
+          </div>
+          <!-- Actual bar -->
+          <div style="margin-bottom:4px">
+            <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--faint);margin-bottom:2px"><span>Actual</span><span style="color:${col}">${kpi.value} ${kpi.unit}</span></div>
+            <div style="background:var(--bdr);border-radius:3px;height:6px;overflow:hidden"><div style="height:100%;width:${actPct.toFixed(0)}%;background:${col};border-radius:3px"></div></div>
+          </div>
+          <!-- Target bar -->
+          <div style="margin-bottom:4px">
+            <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--faint);margin-bottom:2px"><span>Your Target</span><span style="color:#3B82F6">${kpi.target} ${kpi.unit}</span></div>
+            <div style="background:var(--bdr);border-radius:3px;height:6px;overflow:hidden"><div style="height:100%;width:${tgtPct.toFixed(0)}%;background:#3B82F6;border-radius:3px"></div></div>
+          </div>
+          <!-- Industry bar -->
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--faint);margin-bottom:2px"><span>Industry</span><span style="color:#8B5CF6">${kpi.industry} ${kpi.unit}</span></div>
+            <div style="background:var(--bdr);border-radius:3px;height:6px;overflow:hidden"><div style="height:100%;width:${indPct.toFixed(0)}%;background:#8B5CF6;border-radius:3px"></div></div>
+          </div>
+        </div>`;}).join('')}
+    </div>`;
+  }catch(err){ el.innerHTML=`<div class="empty">Error: ${err.message}</div>`; }
+}
+
+function openCustomTargetsModal(){
+  const saved=JSON.parse(localStorage.getItem('sp360_kpi_targets')||'{}');
+  const fields=[
+    ['cpi',       'Portfolio CPI Target',    saved.cpi||1.00,    '0.001'],
+    ['spi',       'Portfolio SPI Target',    saved.spi||1.00,    '0.001'],
+    ['gp_pct',    'GP Margin % Target',      saved.gp_pct||25,   '0.1'],
+    ['wf_sla',    'Workflow SLA % Target',   saved.wf_sla||90,   '1'],
+    ['overdue_ar','Max Overdue AR Target',   saved.overdue_ar||0,'1'],
+    ['open_ncr',  'Max Open NCR Target',     saved.open_ncr||0,  '1'],
+    ['crit_ncr',  'Max Critical NCR Target', saved.crit_ncr||0,  '1'],
+    ['avg_progress','Avg Progress % Target', saved.avg_progress||50,'1'],
+  ];
+  openModal('⚙️ Customize KPI Targets',`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${fields.map(([id,label,val,step])=>`
+      <div class="form-field">
+        <label style="font-size:10px">${label}</label>
+        <input id="tgt-${id}" type="number" step="${step}" value="${val}" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:6px;padding:8px;color:var(--text)"/>
+      </div>`).join('')}
+    </div>
+    <div style="margin-top:10px;padding:8px;background:var(--n3);border-radius:6px;font-size:10px;color:var(--muted)">
+      Targets are saved locally and used across Scorecard, Analytics, and Benchmark pages.
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-ghost btn-sm" onclick="resetCustomTargets()">Reset Defaults</button>
+      <button class="btn btn-primary" onclick="saveCustomTargets()">Save Targets</button>
+    </div>`);
+}
+
+function saveCustomTargets(){
+  const fields=['cpi','spi','gp_pct','wf_sla','overdue_ar','open_ncr','crit_ncr','avg_progress'];
+  const targets={};
+  fields.forEach(id=>{
+    const el=document.getElementById('tgt-'+id);
+    if(el) targets[id]=Number(el.value);
+  });
+  localStorage.setItem('sp360_kpi_targets',JSON.stringify(targets));
+  showToast('KPI targets saved ✓');
+  closeModal();
+  loadBenchmark();
+}
+
+function resetCustomTargets(){
+  localStorage.removeItem('sp360_kpi_targets');
+  showToast('Targets reset to defaults');
+  closeModal();
+  loadBenchmark();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P10-5 · DATA IMPORT / EXPORT
+// ══════════════════════════════════════════════════════════════
+async function loadImportExport(){
+  const el=document.getElementById('page-import');
+  if(!el) return;
+
+  el.innerHTML=`
+  <div class="page-head">
+    <div class="page-head-left"><span style="font-size:22px">📥</span>
+      <div><h1>Data Import / Export</h1><div class="sub">Bulk import from Excel/CSV · Export all data · Template downloads</div></div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-bottom:14px">
+    <!-- EXPORT -->
+    <div class="card">
+      <div class="sec-head"><div class="sec-title"><span>📤</span>Export Data</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${[
+          ['projects',   '🏗', 'All Projects + EVM Data',        '#C9A84C'],
+          ['invoices',   '💰', 'All Invoices (AR + AP)',          '#10B981'],
+          ['employees',  '👥', 'Employee List',                   '#3B82F6'],
+          ['vendors',    '🏢', 'Vendor Directory',               '#8B5CF6'],
+          ['ncrs',       '🛡', 'NCR Register',                   '#EF4444'],
+          ['workflow',   '⚡', 'Workflow Items',                  '#F97316'],
+          ['contracts',  '📜', 'Contract Register',              '#06B6D4'],
+          ['assets',     '🔧', 'Asset Register',                  '#84CC16'],
+        ].map(([id,icon,label,col])=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--card2);border-radius:6px;border:1px solid var(--bdr)">
+          <span style="font-size:16px">${icon}</span>
+          <div style="flex:1;font-size:11px;font-weight:600">${label}</div>
+          <div style="display:flex;gap:6px">
+            <button onclick="exportDataset('${id}','excel')" style="background:${col}22;border:1px solid ${col}44;color:${col};border-radius:5px;padding:4px 10px;font-size:9px;font-weight:700;cursor:pointer">📊 Excel</button>
+            <button onclick="exportDataset('${id}','csv')" style="background:var(--n4);border:1px solid var(--bdr);color:var(--muted);border-radius:5px;padding:4px 10px;font-size:9px;font-weight:600;cursor:pointer">📄 CSV</button>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- IMPORT -->
+    <div class="card">
+      <div class="sec-head"><div class="sec-title"><span>📥</span>Import Data</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${[
+          ['projects_import',  '🏗', 'Projects (bulk update EVM)',  '#C9A84C'],
+          ['employees_import', '👥', 'Employees (new batch)',       '#3B82F6'],
+          ['invoices_import',  '💰', 'Invoices (bulk entry)',       '#10B981'],
+          ['assets_import',    '🔧', 'Assets (initial load)',        '#84CC16'],
+        ].map(([id,icon,label,col])=>`
+        <div style="border:1px solid var(--bdr);border-radius:6px;padding:10px;background:var(--card2)">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="font-size:16px">${icon}</span>
+            <span style="font-size:11px;font-weight:600;flex:1">${label}</span>
+            <button onclick="downloadImportTemplate('${id}')" style="background:var(--n4);border:1px solid var(--bdr);color:var(--muted);border-radius:5px;padding:3px 8px;font-size:9px;cursor:pointer">⬇ Template</button>
+          </div>
+          <div id="import-drop-${id}" style="border:2px dashed var(--bdr);border-radius:6px;padding:12px;text-align:center;cursor:pointer;transition:border-color .2s"
+            onclick="document.getElementById('file-${id}').click()"
+            ondragover="event.preventDefault();this.style.borderColor='${col}'"
+            ondragleave="this.style.borderColor=''"
+            ondrop="event.preventDefault();this.style.borderColor='';handleImportFile(event.dataTransfer.files[0],'${id}')">
+            <div style="font-size:20px;margin-bottom:4px">📂</div>
+            <div style="font-size:10px;color:var(--muted)">Click or drop .xlsx / .csv</div>
+          </div>
+          <input type="file" id="file-${id}" accept=".xlsx,.csv" style="display:none" onchange="handleImportFile(this.files[0],'${id}')"/>
+          <div id="import-status-${id}" style="font-size:10px;color:var(--faint);margin-top:6px;min-height:16px"></div>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Log -->
+  <div class="card">
+    <div class="sec-head"><div class="sec-title"><span>📋</span>Import / Export History</div></div>
+    <div id="import-history">
+      ${JSON.parse(localStorage.getItem('sp360_import_log')||'[]').slice(-10).reverse().map(l=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:10px">
+        <span style="color:var(--text);font-weight:600">${esc(l.action)}</span>
+        <span style="color:var(--muted)">${esc(l.dataset)}</span>
+        <span style="color:${l.ok?'#10B981':'#EF4444'}">${l.ok?'✓ Success':'✗ Failed'}${l.rows?' ('+l.rows+' rows)':''}</span>
+        <span style="color:var(--faint)">${l.ts}</span>
+      </div>`).join('') || '<div style="color:var(--faint);font-size:10px">No history yet</div>'}
+    </div>
+  </div>`;
+}
+
+function _logImport(action, dataset, ok, rows){
+  const log=JSON.parse(localStorage.getItem('sp360_import_log')||'[]');
+  log.push({action,dataset,ok,rows,ts:new Date().toLocaleString('en-GB')});
+  localStorage.setItem('sp360_import_log',JSON.stringify(log.slice(-50)));
+}
+
+async function exportDataset(id, format){
+  showToast(`Exporting ${id} as ${format.toUpperCase()}…`);
+  try{
+    let data=[], cols=[], label=id;
+
+    if(id==='projects'){
+      const {data:r}=await sb.from('projects').select('project_no,name,client,department,status,pct,cpi,spi,bac,ev,ac,pv,start_date,end_date').order('project_no');
+      data=r||[]; cols=Object.keys(data[0]||{}); label='Projects';
+    } else if(id==='invoices'){
+      const {data:r}=await sb.from('invoices').select('invoice_no,invoice_type,client_name,vendor_name,project_id,net_amount,status,invoice_date,due_date,paid_date').order('created_at',{ascending:false});
+      data=r||[]; cols=Object.keys(data[0]||{}); label='Invoices';
+    } else if(id==='employees'){
+      const {data:r}=await sb.from('employees').select('employee_no,full_name,department,position,status,employment_type,join_date').order('employee_no');
+      data=r||[]; cols=Object.keys(data[0]||{}); label='Employees';
+    } else if(id==='vendors'){
+      const {data:r}=await sb.from('vendors').select('vendor_code,name,category,contact_person,email,phone,is_approved,status').order('vendor_code');
+      data=r||[]; cols=Object.keys(data[0]||{}); label='Vendors';
+    } else if(id==='ncrs'){
+      const {data:r}=await sb.from('ncrs').select('ncr_no,severity,status,department,description,created_at').order('created_at',{ascending:false});
+      data=r||[]; cols=Object.keys(data[0]||{}); label='NCRs';
+    } else if(id==='workflow'){
+      const {data:r}=await sb.from('workflow_items').select('ref_no,entity_type,title,current_step,status,created_at,due_date').order('created_at',{ascending:false});
+      data=r||[]; cols=Object.keys(data[0]||{}); label='Workflow';
+    } else if(id==='contracts'){
+      const {data:r}=await sb.from('contracts').select('contract_no,title,contract_type,client_name,contract_value,start_date,end_date,status').order('contract_no');
+      data=r||[]; cols=Object.keys(data[0]||{}); label='Contracts';
+    } else if(id==='assets'){
+      const {data:r}=await sb.from('assets').select('asset_no,asset_name,category,serial_number,purchase_value,book_value,condition,status,location').order('asset_no');
+      data=r||[]; cols=Object.keys(data[0]||{}); label='Assets';
+    }
+
+    if(!data.length){showToast('No data found','error');return;}
+
+    if(format==='csv'){
+      const csv=[cols.join(','),...data.map(r=>cols.map(c=>{const v=r[c]; return typeof v==='string'&&v.includes(',')?`"${v}"`:v??'';}).join(','))].join('\n');
+      const blob=new Blob([csv],{type:'text/csv'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download=`SP360_${label}_${new Date().toISOString().split('T')[0]}.csv`; a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      const wb=new ExcelJS.Workbook(); wb.creator='SP360 ERP v3.3'; wb.created=new Date();
+      const ws=wb.addWorksheet(label);
+      xlTitleBlock(ws,`SP360 ERP v3.3 — ${label} Export`,`Generated: ${new Date().toLocaleDateString('en-GB')} · ${data.length} records`,cols.length);
+      const hdr=ws.addRow(cols.map(c=>c.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase())));
+      hdr.eachCell(cell=>{cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1E3A5F'}};cell.font={bold:true,color:{argb:'FFC9A84C'},name:'Calibri',size:10};cell.border=XL.thinBorder;cell.alignment={horizontal:'center'};});
+      ws.columns=cols.map(()=>({width:18}));
+      data.forEach((r,i)=>{
+        const row=ws.addRow(cols.map(c=>r[c]!=null?r[c]:''));
+        row.eachCell(cell=>{cell.border=XL.thinBorder;cell.font={name:'Calibri',size:10};});
+        if(i%2===0) row.eachCell(c=>{if(!c.fill?.fgColor?.argb) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF8FAFC'}};});
+      });
+      ws.views=[{state:'frozen',ySplit:5}];
+      await xlSave(wb,`SP360_${label}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
+
+    _logImport(`Export ${format.toUpperCase()}`,label,true,data.length);
+    showToast(`${label} exported (${data.length} rows) ✓`);
+  }catch(e){
+    showToast('Export error: '+e.message,'error');
+    _logImport(`Export ${format.toUpperCase()}`,id,false);
+  }
+}
+
+async function downloadImportTemplate(id){
+  const templates={
+    projects_import:{cols:['project_no','name','client','department','bac','pct','ac','ev','start_date','end_date','status'],sample:['SP360-NEW-001','New Project Name','Client Corp','Security',100000,25,25000,25000,'2026-01-01','2026-12-31','execution']},
+    employees_import:{cols:['employee_no','full_name','department','position','employment_type','join_date'],sample:['EMP-100','John Smith','IT','Engineer','permanent','2026-01-01']},
+    invoices_import:{cols:['invoice_no','invoice_type','client_name','net_amount','invoice_date','due_date','status'],sample:['INV-C-NEW-001','client','Client Corp',5000,'2026-09-01','2026-10-01','pending']},
+    assets_import:{cols:['asset_name','category','serial_number','purchase_value','purchase_date','location','condition'],sample:['Generator Gen-01','Heavy Equipment','SN-12345',15000,'2026-01-01','Main Warehouse','good']},
+  };
+  const tpl=templates[id];
+  if(!tpl){showToast('Template not available','error');return;}
+  const wb=new ExcelJS.Workbook(); wb.creator='SP360 ERP v3.3'; wb.created=new Date();
+  const ws=wb.addWorksheet('Import Template');
+  ws.addRow(['SP360 ERP v3.3 — Import Template — '+id.replace(/_/g,' ')]).getCell(1).font={bold:true,color:{argb:'FF1E3A5F'},size:12};
+  ws.addRow(['NOTE: Delete this row and the row above before importing. Do NOT change column headers.']);
+  const hdr=ws.addRow(tpl.cols);
+  hdr.eachCell(cell=>{cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1E3A5F'}};cell.font={bold:true,color:{argb:'FFC9A84C'},name:'Calibri',size:10};cell.border=XL.thinBorder;});
+  const sampleRow=ws.addRow(tpl.sample);
+  sampleRow.eachCell(cell=>{cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFF3CD'}};cell.font={name:'Calibri',size:10,italic:true};});
+  ws.columns=tpl.cols.map(()=>({width:20}));
+  await xlSave(wb,`SP360_Template_${id}.xlsx`);
+  showToast('Template downloaded ✓');
+}
+
+async function handleImportFile(file, importId){
+  if(!file) return;
+  const statusEl=document.getElementById('import-status-'+importId);
+  if(statusEl) statusEl.textContent='⏳ Reading file…';
+
+  try{
+    // Read with ExcelJS
+    const wb=new ExcelJS.Workbook();
+    const arrayBuffer=await file.arrayBuffer();
+    await wb.xlsx.load(arrayBuffer);
+    const ws=wb.worksheets[0];
+    const rows=[];
+    ws.eachRow({includeEmpty:false},(row,ri)=>{
+      if(ri<=3) return; // skip title + note + header rows
+      const vals=[];
+      row.eachCell({includeEmpty:true},cell=>{ vals.push(cell.value!=null?String(cell.value).trim():''); });
+      if(vals.some(v=>v)) rows.push(vals);
+    });
+
+    if(!rows.length){showToast('No data rows found','error');return;}
+
+    // Preview first 3 rows
+    if(statusEl) statusEl.innerHTML=`<span style="color:#C9A84C">✓ Found ${rows.length} rows — review and confirm</span>`;
+
+    openModal(`📥 Import Preview — ${importId.replace(/_/g,' ')}`,`
+      <div style="margin-bottom:8px;font-size:11px;color:var(--muted)">First 3 rows of ${rows.length} total. Verify data before importing.</div>
+      <div style="overflow-x:auto;max-height:200px;overflow-y:auto">
+        <table style="font-size:10px"><tbody>
+          ${rows.slice(0,3).map(r=>`<tr>${r.map(cell=>`<td style="padding:4px 8px;border:1px solid var(--bdr)">${esc(cell||'—')}</td>`).join('')}</tr>`).join('')}
+        </tbody></table>
+      </div>
+      <div style="margin-top:10px;padding:8px;background:#F9731622;border:1px solid #F9731633;border-radius:6px;font-size:10px;color:#F97316">
+        ⚠️ Import will attempt to upsert records. Existing records with same reference number will be updated.
+        Always backup your data before bulk imports.
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="executeImport(${JSON.stringify(rows)},'${importId}');closeModal()">✅ Confirm Import (${rows.length} rows)</button>
+      </div>`);
+
+  }catch(e){
+    if(statusEl) statusEl.innerHTML=`<span style="color:#EF4444">✗ ${e.message}</span>`;
+    showToast('File read error: '+e.message,'error');
+  }
+}
+
+async function executeImport(rows, importId){
+  showToast(`Importing ${rows.length} rows…`);
+  let success=0, errors=0;
+
+  for(const row of rows){
+    try{
+      if(importId==='projects_import'){
+        const [projNo,name,client,dept,bac,pct,ac,ev,start,end,status]=row;
+        if(!projNo||!name) continue;
+        const cpi=Number(ac)>0?Number(ev)/Number(ac):1;
+        const {error}=await sb.from('projects').upsert({project_no:projNo,name,client:client||null,department:dept||null,bac:Number(bac)||0,pct:Number(pct)||0,ac:Number(ac)||0,ev:Number(ev)||0,cpi:Number(cpi.toFixed(3)),start_date:start||null,end_date:end||null,status:status||'execution'},{onConflict:'project_no'});
+        if(error){errors++;console.warn('Import error:',projNo,error.message);}else success++;
+      } else if(importId==='employees_import'){
+        const [empNo,fullName,dept,pos,empType,joinDate]=row;
+        if(!empNo||!fullName) continue;
+        const {error}=await sb.from('employees').upsert({employee_no:empNo,full_name:fullName,department:dept||null,position:pos||null,employment_type:empType||'permanent',join_date:joinDate||null,status:'active'},{onConflict:'employee_no'});
+        if(error){errors++;} else success++;
+      } else if(importId==='invoices_import'){
+        const [invNo,type,client,amount,invDate,dueDate,status]=row;
+        if(!invNo||!amount) continue;
+        const {error}=await sb.from('invoices').upsert({invoice_no:invNo,invoice_type:type||'client',client_name:client||null,net_amount:Number(amount)||0,invoice_date:invDate||null,due_date:dueDate||null,status:status||'pending'},{onConflict:'invoice_no'});
+        if(error){errors++;} else success++;
+      } else if(importId==='assets_import'){
+        const [name,cat,serial,val,purchDate,loc,cond]=row;
+        if(!name) continue;
+        const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'AST'});
+        const {error}=await sb.from('assets').insert({asset_no:no,asset_name:name,category:cat||'Other',serial_number:serial||null,purchase_value:Number(val)||0,book_value:Number(val)||0,purchase_date:purchDate||null,location:loc||null,condition:cond||'good',status:'active',created_by:currentProfile?.id});
+        if(error){errors++;} else success++;
+      }
+    }catch(e){ errors++; }
+  }
+
+  _logImport('Import',importId,errors===0,success);
+  showToast(`Import complete: ${success} success, ${errors} errors`);
+  if(success>0) loadImportExport();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P11-1 · VARIATION ORDERS (enhanced Change Orders)
+//  Detailed VO tracking linked to contract + CO
+// ══════════════════════════════════════════════════════════════
+async function openVariationOrderDetail(coId){
+  const {data:co}=await sb.from('change_orders')
+    .select('*,project:projects(project_no,name,bac,contract_value,client)')
+    .eq('id',coId).single();
+  if(!co) return;
+
+  const {data:vos}=await sb.from('variation_order_items')
+    .select('*').eq('co_id',coId).order('item_no');
+  const items=vos||[];
+
+  const totalLabor   =items.reduce((s,i)=>s+Number(i.labor_cost||0),0);
+  const totalMaterial=items.reduce((s,i)=>s+Number(i.material_cost||0),0);
+  const totalPlant   =items.reduce((s,i)=>s+Number(i.plant_cost||0),0);
+  const totalOverhead=items.reduce((s,i)=>s+Number(i.overhead_cost||0),0);
+  const totalVO      =items.reduce((s,i)=>s+Number(i.total_cost||0),0);
+
+  openModal(`📋 Variation Order Detail — ${co.co_no}`,`
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+      ${[['Project',co.project?.project_no||'—'],['Client',co.project?.client||'—'],
+         ['VO Status',pill(co.status||'pending',co.status==='approved'?'#10B981':co.status==='rejected'?'#EF4444':'#F97316')],
+         ['Original Contract',fmtKWD(co.project?.contract_value||0)],
+         ['VO Amount',`<span style="font-weight:900;color:${Number(co.amount)>=0?'#C9A84C':'#EF4444'}">${fmtKWD(co.amount||0)}</span>`],
+         ['Revised Contract',fmtKWD((Number(co.project?.contract_value||0))+(Number(co.amount||0)))]
+      ].map(([l,v])=>`<div style="background:var(--n3);border-radius:6px;padding:8px">
+        <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase">${l}</div>
+        <div style="font-size:11px;color:var(--text);margin-top:2px">${v}</div>
+      </div>`).join('')}
+    </div>
+
+    ${co.description?`<div style="padding:8px;background:var(--n3);border-radius:6px;font-size:11px;color:var(--muted);margin-bottom:12px"><b>Description:</b> ${esc(co.description)}</div>`:''}
+
+    <!-- Cost Breakdown -->
+    ${items.length>0?`
+    <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:8px">Cost Breakdown</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
+      ${[['Labor',totalLabor,'#3B82F6'],['Materials',totalMaterial,'#10B981'],['Plant',totalPlant,'#F97316'],['Overhead',totalOverhead,'#8B5CF6']].map(([l,v,col])=>`
+      <div style="background:${col}11;border:1px solid ${col}33;border-radius:6px;padding:8px;text-align:center">
+        <div style="font-size:9px;color:var(--muted)">${l}</div>
+        <div style="font-size:13px;font-weight:800;color:${col}">${fmtKWD(v)}</div>
+      </div>`).join('')}
+    </div>
+    <table><thead><tr><th>#</th><th>Item Description</th><th>Unit</th><th style="text-align:right">Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Total</th></tr></thead><tbody>
+    ${items.map(i=>`<tr>
+      <td style="color:var(--gold);font-size:10px">${i.item_no||'—'}</td>
+      <td style="font-size:11px">${esc(i.description||'—')}</td>
+      <td style="font-size:10px;color:var(--muted)">${esc(i.unit||'LS')}</td>
+      <td style="text-align:right">${Number(i.quantity||1).toFixed(2)}</td>
+      <td style="text-align:right">${fmtKWD(i.unit_rate||0)}</td>
+      <td style="text-align:right;font-weight:700;color:var(--gold)">${fmtKWD(i.total_cost||0)}</td>
+    </tr>`).join('')}
+    <tr style="background:var(--n3)"><td colspan="5" style="font-weight:800;text-align:right;padding:8px">TOTAL VO AMOUNT:</td><td style="text-align:right;font-weight:900;font-size:13px;color:var(--gold)">${fmtKWD(totalVO)}</td></tr>
+    </tbody></table>`:'<div class="empty">No cost items — add items for detailed breakdown</div>'}
+
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      ${can('create')?`<button class="btn btn-primary" onclick="openAddVOItemModal('${coId}','${co.co_no}')">+ Add Item</button>`:''}
+    </div>`);
+}
+
+function openAddVOItemModal(coId, coNo){
+  openModal(`+ Add VO Item — ${coNo}`,`
+    <div class="form-row">
+      <div class="form-field"><label>Item No</label><input id="voi-no" placeholder="1.1"/></div>
+      <div class="form-field"><label>Unit</label><input id="voi-unit" placeholder="m², hr, LS, No."/></div>
+    </div>
+    <div class="form-field"><label>Description *</label><input id="voi-desc" placeholder="Item description"/></div>
+    <div class="form-row">
+      <div class="form-field"><label>Quantity</label><input id="voi-qty" type="number" step="0.01" value="1"/></div>
+      <div class="form-field"><label>Unit Rate (KWD)</label><input id="voi-rate" type="number" step="0.001" placeholder="0.000"/></div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--gold);margin:10px 0 6px">Cost Breakdown (optional)</div>
+    <div class="form-row">
+      <div class="form-field"><label>Labor (KWD)</label><input id="voi-labor" type="number" step="0.001" placeholder="0.000"/></div>
+      <div class="form-field"><label>Materials (KWD)</label><input id="voi-mat" type="number" step="0.001" placeholder="0.000"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Plant/Equipment (KWD)</label><input id="voi-plant" type="number" step="0.001" placeholder="0.000"/></div>
+      <div class="form-field"><label>Overhead (KWD)</label><input id="voi-oh" type="number" step="0.001" placeholder="0.000"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="openVariationOrderDetail('${coId}')">← Back</button>
+      <button class="btn btn-primary" onclick="saveVOItem(event,'${coId}','${coNo}')">Add Item</button>
+    </div>`);
+}
+
+async function saveVOItem(e,coId,coNo){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const desc=document.getElementById('voi-desc').value.trim();
+    if(!desc){showToast('Description required','error');return;}
+    const qty=Number(document.getElementById('voi-qty').value)||1;
+    const rate=Number(document.getElementById('voi-rate').value)||0;
+    const labor=Number(document.getElementById('voi-labor').value)||0;
+    const mat  =Number(document.getElementById('voi-mat').value)||0;
+    const plant=Number(document.getElementById('voi-plant').value)||0;
+    const oh   =Number(document.getElementById('voi-oh').value)||0;
+    const total=rate>0?qty*rate:(labor+mat+plant+oh)||qty*rate;
+    const {error}=await sb.from('variation_order_items').insert({
+      co_id:coId, item_no:document.getElementById('voi-no').value.trim()||null,
+      description:desc, unit:document.getElementById('voi-unit').value.trim()||'LS',
+      quantity:qty, unit_rate:rate, total_cost:total,
+      labor_cost:labor||null, material_cost:mat||null, plant_cost:plant||null, overhead_cost:oh||null,
+      created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('VO item added ✓');
+    openVariationOrderDetail(coId);
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Add Item';}}
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P11-2 · SITE DIARY
+// ══════════════════════════════════════════════════════════════
+async function loadSiteDiary(tab='list'){
+  const el=document.getElementById('page-sitediary');
+  if(!el) return;
+  el.innerHTML='<div class="loading">Loading Site Diary…</div>';
+  try{
+    const today=new Date().toISOString().split('T')[0];
+    const [diaryR,projR]=await Promise.all([
+      sb.from('site_diary').select('*,project:projects(project_no,name)').order('diary_date',{ascending:false}),
+      sb.from('projects').select('id,project_no,name').in('status',ACTIVE_STATUSES).order('project_no')
+    ]);
+    const entries=diaryR.data||[], projs=projR.data||[];
+    const thisWeek=entries.filter(e=>{ const d=new Date(e.diary_date); return (new Date()-d)/86400000<=7; });
+
+    el.innerHTML=`
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">📔</span>
+        <div><h1>Site Diary</h1><div class="sub">Daily Site Records · Weather · Labour · Activities · Issues</div></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openNewDiaryModal()">+ Today's Entry</button>`:''}
+      </div>
+    </div>
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Total Entries',  entries.length,    '#C9A84C', 'All recorded')}
+      ${kpi('This Week',      thisWeek.length,   '#3B82F6', 'Last 7 days')}
+      ${kpi('Projects',       new Set(entries.map(e=>e.project_id).filter(Boolean)).size, '#10B981', 'With diary entries')}
+      ${kpi('Today',          entries.filter(e=>e.diary_date===today).length, '#F97316', 'Entries for today')}
+    </div>
+    <div class="card">
+      ${entries.length===0?'<div class="empty">No site diary entries yet — record today\'s activities</div>':`
+      <table><thead><tr>
+        <th>Date</th><th>Project</th><th>Weather</th><th>Labour</th>
+        <th>Activities Summary</th><th>Issues</th><th style="text-align:center">Photos</th><th></th>
+      </tr></thead><tbody>
+      ${entries.map(e=>`<tr>
+        <td style="font-weight:700;color:var(--gold);font-size:10px">${e.diary_date||'—'}</td>
+        <td style="font-size:10px;color:var(--gold)">${esc(e.project?.project_no||'General')}</td>
+        <td style="font-size:10px">
+          <span style="font-size:14px">${e.weather==='sunny'?'☀️':e.weather==='cloudy'?'⛅':e.weather==='rainy'?'🌧️':e.weather==='stormy'?'⛈️':e.weather==='sandstorm'?'🌪️':'—'}</span>
+          ${esc(e.weather||'')}
+          ${e.temperature?`<span style="color:var(--faint)">${e.temperature}°C</span>`:''}
+        </td>
+        <td style="font-size:10px;color:var(--muted)">${e.total_labour||'—'} workers</td>
+        <td style="font-size:10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.activities_summary||'—')}</td>
+        <td style="font-size:10px;color:${(e.issues_count||0)>0?'#EF4444':'var(--faint)'}">${(e.issues_count||0)>0?`⚠️ ${e.issues_count}`:'None'}</td>
+        <td style="text-align:center;font-size:10px;color:var(--faint)">${e.photos_count||0}</td>
+        <td><button onclick="openDiaryDetail('${e.id}')" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:11px">👁</button></td>
+      </tr>`).join('')}
+      </tbody></table>`}
+    </div>`;
+  }catch(err){ el.innerHTML=`<div class="empty">Error: ${err.message}</div>`; }
+}
+
+function openNewDiaryModal(){
+  const projs=window._cachedProjects||[];
+  const today=new Date().toISOString().split('T')[0];
+  openModal('📔 New Site Diary Entry',`
+    <div class="form-row">
+      <div class="form-field"><label>Date *</label><input id="sd-date" type="date" value="${today}"/></div>
+      <div class="form-field"><label>Project</label>
+        <select id="sd-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— General / None —</option>
+          ${projs.map(p=>`<option value="${p.id}">${esc(p.project_no)} — ${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Weather</label>
+        <select id="sd-weather" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          ${['sunny','cloudy','partly_cloudy','rainy','stormy','sandstorm','foggy'].map(w=>`<option value="${w}">${{'sunny':'☀️ Sunny','cloudy':'⛅ Cloudy','partly_cloudy':'🌤 Partly Cloudy','rainy':'🌧️ Rainy','stormy':'⛈️ Stormy','sandstorm':'🌪️ Sandstorm','foggy':'🌫️ Foggy'}[w]||w}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Temperature (°C)</label><input id="sd-temp" type="number" placeholder="42"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Total Labour on Site</label><input id="sd-labour" type="number" placeholder="25"/></div>
+      <div class="form-field"><label>Issues / Delays Count</label><input id="sd-issues" type="number" value="0" min="0"/></div>
+    </div>
+    <div class="form-field"><label>Activities Summary *</label>
+      <textarea id="sd-activities" rows="3" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical" placeholder="Main activities performed today…"></textarea>
+    </div>
+    <div class="form-field"><label>Issues / Delays Description</label>
+      <textarea id="sd-issues-desc" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical" placeholder="Describe any issues or delays…"></textarea>
+    </div>
+    <div class="form-field"><label>Materials Delivered Today</label>
+      <input id="sd-materials" placeholder="e.g. 50 bags cement, 2 tons rebar…"/></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveDiaryEntry(event)">Save Entry</button>
+    </div>`);
+}
+
+async function saveDiaryEntry(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const date=document.getElementById('sd-date').value;
+    const activities=document.getElementById('sd-activities').value.trim();
+    if(!date||!activities){showToast('Date and activities required','error');return;}
+    const {error}=await sb.from('site_diary').insert({
+      diary_date:date,
+      project_id:document.getElementById('sd-proj').value||null,
+      weather:document.getElementById('sd-weather').value,
+      temperature:Number(document.getElementById('sd-temp').value)||null,
+      total_labour:Number(document.getElementById('sd-labour').value)||null,
+      activities_summary:activities,
+      issues_count:Number(document.getElementById('sd-issues').value)||0,
+      issues_description:document.getElementById('sd-issues-desc').value.trim()||null,
+      materials_delivered:document.getElementById('sd-materials').value.trim()||null,
+      photos_count:0,
+      recorded_by:currentProfile?.id,
+      created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Diary entry saved ✓'); closeModal(); loadSiteDiary();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save Entry';}}
+}
+
+async function openDiaryDetail(id){
+  const {data:e}=await sb.from('site_diary').select('*,project:projects(project_no,name)').eq('id',id).single();
+  if(!e) return;
+  const weatherIcons={'sunny':'☀️','cloudy':'⛅','partly_cloudy':'🌤','rainy':'🌧️','stormy':'⛈️','sandstorm':'🌪️','foggy':'🌫️'};
+  openModal(`📔 Diary — ${e.diary_date}`,`
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;font-size:10px;color:var(--muted)">
+      <span>${weatherIcons[e.weather]||'—'} ${e.weather||'—'} ${e.temperature?e.temperature+'°C':''}</span>
+      <span>👷 ${e.total_labour||'—'} workers</span>
+      <span>🏗 ${esc(e.project?.project_no||'General')}</span>
+      ${e.issues_count>0?`<span style="color:#EF4444">⚠️ ${e.issues_count} issue(s)</span>`:''}
+    </div>
+    <div style="margin-bottom:10px;padding:10px;background:var(--n3);border-radius:6px;font-size:11px;color:var(--text);white-space:pre-wrap"><b style="color:var(--gold)">Activities:</b>\n${esc(e.activities_summary||'—')}</div>
+    ${e.issues_description?`<div style="margin-bottom:10px;padding:10px;background:#EF444411;border-radius:6px;font-size:11px;color:var(--text)"><b style="color:#EF4444">Issues:</b>\n${esc(e.issues_description)}</div>`:''}
+    ${e.materials_delivered?`<div style="padding:10px;background:var(--n3);border-radius:6px;font-size:11px;color:var(--muted)"><b>Materials Delivered:</b> ${esc(e.materials_delivered)}</div>`:''}
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      <button class="btn btn-primary" onclick="exportDiaryPDF('${id}')">📄 Export PDF</button>
+    </div>`);
+}
+
+async function exportDiaryPDF(id){
+  const {data:e}=await sb.from('site_diary').select('*,project:projects(project_no,name)').eq('id',id).single();
+  if(!e) return;
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  doc.setFillColor(30,58,95); doc.rect(0,0,210,32,'F');
+  doc.setTextColor(201,168,76); doc.setFontSize(16); doc.setFont('helvetica','bold');
+  doc.text('SITE DIARY',14,13);
+  doc.setTextColor(255,255,255); doc.setFontSize(11);
+  doc.text(`${e.project?.project_no||'General'} · ${e.diary_date}`,14,22);
+  doc.setTextColor(148,163,184); doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text(`Weather: ${e.weather||'—'} ${e.temperature||''}°C · Labour: ${e.total_labour||'—'} · Issues: ${e.issues_count||0}`,14,29);
+  let y=42;
+  doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(30,58,95);
+  doc.text('ACTIVITIES PERFORMED',14,y); y+=7;
+  doc.setFont('helvetica','normal'); doc.setTextColor(15,23,42); doc.setFontSize(9);
+  doc.splitTextToSize(e.activities_summary||'—',178).forEach(l=>{doc.text(l,14,y);y+=5;});
+  if(e.issues_description){ y+=4; doc.setFont('helvetica','bold'); doc.setTextColor(239,68,68); doc.text('ISSUES / DELAYS',14,y); y+=7;
+    doc.setFont('helvetica','normal'); doc.setTextColor(15,23,42); doc.splitTextToSize(e.issues_description,178).forEach(l=>{doc.text(l,14,y);y+=5;}); }
+  if(e.materials_delivered){ y+=4; doc.setFont('helvetica','bold'); doc.setTextColor(30,58,95); doc.text('MATERIALS DELIVERED',14,y); y+=7;
+    doc.setFont('helvetica','normal'); doc.setTextColor(15,23,42); doc.text(e.materials_delivered,14,y); }
+  doc.setFontSize(8); doc.setTextColor(148,163,184);
+  doc.text(`SP360 ERP v3.3 · Smart Projects 360 Kuwait · ${new Date().toLocaleDateString('en-GB')}`,105,290,'center');
+  doc.save(`SiteDiary_${e.project?.project_no||'General'}_${e.diary_date}.pdf`);
+  showToast('Diary PDF exported ✓');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P11-3 · PUNCH LIST
+// ══════════════════════════════════════════════════════════════
+async function loadPunchList(tab='open'){
+  const el=document.getElementById('page-punchlist');
+  if(!el) return;
+  el.innerHTML='<div class="loading">Loading Punch List…</div>';
+  try{
+    const today=new Date();
+    const [punchR,projR]=await Promise.all([
+      sb.from('punch_list').select('*,project:projects(project_no,name)').order('created_at',{ascending:false}),
+      sb.from('projects').select('id,project_no,name').in('status',ACTIVE_STATUSES).order('project_no')
+    ]);
+    const items=punchR.data||[], projs=projR.data||[];
+    const open=items.filter(i=>i.status==='open');
+    const inProgress=items.filter(i=>i.status==='in_progress');
+    const closed=items.filter(i=>i.status==='closed');
+    const overdue=items.filter(i=>i.status!=='closed'&&i.due_date&&new Date(i.due_date)<today);
+
+    const tabBtns=`<div class="tabs">
+      <button class="tab${tab==='open'?' act':''}" onclick="loadPunchList('open')" style="color:${open.length>0?'#F97316':'inherit'}">🔴 Open (${open.length})</button>
+      <button class="tab${tab==='in_progress'?' act':''}" onclick="loadPunchList('in_progress')">🟡 In Progress (${inProgress.length})</button>
+      <button class="tab${tab==='closed'?' act':''}" onclick="loadPunchList('closed')">✅ Closed (${closed.length})</button>
+      <button class="tab${tab==='all'?' act':''}" onclick="loadPunchList('all')">📋 All (${items.length})</button>
+    </div>`;
+
+    const list=tab==='open'?open:tab==='in_progress'?inProgress:tab==='closed'?closed:items;
+    const catColors={'electrical':'#F97316','civil':'#8B5CF6','mechanical':'#3B82F6','finishing':'#10B981','safety':'#EF4444','other':'#94A3B8'};
+
+    el.innerHTML=`
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">📌</span>
+        <div><h1>Punch List</h1><div class="sub">Defect Tracking · Snagging · Close-out Items</div></div>
+      </div>
+      ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openNewPunchModal()">+ Add Item</button>`:''}
+    </div>
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Open',       open.length,       open.length>0?'#EF4444':'#10B981', 'Require action')}
+      ${kpi('In Progress',inProgress.length, '#F97316', 'Being addressed')}
+      ${kpi('Closed',     closed.length,     '#10B981', 'Completed')}
+      ${kpi('Overdue',    overdue.length,     overdue.length>0?'#EF4444':'#10B981', 'Past due date')}
+    </div>
+    <div class="card">
+      ${tabBtns}
+      ${list.length===0?`<div class="empty">No ${tab} punch list items</div>`:`
+      <table><thead><tr>
+        <th>Item No</th><th>Description</th><th>Category</th><th>Location</th>
+        <th>Project</th><th>Priority</th><th>Due</th>
+        <th style="text-align:center">Status</th><th></th>
+      </tr></thead><tbody>
+      ${list.map(i=>{
+        const daysLeft=i.due_date?Math.ceil((new Date(i.due_date)-today)/86400000):null;
+        const prioColor=i.priority==='critical'?'#EF4444':i.priority==='high'?'#F97316':i.priority==='medium'?'#C9A84C':'#94A3B8';
+        return`<tr>
+          <td style="color:var(--gold);font-weight:700;font-size:10px">${esc(i.item_no||'—')}</td>
+          <td style="font-size:11px;font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(i.description||'—')}</td>
+          <td><span style="font-size:9px;background:${(catColors[i.category]||'#94A3B8')}22;color:${catColors[i.category]||'#94A3B8'};border-radius:4px;padding:2px 6px;text-transform:capitalize">${esc(i.category||'other')}</span></td>
+          <td style="font-size:10px;color:var(--muted)">${esc(i.location||'—')}</td>
+          <td style="font-size:10px;color:var(--gold)">${esc(i.project?.project_no||'—')}</td>
+          <td><span style="font-size:9px;background:${prioColor}22;color:${prioColor};border-radius:4px;padding:2px 6px;font-weight:700;text-transform:capitalize">${i.priority||'low'}</span></td>
+          <td style="font-size:10px;color:${daysLeft!==null&&daysLeft<0?'#EF4444':daysLeft!==null&&daysLeft<=3?'#F97316':'var(--faint)'};font-weight:700">
+            ${i.due_date||'—'}${daysLeft!==null&&i.status!=='closed'?`<br><span style="font-size:9px">${daysLeft<0?Math.abs(daysLeft)+'d late':daysLeft+'d'}</span>`:''}
+          </td>
+          <td style="text-align:center">${pill(i.status||'open',i.status==='closed'?'#10B981':i.status==='in_progress'?'#F97316':'#EF4444')}</td>
+          <td style="white-space:nowrap">
+            ${i.status!=='closed'?`<button onclick="updatePunchStatus('${i.id}','${i.status==='open'?'in_progress':'closed'}','${tab}')" style="background:none;border:none;color:${i.status==='open'?'#F97316':'#10B981'};cursor:pointer;font-size:12px" title="${i.status==='open'?'Start':'Close'}">${i.status==='open'?'▶':'✅'}</button>`:''}
+          </td>
+        </tr>`;}).join('')}
+      </tbody></table>`}
+    </div>`;
+  }catch(err){ el.innerHTML=`<div class="empty">Error: ${err.message}</div>`; }
+}
+
+function openNewPunchModal(){
+  const projs=window._cachedProjects||[];
+  const today=new Date(); today.setDate(today.getDate()+7);
+  const dueDefault=today.toISOString().split('T')[0];
+  openModal('📌 Add Punch List Item',`
+    <div class="form-row">
+      <div class="form-field"><label>Description *</label><input id="pl-desc" placeholder="Describe the defect or incomplete work"/></div>
+      <div class="form-field"><label>Category *</label>
+        <select id="pl-cat" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          ${['electrical','civil','mechanical','finishing','safety','other'].map(c=>`<option value="${c}">${c.charAt(0).toUpperCase()+c.slice(1)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Project</label>
+        <select id="pl-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select —</option>
+          ${projs.map(p=>`<option value="${p.id}">${esc(p.project_no)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Location / Zone</label><input id="pl-loc" placeholder="e.g. Floor 2 — Room 201"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Priority</label>
+        <select id="pl-prio" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="low">Low</option><option value="medium">Medium</option>
+          <option value="high">High</option><option value="critical">Critical</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Due Date</label><input id="pl-due" type="date" value="${dueDefault}"/></div>
+    </div>
+    <div class="form-field"><label>Responsible Party</label><input id="pl-resp" placeholder="Subcontractor or team responsible"/></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="savePunchItem(event)">Add Item</button>
+    </div>`);
+}
+
+async function savePunchItem(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const desc=document.getElementById('pl-desc').value.trim();
+    if(!desc){showToast('Description required','error');return;}
+    const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'PL'});
+    const {error}=await sb.from('punch_list').insert({
+      item_no:no, description:desc,
+      category:document.getElementById('pl-cat').value,
+      project_id:document.getElementById('pl-proj').value||null,
+      location:document.getElementById('pl-loc').value.trim()||null,
+      priority:document.getElementById('pl-prio').value,
+      due_date:document.getElementById('pl-due').value||null,
+      responsible_party:document.getElementById('pl-resp').value.trim()||null,
+      status:'open', created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast(no+' added ✓'); closeModal(); loadPunchList('open');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Add Item';}}
+}
+
+async function updatePunchStatus(id, newStatus, tab){
+  const {error}=await sb.from('punch_list').update({
+    status:newStatus,
+    closed_at:newStatus==='closed'?new Date().toISOString():null,
+    closed_by:newStatus==='closed'?currentProfile?.id:null
+  }).eq('id',id);
+  if(error){showToast('Error: '+error.message,'error');return;}
+  showToast(newStatus==='closed'?'Item closed ✓':'Item started ✓');
+  loadPunchList(tab||'open');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P11-4 · INVOICE MATCHING
+//  Match supplier invoices against POs and MRVs
+// ══════════════════════════════════════════════════════════════
+async function openInvoiceMatchingModal(invoiceId){
+  const [{data:inv},{data:pos}]=await Promise.all([
+    sb.from('invoices').select('*,vendor:vendors(vendor_name)').eq('id',invoiceId).single(),
+    sb.from('purchase_orders').select('id,po_no,total_amount,status,vendor_id').eq('status','approved').order('po_no')
+  ]);
+  if(!inv) return;
+  const vendorPOs=(pos||[]).filter(p=>p.vendor_id===inv.vendor_id);
+
+  openModal(`🔗 Invoice Matching — ${inv.invoice_no}`,`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div style="padding:12px;background:var(--n3);border-radius:8px">
+        <div style="font-size:10px;font-weight:700;color:var(--gold);margin-bottom:8px">INVOICE</div>
+        <div style="font-size:12px;font-weight:700">${esc(inv.invoice_no)}</div>
+        <div style="font-size:11px;color:var(--muted)">${esc(inv.vendor?.vendor_name||'—')}</div>
+        <div style="font-size:16px;font-weight:900;color:var(--gold);margin-top:6px">${fmtKWD(inv.net_amount||0)}</div>
+        <div style="font-size:9px;color:var(--faint)">${inv.invoice_date||'—'}</div>
+      </div>
+      <div style="padding:12px;background:var(--n3);border-radius:8px">
+        <div style="font-size:10px;font-weight:700;color:var(--gold);margin-bottom:8px">MATCHING STATUS</div>
+        ${inv.po_id?`<div style="color:#10B981;font-weight:700;font-size:12px">✅ Matched to PO</div><div style="font-size:10px;color:var(--muted)">PO ID: ${esc(inv.po_id)}</div>`:
+        `<div style="color:#F97316;font-weight:700;font-size:12px">⚠️ Not matched to PO</div><div style="font-size:10px;color:var(--muted)">Select a PO below to match</div>`}
+      </div>
+    </div>
+
+    ${vendorPOs.length>0?`
+    <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:8px">Matching POs from same vendor:</div>
+    ${vendorPOs.map(po=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:${inv.po_id===po.id?'#10B98111':'var(--n3)'};border:1px solid ${inv.po_id===po.id?'#10B98133':'var(--bdr)'};border-radius:6px;margin-bottom:6px">
+      <div style="flex:1">
+        <div style="font-size:11px;font-weight:700;color:var(--gold)">${esc(po.po_no)}</div>
+        <div style="font-size:10px;color:var(--muted)">${fmtKWD(po.total_amount||0)} · ${esc(po.status)}</div>
+      </div>
+      <div style="text-align:right;font-size:10px;color:${Math.abs(Number(inv.net_amount)-Number(po.total_amount))/Math.max(Number(po.total_amount),1)<0.1?'#10B981':'#F97316'}">
+        ${Math.abs(Number(inv.net_amount)-Number(po.total_amount))/Math.max(Number(po.total_amount),1)<0.01?'✅ Exact match':
+          Math.abs(Number(inv.net_amount)-Number(po.total_amount))/Math.max(Number(po.total_amount),1)<0.1?'≈ Close match':'⚠️ Amount differs'}
+      </div>
+      ${inv.po_id!==po.id?`<button onclick="matchInvoiceToPO('${invoiceId}','${po.id}','${po.po_no}')" class="btn btn-primary btn-sm" style="font-size:9px">Link</button>`:'<span style="font-size:10px;color:#10B981;font-weight:700">Linked ✓</span>'}
+    </div>`).join('')}`:'<div class="empty">No approved POs found for this vendor</div>'}
+
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+    </div>`);
+}
+
+async function matchInvoiceToPO(invoiceId, poId, poNo){
+  const {error}=await sb.from('invoices').update({po_id:poId,updated_at:new Date().toISOString()}).eq('id',invoiceId);
+  if(error){showToast('Error: '+error.message,'error');return;}
+  await writeAudit('invoices',invoiceId,'INVOICE_MATCHED',{po_id:null},{po_id:poId},'Invoice matched to '+poNo);
+  showToast('Invoice matched to '+poNo+' ✓');
+  const invModal=document.querySelector('.modal-content');
+  if(invModal) openInvoiceMatchingModal(invoiceId);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P11-5 · EMPLOYEE EXPENSES
+// ══════════════════════════════════════════════════════════════
+async function loadExpenses(tab='pending'){
+  const el=document.getElementById('page-expenses');
+  if(!el) return;
+  el.innerHTML='<div class="loading">Loading Expenses…</div>';
+  try{
+    const [expR,empR]=await Promise.all([
+      sb.from('employee_expenses').select('*,employee:employees(full_name,employee_no,department)').order('expense_date',{ascending:false}),
+      sb.from('employees').select('id,full_name,employee_no,department').eq('status','active').order('full_name')
+    ]);
+    const exps=expR.data||[], emps=empR.data||[];
+    const pending  =exps.filter(e=>e.status==='pending');
+    const approved =exps.filter(e=>e.status==='approved');
+    const rejected =exps.filter(e=>e.status==='rejected');
+    const paid     =exps.filter(e=>e.status==='paid');
+    const totalPending=pending.reduce((s,e)=>s+Number(e.amount||0),0);
+    const totalPaid   =paid.reduce((s,e)=>s+Number(e.amount||0),0);
+
+    const list=tab==='pending'?pending:tab==='approved'?approved:tab==='rejected'?rejected:tab==='paid'?paid:exps;
+    const tabBtns=`<div class="tabs">
+      <button class="tab${tab==='pending'?' act':''}" onclick="loadExpenses('pending')" style="color:${pending.length>0?'#F97316':'inherit'}">⏳ Pending (${pending.length})</button>
+      <button class="tab${tab==='approved'?' act':''}" onclick="loadExpenses('approved')">✅ Approved (${approved.length})</button>
+      <button class="tab${tab==='paid'?' act':''}" onclick="loadExpenses('paid')">💳 Paid (${paid.length})</button>
+      <button class="tab${tab==='all'?' act':''}" onclick="loadExpenses('all')">📋 All (${exps.length})</button>
+    </div>`;
+
+    const catColors={'travel':'#3B82F6','meals':'#10B981','accommodation':'#8B5CF6','equipment':'#F97316','training':'#C9A84C','other':'#94A3B8'};
+
+    el.innerHTML=`
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">🧾</span>
+        <div><h1>Employee Expenses</h1><div class="sub">Claims · Approvals · Reimbursements</div></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openNewExpenseModal()">+ Submit Expense</button>`:''}
+      </div>
+    </div>
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Pending Claims',   pending.length,     '#F97316', fmtKWD(totalPending)+' total')}
+      ${kpi('Approved',         approved.length,    '#10B981', 'Ready to pay')}
+      ${kpi('Total Paid',       fmtKWD(totalPaid),  '#C9A84C', 'Reimbursed')}
+      ${kpi('Employees',        new Set(exps.map(e=>e.employee_id)).size, '#3B82F6', 'With claims')}
+    </div>
+    <div class="card">
+      ${tabBtns}
+      ${list.length===0?`<div class="empty">No ${tab} expense claims</div>`:`
+      <table><thead><tr>
+        <th>Ref</th><th>Employee</th><th>Category</th><th>Description</th>
+        <th>Date</th><th style="text-align:right">Amount</th>
+        <th style="text-align:center">Status</th><th></th>
+      </tr></thead><tbody>
+      ${list.map(exp=>`<tr>
+        <td style="color:var(--gold);font-weight:700;font-size:10px">${esc(exp.expense_no||'—')}</td>
+        <td style="font-weight:600;font-size:11px">${esc(exp.employee?.full_name||'—')}</td>
+        <td><span style="font-size:9px;background:${(catColors[exp.category]||'#94A3B8')}22;color:${catColors[exp.category]||'#94A3B8'};border-radius:4px;padding:2px 6px;text-transform:capitalize">${esc(exp.category||'other')}</span></td>
+        <td style="font-size:10px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(exp.description||'—')}</td>
+        <td style="font-size:10px;color:var(--faint)">${exp.expense_date||'—'}</td>
+        <td style="text-align:right;font-weight:700;color:var(--gold)">${fmtKWD(exp.amount||0)}</td>
+        <td style="text-align:center">${pill(exp.status||'pending',exp.status==='paid'?'#10B981':exp.status==='approved'?'#3B82F6':exp.status==='rejected'?'#EF4444':'#F97316')}</td>
+        <td style="white-space:nowrap">
+          ${can('approve')&&exp.status==='pending'?`
+          <button onclick="approveExpense('${exp.id}',true,'${tab}')" style="background:none;border:none;color:#10B981;cursor:pointer;font-size:12px" title="Approve">✅</button>
+          <button onclick="approveExpense('${exp.id}',false,'${tab}')" style="background:none;border:none;color:#EF4444;cursor:pointer;font-size:12px" title="Reject">✗</button>`:''}
+          ${can('approve')&&exp.status==='approved'?`<button onclick="markExpensePaid('${exp.id}','${tab}')" style="background:none;border:none;color:#C9A84C;cursor:pointer;font-size:10px;font-weight:700" title="Mark Paid">PAY</button>`:''}
+        </td>
+      </tr>`).join('')}
+      </tbody></table>`}
+    </div>`;
+  }catch(err){ el.innerHTML=`<div class="empty">Error: ${err.message}</div>`; }
+}
+
+function openNewExpenseModal(){
+  const emps=window._cachedEmployees||[];
+  const today=new Date().toISOString().split('T')[0];
+  openModal('🧾 Submit Expense Claim',`
+    <div class="form-row">
+      <div class="form-field"><label>Employee *</label>
+        <select id="exp-emp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select —</option>
+          ${emps.map(e=>`<option value="${e.id}"${e.id===currentProfile?.id?' selected':''}>${esc(e.full_name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Category *</label>
+        <select id="exp-cat" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          ${['travel','meals','accommodation','equipment','training','other'].map(c=>`<option value="${c}">${c.charAt(0).toUpperCase()+c.slice(1)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Expense Date *</label><input id="exp-date" type="date" value="${today}"/></div>
+      <div class="form-field"><label>Amount (KWD) *</label><input id="exp-amt" type="number" step="0.001" placeholder="0.000"/></div>
+    </div>
+    <div class="form-field"><label>Description *</label><input id="exp-desc" placeholder="Purpose of expense"/></div>
+    <div class="form-row">
+      <div class="form-field"><label>Receipt No</label><input id="exp-rcpt" placeholder="Receipt reference"/></div>
+      <div class="form-field"><label>Project (if applicable)</label>
+        <select id="exp-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— None —</option>
+          ${(window._cachedProjects||[]).map(p=>`<option value="${p.id}">${esc(p.project_no)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveExpense(event)">Submit Claim</button>
+    </div>`);
+}
+
+async function saveExpense(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Submitting…';}
+  try{
+    const empId=document.getElementById('exp-emp').value;
+    const amt  =Number(document.getElementById('exp-amt').value);
+    const desc =document.getElementById('exp-desc').value.trim();
+    const date =document.getElementById('exp-date').value;
+    if(!empId||!amt||!desc||!date){showToast('Employee, amount, description and date required','error');return;}
+    const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'EXP'});
+    const {error}=await sb.from('employee_expenses').insert({
+      expense_no:no, employee_id:empId,
+      category:document.getElementById('exp-cat').value,
+      expense_date:date, amount:amt, description:desc,
+      receipt_no:document.getElementById('exp-rcpt').value.trim()||null,
+      project_id:document.getElementById('exp-proj').value||null,
+      status:'pending', submitted_by:currentProfile?.id, created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast(no+' submitted ✓'); closeModal(); loadExpenses('pending');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Submit Claim';}}
+}
+
+async function approveExpense(id, approve, tab){
+  const {error}=await sb.from('employee_expenses').update({
+    status:approve?'approved':'rejected',
+    approved_by:currentProfile?.id, approved_at:new Date().toISOString()
+  }).eq('id',id);
+  if(error){showToast('Error: '+error.message,'error');return;}
+  showToast(approve?'Expense approved ✓':'Expense rejected');
+  loadExpenses(tab||'pending');
+}
+
+async function markExpensePaid(id, tab){
+  const {error}=await sb.from('employee_expenses').update({
+    status:'paid', paid_at:new Date().toISOString(), paid_by:currentProfile?.id
+  }).eq('id',id);
+  if(error){showToast('Error: '+error.message,'error');return;}
+  showToast('Expense marked as paid ✓');
+  loadExpenses(tab||'approved');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P11-6 · AI ASSISTANT (Claude-powered via Anthropic API)
+// ══════════════════════════════════════════════════════════════
+let _aiHistory = [];
+
+async function loadAI(){
+  const el=document.getElementById('page-ai');
+  if(!el) return;
+
+  el.innerHTML=`
+  <div class="page-head">
+    <div class="page-head-left"><span style="font-size:22px">🤖</span>
+      <div><h1>AI Assistant</h1><div class="sub">SP360 ERP Intelligence · Powered by Claude · Ask anything about your data</div></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="_aiHistory=[];loadAI()">🗑 Clear</button>
+    </div>
+  </div>
+
+  <!-- Quick prompts -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+    ${[
+      ['📊 Portfolio health summary','Give me a summary of the current portfolio health including CPI, SPI and any critical issues.'],
+      ['💰 Finance overview','What is the current financial position? Revenue, costs, GP margin and outstanding AR.'],
+      ['⚠️ Risks and alerts','What are the top risks and alerts I should address today?'],
+      ['📅 Upcoming deadlines','What projects have deadlines in the next 30 days?'],
+      ['📋 Pending approvals','How many items are pending approval and what are the most overdue?'],
+    ].map(([label,prompt])=>`
+    <button onclick="sendAIMessage(${JSON.stringify(prompt)})"
+      style="background:var(--n3);border:1px solid var(--bdr);color:var(--text);border-radius:8px;padding:6px 12px;font-size:10px;cursor:pointer;white-space:nowrap">
+      ${label}
+    </button>`).join('')}
+  </div>
+
+  <!-- Chat container -->
+  <div class="card" style="padding:0;display:flex;flex-direction:column;height:500px">
+    <div id="ai-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px">
+      <div style="text-align:center;padding:30px">
+        <div style="font-size:32px;margin-bottom:10px">🤖</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px">SP360 AI Assistant</div>
+        <div style="font-size:11px;color:var(--muted);max-width:400px;margin:0 auto">
+          Ask me anything about your projects, finances, team, or ERP data.
+          I have access to your live Supabase data to give you accurate, real-time answers.
+        </div>
+      </div>
+    </div>
+    <!-- Input -->
+    <div style="padding:12px 16px;border-top:1px solid var(--bdr);display:flex;gap:8px">
+      <input id="ai-input" placeholder="Ask about your projects, finances, team…"
+        style="flex:1;background:var(--n3);border:1px solid var(--bdr);border-radius:8px;padding:10px 14px;color:var(--text);font-size:12px"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAIMessage();}"/>
+      <button onclick="sendAIMessage()" id="ai-send-btn"
+        style="background:var(--gold);border:none;color:#0D1B2A;border-radius:8px;padding:10px 16px;font-size:11px;font-weight:700;cursor:pointer">
+        Send ➤
+      </button>
+    </div>
+  </div>`;
+}
+
+async function sendAIMessage(presetPrompt){
+  const input=document.getElementById('ai-input');
+  const messages=document.getElementById('ai-messages');
+  const sendBtn=document.getElementById('ai-send-btn');
+  const userMsg=(presetPrompt||input?.value||'').trim();
+  if(!userMsg) return;
+  if(input) input.value='';
+  if(sendBtn){sendBtn.disabled=true;sendBtn.textContent='…';}
+
+  // Add user bubble
+  if(messages){
+    messages.innerHTML+=`
+    <div style="display:flex;justify-content:flex-end">
+      <div style="background:var(--gold);color:#0D1B2A;border-radius:12px 12px 2px 12px;padding:10px 14px;max-width:75%;font-size:11px;font-weight:600">
+        ${esc(userMsg)}
+      </div>
+    </div>`;
+    messages.scrollTop=messages.scrollHeight;
+  }
+
+  // Add typing indicator
+  const typingId='ai-typing-'+Date.now();
+  if(messages){
+    messages.innerHTML+=`<div id="${typingId}" style="display:flex;align-items:center;gap:8px">
+      <div style="width:28px;height:28px;background:var(--n3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px">🤖</div>
+      <div style="background:var(--n3);border-radius:2px 12px 12px 12px;padding:10px 14px;font-size:11px;color:var(--muted)">
+        <span style="animation:pulse 1s infinite">●●● Thinking…</span>
+      </div>
+    </div>`;
+    messages.scrollTop=messages.scrollHeight;
+  }
+
+  try{
+    // Fetch live context data
+    const [projR,invR,wfR,ncrR]=await Promise.all([
+      sb.from('projects').select('project_no,name,status,cpi,spi,pct,bac,ev,ac,department').in('status',ACTIVE_STATUSES).order('project_no'),
+      sb.from('invoices').select('invoice_type,status,net_amount,due_date').order('created_at',{ascending:false}).limit(200),
+      sb.from('workflow_items').select('ref_no,status,entity_type,current_step,due_date').in('status',['pending','overdue']).limit(20),
+      sb.from('ncrs').select('ncr_no,severity,status,department').eq('status','open').limit(20)
+    ]);
+
+    const projs=projR.data||[], invs=invR.data||[], wfs=wfR.data||[], ncrs=ncrR.data||[];
+    const today=new Date();
+    const rev=invs.filter(i=>i.invoice_type==='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+    const cost=invs.filter(i=>i.invoice_type!=='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+    const arOut=invs.filter(i=>i.invoice_type==='client'&&!['paid','cancelled'].includes(i.status)).reduce((s,i)=>s+Number(i.net_amount),0);
+    const overdueAR=invs.filter(i=>i.invoice_type==='client'&&!['paid','cancelled'].includes(i.status)&&i.due_date&&new Date(i.due_date)<today).length;
+    const totalEV=projs.reduce((s,p)=>s+Number(p.ev),0);
+    const totalAC=projs.reduce((s,p)=>s+Number(p.ac),0);
+    const portCPI=totalAC>0?totalEV/totalAC:1;
+
+    const systemPrompt=`You are the SP360 ERP AI Assistant for Smart Projects 360, a Kuwait-based systems integration company.
+You have access to real-time data from the SP360 ERP system. Here is the current data snapshot:
+
+PORTFOLIO SUMMARY (${today.toLocaleDateString('en-GB')}):
+- Active Projects: ${projs.length}
+- Portfolio CPI: ${portCPI.toFixed(3)} (${portCPI>=1?'On Track':portCPI>=0.9?'At Risk':'Critical'})
+- Projects Data: ${projs.map(p=>`${p.project_no}(CPI:${Number(p.cpi||1).toFixed(2)},${p.pct}%,${p.status})`).join(', ')}
+
+FINANCIAL:
+- Revenue Collected: KWD ${Math.round(rev).toLocaleString()}
+- Cost Paid: KWD ${Math.round(cost).toLocaleString()}
+- Gross Profit: KWD ${Math.round(rev-cost).toLocaleString()} (${rev>0?((rev-cost)/rev*100).toFixed(1):0}% margin)
+- AR Outstanding: KWD ${Math.round(arOut).toLocaleString()} (${overdueAR} overdue)
+
+PENDING APPROVALS (${wfs.length} items):
+${wfs.slice(0,10).map(w=>`- ${w.ref_no}: ${w.current_step} [${w.status.toUpperCase()}]`).join('\n')}
+
+OPEN NCRs (${ncrs.length}):
+${ncrs.slice(0,10).map(n=>`- ${n.ncr_no}: ${n.severity} (${n.department||'N/A'})`).join('\n')}
+
+Respond concisely and professionally. Use KWD for currency. Format numbers clearly. Be direct and actionable.
+When asked for recommendations, provide specific, data-driven insights from the above context.
+Respond in the same language as the user's message (Arabic or English).`;
+
+    // Build messages for API
+    _aiHistory.push({role:'user',content:userMsg});
+
+    const response=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:1000,
+        system:systemPrompt,
+        messages:_aiHistory.slice(-10) // keep last 10 for context
+      })
+    });
+
+    const data=await response.json();
+    const aiReply=data.content?.[0]?.text||'Sorry, I could not process your request.';
+    _aiHistory.push({role:'assistant',content:aiReply});
+
+    // Remove typing indicator and add response
+    const typingEl=document.getElementById(typingId);
+    if(typingEl) typingEl.remove();
+
+    if(messages){
+      messages.innerHTML+=`
+      <div style="display:flex;align-items:flex-start;gap:8px">
+        <div style="width:28px;height:28px;background:var(--n3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">🤖</div>
+        <div style="background:var(--n3);border-radius:2px 12px 12px 12px;padding:12px 14px;max-width:80%;font-size:11px;color:var(--text);line-height:1.7;white-space:pre-wrap">${esc(aiReply)}</div>
+      </div>`;
+      messages.scrollTop=messages.scrollHeight;
+    }
+
+  }catch(err){
+    const typingEl=document.getElementById(typingId);
+    if(typingEl) typingEl.remove();
+    if(messages){
+      messages.innerHTML+=`
+      <div style="display:flex;align-items:flex-start;gap:8px">
+        <div style="width:28px;height:28px;background:var(--n3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px">🤖</div>
+        <div style="background:#EF444411;border:1px solid #EF444433;border-radius:2px 12px 12px 12px;padding:12px 14px;max-width:80%;font-size:11px;color:#EF4444">
+          Connection error: ${esc(err.message)}. Please ensure you are connected to the internet.
+        </div>
+      </div>`;
+      messages.scrollTop=messages.scrollHeight;
+    }
+  }finally{
+    if(sendBtn){sendBtn.disabled=false;sendBtn.textContent='Send ➤';}
+  }
+}
 
 async function installPWA(){
   if(!_pwaPrompt){
