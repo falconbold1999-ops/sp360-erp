@@ -550,6 +550,7 @@ img,canvas,svg{max-width:100%;height:auto}
         <div style="font-size:9px;text-transform:uppercase;letter-spacing:.3px;font-weight:700" id="user-role">—</div>
       </div>
       <button onclick="toggleLanguage()" style="background:none;border:1px solid var(--bdr);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer" title="Toggle Arabic/English">🌐 AR/EN</button>
+      <button onclick="openNotifScheduler()" style="background:none;border:1px solid var(--bdr);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer" title="Notification Schedule">🔔 Schedule</button>
       <button class="btn-logout" onclick="doLogout()">Sign out</button>
       <button id="pwa-install-btn" onclick="installPWA()" style="display:none;background:#C9A84C;color:#0D1B2A;border:none;border-radius:6px;padding:5px 10px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">📱 Install</button>
     </div>
@@ -587,6 +588,11 @@ img,canvas,svg{max-width:100%;height:auto}
         <button class="nav-btn" id="nav-assets" onclick="navTo('assets',this)"><span class="nav-icon">🔧</span>Assets</button>
         <button class="nav-btn" id="nav-subcon" onclick="navTo('subcon',this)"><span class="nav-icon">🏢</span>Subcon</button>
         <button class="nav-btn" id="nav-meetings" onclick="navTo('meetings',this)"><span class="nav-icon">📝</span>Meetings</button>
+        <button class="nav-btn" id="nav-analytics" onclick="navTo('analytics',this)"><span class="nav-icon">🔬</span>Analytics</button>
+        <button class="nav-btn" id="nav-tender" onclick="navTo('tender',this)"><span class="nav-icon">📋</span>Tender</button>
+        <button class="nav-btn" id="nav-insurance" onclick="navTo('insurance',this)"><span class="nav-icon">🛡</span>Insurance</button>
+        <button class="nav-btn" id="nav-appraisal" onclick="navTo('appraisal',this)"><span class="nav-icon">⭐</span>Appraisal</button>
+        <button class="nav-btn" id="nav-budget" onclick="navTo('budget',this)"><span class="nav-icon">💵</span>Budget</button>
         <button class="nav-btn" id="nav-system" onclick="navTo('system',this)"><span class="nav-icon">⚙️</span>System</button>
       </nav>
       <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v3.3 · Production<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
@@ -615,6 +621,11 @@ img,canvas,svg{max-width:100%;height:auto}
       <div class="page" id="page-assets"></div>
       <div class="page" id="page-subcon"></div>
       <div class="page" id="page-meetings"></div>
+      <div class="page" id="page-analytics"></div>
+      <div class="page" id="page-tender"></div>
+      <div class="page" id="page-insurance"></div>
+      <div class="page" id="page-appraisal"></div>
+      <div class="page" id="page-budget"></div>
       <div class="page" id="page-system"></div>
       <div class="page" id="page-resources"></div>
       <div class="page" id="page-scorecard"></div>
@@ -755,15 +766,15 @@ var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 // Page visibility per role
 const ROLE_PAGES = {
-  'Admin':             ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings'],
-  'PMO Manager':       ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings'],
-  'CEO':               ['dashboard','ceo','projects','gantt','resources','scorecard','bizdev','finance','contracts','lessons','forecast','reports','subcon','meetings'],
-  'Finance Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','finance','inventory','workflow','audit','contracts','lessons','forecast','reports','assets','subcon','meetings'],
-  'Project Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','inventory','qhse','documents','workflow','contracts','lessons','forecast','reports','training','assets','subcon','meetings'],
+  'Admin':             ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget'],
+  'PMO Manager':       ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget'],
+  'CEO':               ['dashboard','ceo','projects','gantt','resources','scorecard','bizdev','finance','contracts','lessons','forecast','reports','subcon','meetings','analytics','tender','insurance','budget'],
+  'Finance Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','finance','inventory','workflow','audit','contracts','lessons','forecast','reports','assets','subcon','meetings','analytics','insurance','budget'],
+  'Project Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','inventory','qhse','documents','workflow','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','budget'],
   'Procurement Lead':  ['dashboard','projects','gantt','procurement','inventory','workflow','contracts','lessons','assets','subcon','meetings'],
-  'BD Manager':        ['dashboard','bizdev','projects','gantt','contracts','lessons'],
+  'BD Manager':        ['dashboard','bizdev','projects','gantt','contracts','lessons','tender'],
   'QHSE Engineer':     ['dashboard','projects','gantt','qhse','documents','contracts','lessons'],
-  'HR Manager':        ['dashboard','hr','documents','contracts','lessons','training'],
+  'HR Manager':        ['dashboard','hr','documents','contracts','lessons','training','appraisal'],
   'Viewer':            ['dashboard','projects','gantt']
 };
 
@@ -1141,7 +1152,7 @@ function enterApp(){
 
   // ── Apply role-based nav visibility ──────────────────────
   const allowed = ROLE_PAGES[currentProfile?.role] || ['dashboard'];
-  ['bizdev','projects','gantt','resources','scorecard','contracts','lessons','forecast','reports','training','assets','subcon','meetings','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system'].forEach(p=>{
+  ['bizdev','projects','gantt','resources','scorecard','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system'].forEach(p=>{
     const btn = document.getElementById('nav-'+p);
     if(btn) btn.style.display = allowed.includes(p) ? '' : 'none';
   });
@@ -1180,6 +1191,7 @@ function enterApp(){
   navTo('dashboard',document.querySelector('.nav-btn.active'));
   // P2-1: Init Notifications Center
   setTimeout(()=>{ initNotifRealtime(); _silentRefreshNotifs(); }, 1200);
+  setTimeout(()=>{ runScheduledNotifications(); }, 3000);
   loadWfBadge();
   initRealtime();
   initSessionGuard();
@@ -1386,7 +1398,7 @@ function navTo(id,btn){
     procurement:()=>loadProc(curProcTab),finance:loadFinance,
     hr:()=>loadHR(curHRTab),qhse:()=>loadQHSE(curQHSETab),
     inventory:loadInventory,documents:()=>loadDocs(curDocTab),workflow:loadWorkflow,audit:loadAudit,
-    users:loadUsers,ceo:loadCEO,system:loadSystem,resources:loadResources,scorecard:loadScorecard,contracts:loadContracts,lessons:loadLessons,forecast:loadForecast,reports:loadReports,training:loadTraining,assets:loadAssets,subcon:loadSubcon,meetings:loadMeetings
+    users:loadUsers,ceo:loadCEO,system:loadSystem,resources:loadResources,scorecard:loadScorecard,contracts:loadContracts,lessons:loadLessons,forecast:loadForecast,reports:loadReports,training:loadTraining,assets:loadAssets,subcon:loadSubcon,meetings:loadMeetings,analytics:loadAnalytics,tender:loadTender,insurance:loadInsurance,appraisal:loadAppraisal,budget:loadBudget
   };
   if(loaders[id])loaders[id]();
 }
@@ -12365,6 +12377,1065 @@ async function loadCODashboard(){
       <button class="btn btn-primary" onclick="closeModal();navTo('projects',document.getElementById('nav-projects'))">Go to Projects</button>
     </div>`);
 }
+
+// ══════════════════════════════════════════════════════════════
+//  P9-1 · ADVANCED ANALYTICS
+// ══════════════════════════════════════════════════════════════
+async function loadAnalytics(){
+  const el=document.getElementById('page-analytics');
+  if(!el) return;
+  el.innerHTML='<div class="loading">Loading Analytics…</div>';
+  try{
+    const today=new Date();
+    const [projR,invR,wfR,ncrR,empR,snapR]=await Promise.all([
+      sb.from('projects').select('id,project_no,name,status,cpi,spi,pct,bac,ev,ac,pv,department,start_date,end_date').order('project_no'),
+      sb.from('invoices').select('invoice_type,status,net_amount,paid_date,created_at,due_date'),
+      sb.from('workflow_items').select('id,status,entity_type,created_at'),
+      sb.from('ncrs').select('id,severity,status,department,created_at'),
+      sb.from('employees').select('id,department,status'),
+      sb.from('project_evm_snapshots').select('project_id,snapshot_date,pv,ev,ac').order('snapshot_date')
+    ]);
+    const projs=projR.data||[], invs=invR.data||[], wfs=wfR.data||[];
+    const ncrs=ncrR.data||[], emps=empR.data||[], snaps=snapR.data||[];
+
+    const active=projs.filter(p=>ACTIVE_STATUSES.includes(p.status));
+
+    // ── Predictive: EAC + Completion Forecast ────────────────
+    const eacData=active.map(p=>{
+      const cpi=Number(p.cpi)||1;
+      const eac=cpi>0?Number(p.ac)+(Number(p.bac)-Number(p.ev))/cpi:Number(p.bac);
+      const costOverrun=eac-Number(p.bac);
+      const pctLeft=Math.max(100-Number(p.pct||0),0)/100;
+      const daysElapsed=p.start_date?Math.ceil((today-new Date(p.start_date))/86400000):0;
+      const predictedDays=p.pct>0?Math.round(daysElapsed/(Number(p.pct)/100)):null;
+      const predictedEnd=predictedDays&&p.start_date?new Date(new Date(p.start_date).getTime()+predictedDays*86400000):null;
+      return {
+        project_no:p.project_no, name:(p.name||'').substring(0,30),
+        cpi:Number(p.cpi||1), spi:Number(p.spi||1),
+        bac:Number(p.bac||0), eac:Math.round(eac),
+        costOverrun:Math.round(costOverrun),
+        predictedEnd:predictedEnd?predictedEnd.toLocaleDateString('en-GB'):null,
+        scheduledEnd:p.end_date?new Date(p.end_date).toLocaleDateString('en-GB'):null,
+        risk:cpi<0.9?'critical':cpi<1?'at-risk':'on-track'
+      };
+    });
+
+    // ── Trend: Monthly Workflow SLA ───────────────────────────
+    const wfTrend=[];
+    for(let i=5;i>=0;i--){
+      const d=new Date(today.getFullYear(),today.getMonth()-i,1);
+      const m=d.toISOString().slice(0,7);
+      const monthWFs=wfs.filter(w=>w.created_at?.startsWith(m));
+      const overdue=monthWFs.filter(w=>w.status==='overdue').length;
+      const sla=monthWFs.length>0?Math.round((1-overdue/monthWFs.length)*100):100;
+      wfTrend.push({m:d.toLocaleDateString('en-GB',{month:'short',year:'2-digit'}),total:monthWFs.length,overdue,sla});
+    }
+
+    // ── Dept performance ─────────────────────────────────────
+    const depts=[...new Set(active.map(p=>p.department).filter(Boolean))];
+    const deptPerf=depts.map(d=>{
+      const dp=active.filter(p=>p.department===d);
+      const avgCPI=dp.length?dp.reduce((s,p)=>s+Number(p.cpi||1),0)/dp.length:1;
+      const avgPct=dp.length?dp.reduce((s,p)=>s+Number(p.pct||0),0)/dp.length:0;
+      return {dept:d,count:dp.length,avgCPI:Number(avgCPI.toFixed(3)),avgPct:Math.round(avgPct)};
+    }).sort((a,b)=>b.avgCPI-a.avgCPI);
+
+    // ── Revenue vs Cost trend ─────────────────────────────────
+    const revTrend=[];
+    for(let i=5;i>=0;i--){
+      const d=new Date(today.getFullYear(),today.getMonth()-i,1);
+      const m=d.toISOString().slice(0,7);
+      const rev=invs.filter(x=>x.invoice_type==='client'&&x.status==='paid'&&x.paid_date?.startsWith(m)).reduce((s,x)=>s+Number(x.net_amount),0);
+      const cost=invs.filter(x=>x.invoice_type!=='client'&&x.status==='paid'&&x.paid_date?.startsWith(m)).reduce((s,x)=>s+Number(x.net_amount),0);
+      revTrend.push({m:d.toLocaleDateString('en-GB',{month:'short',year:'2-digit'}),rev:Math.round(rev),cost:Math.round(cost),gp:Math.round(rev-cost)});
+    }
+    const maxRev=Math.max(...revTrend.map(r=>Math.max(r.rev,r.cost)),1);
+
+    // ── NCR trend ────────────────────────────────────────────
+    const ncrTrend=[];
+    for(let i=5;i>=0;i--){
+      const d=new Date(today.getFullYear(),today.getMonth()-i,1);
+      const m=d.toISOString().slice(0,7);
+      const month_ncrs=ncrs.filter(n=>n.created_at?.startsWith(m));
+      ncrTrend.push({m:d.toLocaleDateString('en-GB',{month:'short'}),total:month_ncrs.length,critical:month_ncrs.filter(n=>n.severity==='critical').length});
+    }
+
+    // ── Predictive alerts ─────────────────────────────────────
+    const alerts=[];
+    eacData.filter(e=>e.costOverrun>0).forEach(e=>alerts.push({type:'cost',icon:'💰',msg:`${e.project_no}: Cost overrun of ${fmtKWD(e.costOverrun)} predicted (EAC > BAC)`,col:'#EF4444'}));
+    eacData.filter(e=>e.cpi<0.85).forEach(e=>alerts.push({type:'cpi',icon:'📉',msg:`${e.project_no}: CPI ${e.cpi.toFixed(2)} — severe cost pressure`,col:'#EF4444'}));
+    const overdueARCount=invs.filter(i=>i.invoice_type==='client'&&!['paid','cancelled'].includes(i.status)&&i.due_date&&new Date(i.due_date)<today).length;
+    if(overdueARCount>0) alerts.push({type:'ar',icon:'💳',msg:`${overdueARCount} AR invoice(s) overdue — cash flow risk`,col:'#F97316'});
+    const expCerts=[] ; // would need cert data
+    if(wfTrend[5]?.sla<80) alerts.push({type:'sla',icon:'⚡',msg:`Workflow SLA ${wfTrend[5].sla}% this month — below 80% threshold`,col:'#F97316'});
+
+    el.innerHTML=`
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">🔬</span>
+        <div><h1>Advanced Analytics</h1><div class="sub">Predictive Insights · Trend Analysis · Performance Intelligence</div></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="loadAnalytics()">🔄 Refresh</button>
+    </div>
+
+    <!-- Predictive Alerts -->
+    ${alerts.length>0?`
+    <div class="card" style="margin-bottom:14px;border-left:3px solid #EF4444">
+      <div class="sec-head"><div class="sec-title"><span>🚨</span>Predictive Alerts (${alerts.length})</div></div>
+      ${alerts.slice(0,6).map(a=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bdr)">
+        <span style="font-size:16px;flex-shrink:0">${a.icon}</span>
+        <div style="font-size:11px;color:var(--text);flex:1">${a.msg}</div>
+        <span style="font-size:9px;background:${a.col}22;color:${a.col};border-radius:4px;padding:2px 7px;font-weight:700">ACTION</span>
+      </div>`).join('')}
+    </div>`:``}
+
+    <div class="grid2" style="margin-bottom:14px">
+      <!-- Revenue vs Cost Trend -->
+      <div class="card">
+        <div class="sec-head"><div class="sec-title"><span>📈</span>Revenue vs Cost — 6M Trend</div></div>
+        <div style="display:flex;align-items:flex-end;gap:6px;height:100px;margin-bottom:8px">
+          ${revTrend.map(r=>`
+          <div style="flex:1;display:flex;flex-direction:column;gap:2px;align-items:center">
+            <div style="width:100%;display:flex;gap:1px;align-items:flex-end;height:80px">
+              <div style="flex:1;background:#10B98188;border-radius:2px 2px 0 0;height:${Math.max(r.rev/maxRev*80,2)}px" title="Revenue: ${fmtKWD(r.rev)}"></div>
+              <div style="flex:1;background:#EF444488;border-radius:2px 2px 0 0;height:${Math.max(r.cost/maxRev*80,2)}px" title="Cost: ${fmtKWD(r.cost)}"></div>
+            </div>
+            <div style="font-size:8px;color:var(--faint)">${r.m}</div>
+          </div>`).join('')}
+        </div>
+        <div style="display:flex;gap:12px;font-size:9px;color:var(--muted)">
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:8px;background:#10B981;border-radius:2px"></span>Revenue</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:8px;background:#EF4444;border-radius:2px"></span>Cost</span>
+        </div>
+      </div>
+
+      <!-- Workflow SLA Trend -->
+      <div class="card">
+        <div class="sec-head"><div class="sec-title"><span>⚡</span>Workflow SLA — 6M Trend</div></div>
+        <div style="display:flex;align-items:flex-end;gap:6px;height:100px;margin-bottom:8px">
+          ${wfTrend.map(w=>`
+          <div style="flex:1;display:flex;flex-direction:column;gap:2px;align-items:center">
+            <div style="font-size:8px;color:${w.sla>=80?'#10B981':'#EF4444'};font-weight:700">${w.sla}%</div>
+            <div style="width:100%;background:${w.sla>=80?'#10B98188':'#EF444488'};border-radius:2px 2px 0 0;height:${Math.max(w.sla*0.7,2)}px"></div>
+            <div style="font-size:8px;color:var(--faint)">${w.m}</div>
+          </div>`).join('')}
+        </div>
+        <div style="font-size:10px;color:var(--muted)">Target: ≥80% | This month: <b style="color:${wfTrend[5]?.sla>=80?'#10B981':'#EF4444'}">${wfTrend[5]?.sla||0}%</b></div>
+      </div>
+    </div>
+
+    <!-- Dept Performance -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="sec-head"><div class="sec-title"><span>🏗</span>Department Performance (CPI)</div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
+        ${deptPerf.map(d=>`
+        <div style="background:var(--card2);border:1px solid ${d.avgCPI>=1?'#10B98133':d.avgCPI>=0.9?'#F9731633':'#EF444433'};border-radius:8px;padding:12px;text-align:center">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:4px">${esc(d.dept)}</div>
+          <div style="font-size:22px;font-weight:900;color:${d.avgCPI>=1?'#10B981':d.avgCPI>=0.9?'#F97316':'#EF4444'}">${d.avgCPI.toFixed(2)}</div>
+          <div style="font-size:9px;color:var(--faint)">${d.count} projects · avg ${d.avgPct}% done</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- EAC Prediction Table -->
+    <div class="card">
+      <div class="sec-head"><div class="sec-title"><span>🔮</span>EAC Prediction & Completion Forecast</div></div>
+      ${eacData.length===0?'<div class="empty">No active projects</div>':`
+      <div style="overflow-x:auto">
+        <table><thead><tr>
+          <th>Project</th><th style="text-align:right">BAC</th><th style="text-align:right">EAC</th>
+          <th style="text-align:right">Cost Variance</th><th style="text-align:center">CPI</th>
+          <th>Predicted End</th><th>Scheduled End</th><th style="text-align:center">Risk</th>
+        </tr></thead><tbody>
+        ${eacData.map(e=>`<tr>
+          <td style="font-weight:600;font-size:11px">${esc(e.project_no)}</td>
+          <td style="text-align:right">${fmtKWD(e.bac)}</td>
+          <td style="text-align:right;color:${e.eac>e.bac?'#EF4444':'#10B981'};font-weight:700">${fmtKWD(e.eac)}</td>
+          <td style="text-align:right;color:${e.costOverrun>0?'#EF4444':'#10B981'};font-weight:700">${e.costOverrun>0?'+':''} ${fmtKWD(Math.abs(e.costOverrun))}</td>
+          <td style="text-align:center;font-weight:800;color:${e.cpi>=1?'#10B981':e.cpi>=0.9?'#F97316':'#EF4444'}">${e.cpi.toFixed(3)}</td>
+          <td style="font-size:10px;color:${e.predictedEnd&&e.scheduledEnd&&e.predictedEnd>e.scheduledEnd?'#EF4444':'var(--muted)'}">${e.predictedEnd||'N/A'}</td>
+          <td style="font-size:10px;color:var(--faint)">${e.scheduledEnd||'—'}</td>
+          <td style="text-align:center">${pill(e.risk,e.risk==='on-track'?'#10B981':e.risk==='at-risk'?'#F97316':'#EF4444')}</td>
+        </tr>`).join('')}
+        </tbody></table>
+      </div>`}
+    </div>`;
+  }catch(err){ el.innerHTML=`<div class="empty">Error: ${err.message}</div>`; }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P9-2 · TENDER MANAGEMENT
+// ══════════════════════════════════════════════════════════════
+async function loadTender(tab='list'){
+  const el=document.getElementById('page-tender');
+  if(!el) return;
+  el.innerHTML='<div class="loading">Loading Tenders…</div>';
+  try{
+    const today=new Date();
+    const [tendR,projR]=await Promise.all([
+      sb.from('tenders').select('*,project:projects(project_no,name)').order('created_at',{ascending:false}),
+      sb.from('projects').select('id,project_no,name').order('project_no')
+    ]);
+    const tends=tendR.data||[], projs=projR.data||[];
+    const open=tends.filter(t=>t.status==='open');
+    const closing=tends.filter(t=>t.status==='open'&&t.submission_deadline&&Math.ceil((new Date(t.submission_deadline)-today)/86400000)<=7);
+    const awarded=tends.filter(t=>t.status==='awarded');
+    const totalVal=awarded.reduce((s,t)=>s+Number(t.estimated_value||0),0);
+
+    const tabBtns=`<div class="tabs">
+      <button class="tab${tab==='list'?' act':''}" onclick="loadTender('list')">📋 All (${tends.length})</button>
+      <button class="tab${tab==='open'?' act':''}" onclick="loadTender('open')" style="color:${closing.length>0?'#EF4444':'inherit'}">🟢 Open (${open.length})</button>
+      <button class="tab${tab==='awarded'?' act':''}" onclick="loadTender('awarded')">✅ Awarded (${awarded.length})</button>
+    </div>`;
+
+    const list=tab==='open'?open:tab==='awarded'?awarded:tends;
+
+    el.innerHTML=`
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">📋</span>
+        <div><h1>Tender Management</h1><div class="sub">Pre-qualification · Submission · Evaluation · Award</div></div>
+      </div>
+      ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openNewTenderModal()">+ New Tender</button>`:''}
+    </div>
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Open Tenders',   open.length,   '#3B82F6', 'Accepting submissions')}
+      ${kpi('Closing ≤7d',   closing.length, closing.length>0?'#EF4444':'#10B981', 'Urgent deadline')}
+      ${kpi('Awarded',        awarded.length, '#10B981', 'Contracts won')}
+      ${kpi('Award Value',    fmtKWD(totalVal),'#C9A84C', 'Total awarded')}
+    </div>
+    <div class="card">
+      ${tabBtns}
+      ${list.length===0?'<div class="empty">No tenders found</div>':`
+      <table><thead><tr>
+        <th>Tender No</th><th>Title</th><th>Client</th><th>Type</th>
+        <th style="text-align:right">Est. Value</th><th>Deadline</th>
+        <th style="text-align:center">Status</th><th></th>
+      </tr></thead><tbody>
+      ${list.map(t=>{
+        const daysLeft=t.submission_deadline?Math.ceil((new Date(t.submission_deadline)-today)/86400000):null;
+        const deadlineColor=daysLeft===null?'var(--faint)':daysLeft<0?'#EF4444':daysLeft<=7?'#F97316':'#10B981';
+        return`<tr>
+          <td style="color:var(--gold);font-weight:700;font-size:10px">${esc(t.tender_no||'—')}</td>
+          <td style="font-weight:600;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.title||'—')}</td>
+          <td style="font-size:10px;color:var(--muted)">${esc(t.client_name||'—')}</td>
+          <td><span style="font-size:9px;background:#8B5CF622;color:#8B5CF6;border-radius:4px;padding:2px 6px">${esc(t.tender_type||'—')}</span></td>
+          <td style="text-align:right;font-weight:700">${fmtKWD(t.estimated_value||0)}</td>
+          <td style="font-size:10px;color:${deadlineColor};font-weight:700">${t.submission_deadline||'—'}${daysLeft!==null&&t.status==='open'?`<br><span style="font-size:9px">${daysLeft<0?'Closed':daysLeft+'d left'}</span>`:''}</td>
+          <td style="text-align:center">${pill(t.status||'open',t.status==='open'?'#3B82F6':t.status==='awarded'?'#10B981':t.status==='submitted'?'#C9A84C':'#94A3B8')}</td>
+          <td><button onclick="openTenderDetail('${t.id}')" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:11px">👁</button></td>
+        </tr>`;}).join('')}
+      </tbody></table>`}
+    </div>`;
+  }catch(err){ el.innerHTML=`<div class="empty">Error: ${err.message}</div>`; }
+}
+
+function openNewTenderModal(){
+  const today=new Date().toISOString().split('T')[0];
+  openModal('+ New Tender',`
+    <div class="form-row">
+      <div class="form-field"><label>Tender Title *</label><input id="td-title" placeholder="e.g. CCTV System Supply & Installation"/></div>
+      <div class="form-field"><label>Client *</label><input id="td-client" placeholder="Client / Issuer name"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Type</label>
+        <select id="td-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          ${['Open','Selective','Negotiated','Direct Award','Framework'].map(t=>`<option>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Estimated Value (KWD)</label><input id="td-val" type="number" step="0.001" placeholder="0.000"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Issue Date</label><input id="td-issue" type="date" value="${today}"/></div>
+      <div class="form-field"><label>Submission Deadline *</label><input id="td-deadline" type="date"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Bid Bond Required</label>
+        <select id="td-bond" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="no">No</option><option value="yes">Yes</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Bond % of Value</label><input id="td-bond-pct" type="number" step="0.1" placeholder="2.5"/></div>
+    </div>
+    <div class="form-field"><label>Scope Summary</label>
+      <textarea id="td-scope" rows="3" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTender(event)">Create Tender</button>
+    </div>`);
+}
+
+async function saveTender(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const title=document.getElementById('td-title').value.trim();
+    const client=document.getElementById('td-client').value.trim();
+    const deadline=document.getElementById('td-deadline').value;
+    if(!title||!client||!deadline){showToast('Title, client and deadline required','error');return;}
+    const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'TND'});
+    const {error}=await sb.from('tenders').insert({
+      tender_no:no, title, client_name:client,
+      tender_type:document.getElementById('td-type').value,
+      estimated_value:Number(document.getElementById('td-val').value)||0,
+      issue_date:document.getElementById('td-issue').value||null,
+      submission_deadline:deadline,
+      bid_bond_required:document.getElementById('td-bond').value==='yes',
+      bid_bond_pct:Number(document.getElementById('td-bond-pct').value)||null,
+      scope_summary:document.getElementById('td-scope').value.trim()||null,
+      status:'open', created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    await writeAudit('tenders',null,'TENDER_CREATED',null,{tender_no:no,title},'Tender created');
+    showToast(no+' created ✓'); closeModal(); loadTender();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Create Tender';}}
+}
+
+async function openTenderDetail(id){
+  const {data:t}=await sb.from('tenders').select('*').eq('id',id).single();
+  if(!t) return;
+  const today=new Date();
+  const daysLeft=t.submission_deadline?Math.ceil((new Date(t.submission_deadline)-today)/86400000):null;
+  openModal(`📋 ${t.tender_no} — ${t.title}`,`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      ${[['Client',t.client_name||'—'],['Type',t.tender_type||'—'],
+         ['Est. Value',fmtKWD(t.estimated_value||0)],['Status',pill(t.status,t.status==='open'?'#3B82F6':t.status==='awarded'?'#10B981':'#94A3B8')],
+         ['Issue Date',t.issue_date||'—'],['Deadline',t.submission_deadline||'—'],
+         ['Days Left',daysLeft!==null?(daysLeft<0?`<span style="color:#EF4444">Closed ${Math.abs(daysLeft)}d ago</span>`:daysLeft+'d'):'-'],
+         ['Bid Bond',t.bid_bond_required?`Yes (${t.bid_bond_pct||0}%)`:'No']
+      ].map(([l,v])=>`<div style="background:var(--n3);border-radius:6px;padding:8px">
+        <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase">${l}</div>
+        <div style="font-size:12px;color:var(--text);margin-top:2px">${v}</div>
+      </div>`).join('')}
+    </div>
+    ${t.scope_summary?`<div style="padding:8px;background:var(--n3);border-radius:6px;font-size:11px;color:var(--muted);margin-bottom:12px"><b>Scope:</b> ${esc(t.scope_summary)}</div>`:''}
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      ${can('edit')&&t.status==='open'?`<button class="btn btn-primary" onclick="awardTender('${id}','${esc(t.tender_no)}');closeModal()">✅ Mark Awarded</button>`:''}
+    </div>`);
+}
+
+async function awardTender(id,tenderNo){
+  if(!confirm(`Award tender ${tenderNo}?`)) return;
+  await sb.from('tenders').update({status:'awarded',awarded_at:new Date().toISOString(),awarded_by:currentProfile?.id}).eq('id',id);
+  await writeAudit('tenders',id,'TENDER_AWARDED',{status:'open'},{status:'awarded'},'Tender awarded');
+  showToast(tenderNo+' awarded ✓'); loadTender();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P9-3 · INSURANCE & BONDS
+// ══════════════════════════════════════════════════════════════
+async function loadInsurance(tab='policies'){
+  const el=document.getElementById('page-insurance');
+  if(!el) return;
+  el.innerHTML='<div class="loading">Loading Insurance…</div>';
+  try{
+    const today=new Date();
+    const [polR,bondR,projR]=await Promise.all([
+      sb.from('insurance_policies').select('*,project:projects(project_no,name)').order('expiry_date'),
+      sb.from('performance_bonds').select('*,project:projects(project_no,name)').order('expiry_date'),
+      sb.from('projects').select('id,project_no,name').in('status',ACTIVE_STATUSES).order('project_no')
+    ]);
+    const pols=polR.data||[], bonds=bondR.data||[], projs=projR.data||[];
+
+    const expPols=pols.filter(p=>p.expiry_date&&Math.ceil((new Date(p.expiry_date)-today)/86400000)<=30&&new Date(p.expiry_date)>=today);
+    const expBonds=bonds.filter(b=>b.expiry_date&&Math.ceil((new Date(b.expiry_date)-today)/86400000)<=30&&new Date(b.expiry_date)>=today);
+    const expiredPols=pols.filter(p=>p.expiry_date&&new Date(p.expiry_date)<today&&p.status==='active');
+    const totalCoverage=pols.filter(p=>p.status==='active').reduce((s,p)=>s+Number(p.insured_value||0),0);
+
+    const tabBtns=`<div class="tabs">
+      <button class="tab${tab==='policies'?' act':''}" onclick="loadInsurance('policies')">🛡 Policies (${pols.length})</button>
+      <button class="tab${tab==='bonds'?' act':''}" onclick="loadInsurance('bonds')">📜 Bonds (${bonds.length})</button>
+    </div>`;
+
+    el.innerHTML=`
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">🛡</span>
+        <div><h1>Insurance & Bonds</h1><div class="sub">Policies · Performance Bonds · Guarantees · Expiry Tracking</div></div>
+      </div>
+      ${can('create')?`<div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="openNewPolicyModal()">+ Policy</button>
+        <button class="btn btn-primary btn-sm" onclick="openNewBondModal()">+ Bond</button>
+      </div>`:''}
+    </div>
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Active Policies', pols.filter(p=>p.status==='active').length, '#C9A84C', 'Insurance coverage')}
+      ${kpi('Total Coverage', fmtKWD(totalCoverage), '#3B82F6', 'Insured value')}
+      ${kpi('Expiring ≤30d', expPols.length+expBonds.length, expPols.length+expBonds.length>0?'#F97316':'#10B981', 'Policies + Bonds')}
+      ${kpi('Expired Active', expiredPols.length, expiredPols.length>0?'#EF4444':'#10B981', 'Require renewal')}
+    </div>
+    ${expPols.length+expBonds.length+expiredPols.length>0?`
+    <div class="card" style="margin-bottom:14px;border-left:3px solid #F97316">
+      <div class="sec-head"><div class="sec-title"><span>⚠️</span>Expiry Alerts</div></div>
+      ${[...expiredPols.map(p=>({...p,_type:'policy',_expired:true})),...expPols.map(p=>({...p,_type:'policy',_expired:false})),...expBonds.map(b=>({...b,_type:'bond',_expired:false}))].map(item=>{
+        const daysLeft=item.expiry_date?Math.ceil((new Date(item.expiry_date)-today)/86400000):null;
+        return`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bdr)">
+          <span style="font-size:14px">${item._expired?'🔴':'🟡'}</span>
+          <div style="flex:1">
+            <div style="font-size:11px;font-weight:700">${esc(item.policy_no||item.bond_no||'—')} — ${esc(item.policy_type||item.bond_type||'—')}</div>
+            <div style="font-size:9px;color:var(--muted)">${esc(item.insurer||item.bank_name||'—')} · ${esc(item.project?.project_no||'General')}</div>
+          </div>
+          <div style="text-align:right;font-size:10px;color:${item._expired?'#EF4444':'#F97316'};font-weight:700">
+            ${item._expired?'EXPIRED':daysLeft+'d left'}
+          </div>
+        </div>`;}).join('')}
+    </div>`:''}
+    <div class="card">
+      ${tabBtns}
+      ${tab==='policies'?
+        (pols.length===0?'<div class="empty">No insurance policies registered</div>':`
+        <table><thead><tr>
+          <th>Policy No</th><th>Type</th><th>Insurer</th><th>Project</th>
+          <th style="text-align:right">Premium</th><th style="text-align:right">Insured Value</th>
+          <th>Expiry</th><th style="text-align:center">Status</th>
+        </tr></thead><tbody>
+        ${pols.map(p=>{
+          const daysLeft=p.expiry_date?Math.ceil((new Date(p.expiry_date)-today)/86400000):null;
+          const col=daysLeft===null?'var(--faint)':daysLeft<0?'#EF4444':daysLeft<=30?'#F97316':'var(--muted)';
+          return`<tr>
+            <td style="color:var(--gold);font-weight:700;font-size:10px">${esc(p.policy_no||'—')}</td>
+            <td style="font-size:11px">${esc(p.policy_type||'—')}</td>
+            <td style="color:var(--muted)">${esc(p.insurer||'—')}</td>
+            <td style="font-size:10px;color:var(--gold)">${esc(p.project?.project_no||'General')}</td>
+            <td style="text-align:right">${fmtKWD(p.annual_premium||0)}</td>
+            <td style="text-align:right;font-weight:700">${fmtKWD(p.insured_value||0)}</td>
+            <td style="color:${col};font-weight:700;font-size:10px">${p.expiry_date||'—'}${daysLeft!==null&&daysLeft<=30?` (${daysLeft<0?'expired':daysLeft+'d'})`:''}</td>
+            <td style="text-align:center">${pill(p.status||'active',p.status==='active'?'#10B981':'#94A3B8')}</td>
+          </tr>`;}).join('')}
+        </tbody></table>`)
+        :
+        (bonds.length===0?'<div class="empty">No bonds registered</div>':`
+        <table><thead><tr>
+          <th>Bond No</th><th>Type</th><th>Bank</th><th>Project</th>
+          <th style="text-align:right">Amount</th><th>Issue Date</th><th>Expiry</th>
+          <th style="text-align:center">Status</th>
+        </tr></thead><tbody>
+        ${bonds.map(b=>{
+          const daysLeft=b.expiry_date?Math.ceil((new Date(b.expiry_date)-today)/86400000):null;
+          const col=daysLeft===null?'var(--faint)':daysLeft<0?'#EF4444':daysLeft<=30?'#F97316':'var(--muted)';
+          return`<tr>
+            <td style="color:var(--gold);font-weight:700;font-size:10px">${esc(b.bond_no||'—')}</td>
+            <td style="font-size:11px">${esc(b.bond_type||'—')}</td>
+            <td style="color:var(--muted)">${esc(b.bank_name||'—')}</td>
+            <td style="font-size:10px;color:var(--gold)">${esc(b.project?.project_no||'General')}</td>
+            <td style="text-align:right;font-weight:700">${fmtKWD(b.bond_amount||0)}</td>
+            <td style="font-size:10px;color:var(--faint)">${b.issue_date||'—'}</td>
+            <td style="color:${col};font-weight:700;font-size:10px">${b.expiry_date||'—'}${daysLeft!==null&&daysLeft<=30?` (${daysLeft<0?'expired':daysLeft+'d'})`:''}</td>
+            <td style="text-align:center">${pill(b.status||'active',b.status==='active'?'#10B981':'#94A3B8')}</td>
+          </tr>`;}).join('')}
+        </tbody></table>`)}
+    </div>`;
+  }catch(err){ el.innerHTML=`<div class="empty">Error: ${err.message}</div>`; }
+}
+
+function openNewPolicyModal(){
+  const projs=window._cachedProjects||[];
+  const today=new Date().toISOString().split('T')[0];
+  openModal('+ New Insurance Policy',`
+    <div class="form-row">
+      <div class="form-field"><label>Policy Type *</label>
+        <select id="pol-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          ${['All Risk (CAR)','Third Party Liability','Contractor Equipment','Medical','Workmen Compensation','Professional Indemnity','Marine Cargo','Other'].map(t=>`<option>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Insurer *</label><input id="pol-insurer" placeholder="Insurance company name"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Policy No *</label><input id="pol-no" placeholder="Policy reference number"/></div>
+      <div class="form-field"><label>Project</label>
+        <select id="pol-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— General / All Projects —</option>
+          ${projs.map(p=>`<option value="${p.id}">${esc(p.project_no)} — ${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Insured Value (KWD)</label><input id="pol-val" type="number" step="0.001" placeholder="0.000"/></div>
+      <div class="form-field"><label>Annual Premium (KWD)</label><input id="pol-prem" type="number" step="0.001" placeholder="0.000"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Start Date</label><input id="pol-start" type="date" value="${today}"/></div>
+      <div class="form-field"><label>Expiry Date *</label><input id="pol-exp" type="date"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="savePolicy(event)">Save Policy</button>
+    </div>`);
+}
+
+async function savePolicy(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const polNo=document.getElementById('pol-no').value.trim();
+    const insurer=document.getElementById('pol-insurer').value.trim();
+    const expiry=document.getElementById('pol-exp').value;
+    if(!polNo||!insurer||!expiry){showToast('Policy No, insurer and expiry required','error');return;}
+    const {error}=await sb.from('insurance_policies').insert({
+      policy_no:polNo, policy_type:document.getElementById('pol-type').value,
+      insurer, project_id:document.getElementById('pol-proj').value||null,
+      insured_value:Number(document.getElementById('pol-val').value)||0,
+      annual_premium:Number(document.getElementById('pol-prem').value)||0,
+      start_date:document.getElementById('pol-start').value||null,
+      expiry_date:expiry, status:'active', created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Policy saved ✓'); closeModal(); loadInsurance();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save Policy';}}
+}
+
+function openNewBondModal(){
+  const projs=window._cachedProjects||[];
+  const today=new Date().toISOString().split('T')[0];
+  openModal('+ New Performance Bond',`
+    <div class="form-row">
+      <div class="form-field"><label>Bond Type *</label>
+        <select id="bnd-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          ${['Bid Bond','Performance Bond','Advance Payment Guarantee','Retention Bond','Warranty Bond','Payment Bond'].map(t=>`<option>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Bank *</label><input id="bnd-bank" placeholder="Issuing bank name"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Bond No *</label><input id="bnd-no" placeholder="Bond reference number"/></div>
+      <div class="form-field"><label>Project</label>
+        <select id="bnd-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— General —</option>
+          ${projs.map(p=>`<option value="${p.id}">${esc(p.project_no)} — ${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Bond Amount (KWD) *</label><input id="bnd-amt" type="number" step="0.001" placeholder="0.000"/></div>
+      <div class="form-field"><label>% of Contract</label><input id="bnd-pct" type="number" step="0.1" placeholder="10"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Issue Date</label><input id="bnd-issue" type="date" value="${today}"/></div>
+      <div class="form-field"><label>Expiry Date *</label><input id="bnd-exp" type="date"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveBond(event)">Save Bond</button>
+    </div>`);
+}
+
+async function saveBond(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const bondNo=document.getElementById('bnd-no').value.trim();
+    const bank=document.getElementById('bnd-bank').value.trim();
+    const expiry=document.getElementById('bnd-exp').value;
+    const amt=Number(document.getElementById('bnd-amt').value);
+    if(!bondNo||!bank||!expiry||!amt){showToast('Bond No, bank, amount and expiry required','error');return;}
+    const {error}=await sb.from('performance_bonds').insert({
+      bond_no:bondNo, bond_type:document.getElementById('bnd-type').value, bank_name:bank,
+      project_id:document.getElementById('bnd-proj').value||null,
+      bond_amount:amt, bond_pct:Number(document.getElementById('bnd-pct').value)||null,
+      issue_date:document.getElementById('bnd-issue').value||null,
+      expiry_date:expiry, status:'active', created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Bond saved ✓'); closeModal(); loadInsurance('bonds');
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save Bond';}}
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P9-4 · PERFORMANCE APPRAISAL
+// ══════════════════════════════════════════════════════════════
+async function loadAppraisal(tab='list'){
+  const el=document.getElementById('page-appraisal');
+  if(!el) return;
+  el.innerHTML='<div class="loading">Loading Appraisals…</div>';
+  try{
+    const today=new Date();
+    const [appR,empR]=await Promise.all([
+      sb.from('performance_appraisals').select('*,employee:employees(full_name,employee_no,department,position)').order('appraisal_date',{ascending:false}),
+      sb.from('employees').select('id,full_name,employee_no,department,position').eq('status','active').order('full_name')
+    ]);
+    const apps=appR.data||[], emps=empR.data||[];
+    const thisYear=today.getFullYear();
+    const thisYearApps=apps.filter(a=>a.appraisal_date?.startsWith(thisYear));
+    const avgScore=apps.length?apps.reduce((s,a)=>s+Number(a.overall_score||0),0)/apps.length:0;
+    const topPerf=apps.filter(a=>Number(a.overall_score||0)>=4).length;
+
+    const tabBtns=`<div class="tabs">
+      <button class="tab${tab==='list'?' act':''}" onclick="loadAppraisal('list')">📋 All (${apps.length})</button>
+      <button class="tab${tab==='pending'?' act':''}" onclick="loadAppraisal('pending')">⏳ Due (${emps.filter(e=>!apps.find(a=>a.employee_id===e.id&&a.appraisal_date?.startsWith(thisYear))).length})</button>
+    </div>`;
+
+    const scoreColor=s=>s>=4.5?'#10B981':s>=3.5?'#3B82F6':s>=2.5?'#C9A84C':s>=1.5?'#F97316':'#EF4444';
+    const scoreLabel=s=>s>=4.5?'Outstanding':s>=3.5?'Exceeds Expectations':s>=2.5?'Meets Expectations':s>=1.5?'Needs Improvement':'Unsatisfactory';
+
+    let body='';
+    if(tab==='list'){
+      body=apps.length===0?'<div class="empty">No appraisals recorded yet</div>':`
+      <table><thead><tr>
+        <th>Employee</th><th>Department</th><th>Period</th><th>Date</th>
+        <th style="text-align:center">Score</th><th>Rating</th><th style="text-align:center">Status</th><th></th>
+      </tr></thead><tbody>
+      ${apps.map(a=>{
+        const sc=Number(a.overall_score||0);
+        return`<tr>
+          <td style="font-weight:700">${esc(a.employee?.full_name||'—')}</td>
+          <td style="color:var(--muted)">${esc(a.employee?.department||'—')}</td>
+          <td style="font-size:10px;color:var(--muted)">${esc(a.appraisal_period||'—')}</td>
+          <td style="font-size:10px;color:var(--faint)">${a.appraisal_date||'—'}</td>
+          <td style="text-align:center"><span style="font-size:16px;font-weight:900;color:${scoreColor(sc)}">${sc.toFixed(1)}</span></td>
+          <td style="font-size:10px;color:${scoreColor(sc)};font-weight:700">${scoreLabel(sc)}</td>
+          <td style="text-align:center">${pill(a.status||'draft',a.status==='completed'?'#10B981':a.status==='acknowledged'?'#3B82F6':'#94A3B8')}</td>
+          <td><button onclick="openAppraisalDetail('${a.id}')" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:11px">👁</button></td>
+        </tr>`;}).join('')}
+      </tbody></table>`;
+    } else {
+      const notAppraised=emps.filter(e=>!apps.find(a=>a.employee_id===e.id&&a.appraisal_date?.startsWith(thisYear)));
+      body=notAppraised.length===0?`<div style="text-align:center;padding:20px;color:#10B981">✅ All employees appraised for ${thisYear}</div>`:`
+      <div style="font-size:11px;color:#F97316;margin-bottom:10px;font-weight:700">⚠️ ${notAppraised.length} employee(s) not yet appraised for ${thisYear}</div>
+      ${notAppraised.map(e=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--n3);border-radius:6px;margin-bottom:6px">
+        <div style="flex:1">
+          <div style="font-size:11px;font-weight:700">${esc(e.full_name)}</div>
+          <div style="font-size:10px;color:var(--muted)">${esc(e.department||'—')} · ${esc(e.position||'—')}</div>
+        </div>
+        ${can('create')?`<button onclick="openNewAppraisalModal('${e.id}','${esc(e.full_name)}')" class="btn btn-primary btn-sm">+ Appraise</button>`:''}
+      </div>`).join('')}`;
+    }
+
+    el.innerHTML=`
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">⭐</span>
+        <div><h1>Performance Appraisal</h1><div class="sub">Annual Reviews · Scoring · Development Plans</div></div>
+      </div>
+      ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openNewAppraisalModal()">+ New Appraisal</button>`:''}
+    </div>
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Total Appraisals', apps.length, '#C9A84C', 'All records')}
+      ${kpi('This Year', thisYearApps.length, '#3B82F6', thisYear+' appraisals')}
+      ${kpi('Avg Score', avgScore.toFixed(2)+'/5', avgScore>=3.5?'#10B981':avgScore>=2.5?'#C9A84C':'#F97316', scoreLabel(avgScore))}
+      ${kpi('Top Performers', topPerf, '#10B981', 'Score ≥ 4.0')}
+    </div>
+    <div class="card">${tabBtns}${body}</div>`;
+  }catch(err){ el.innerHTML=`<div class="empty">Error: ${err.message}</div>`; }
+}
+
+function openNewAppraisalModal(empId='', empName=''){
+  const emps=window._cachedEmployees||[];
+  const today=new Date().toISOString().split('T')[0];
+  const year=new Date().getFullYear();
+  openModal('+ New Performance Appraisal',`
+    <div class="form-row">
+      <div class="form-field"><label>Employee *</label>
+        <select id="app-emp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select —</option>
+          ${emps.map(e=>`<option value="${e.id}"${e.id===empId?' selected':''}>${esc(e.full_name)} (${esc(e.employee_no||'')})</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Appraisal Period *</label>
+        <select id="app-period" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          ${[`Annual ${year}`,`H1 ${year}`,`H2 ${year}`,`Q1 ${year}`,`Q2 ${year}`,`Q3 ${year}`,`Q4 ${year}`].map(p=>`<option>${p}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:8px">Performance Scores (1=Poor · 5=Outstanding)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${[
+          ['app-quality',   'Quality of Work'],
+          ['app-delivery',  'Delivery & Timeliness'],
+          ['app-initiative','Initiative & Innovation'],
+          ['app-teamwork',  'Teamwork & Communication'],
+          ['app-safety',    'Safety & Compliance'],
+          ['app-leadership','Leadership & Development']
+        ].map(([id,label])=>`
+        <div style="background:var(--n3);border-radius:6px;padding:8px">
+          <label style="font-size:10px;color:var(--muted);display:block;margin-bottom:4px">${label}</label>
+          <select id="${id}" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:6px;padding:6px;color:var(--text);font-size:11px">
+            ${[1,2,3,4,5].map(n=>`<option value="${n}"${n===3?' selected':''}>${n}</option>`).join('')}
+          </select>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="form-field"><label>Strengths</label>
+      <textarea id="app-strengths" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea>
+    </div>
+    <div class="form-field"><label>Areas for Improvement</label>
+      <textarea id="app-improve" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea>
+    </div>
+    <div class="form-field"><label>Development Plan</label>
+      <textarea id="app-plan" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text);resize:vertical"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAppraisal(event)">Save Appraisal</button>
+    </div>`);
+}
+
+async function saveAppraisal(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const empId=document.getElementById('app-emp').value;
+    if(!empId){showToast('Employee required','error');return;}
+    const scores=['app-quality','app-delivery','app-initiative','app-teamwork','app-safety','app-leadership']
+      .map(id=>Number(document.getElementById(id)?.value||3));
+    const overall=scores.reduce((s,v)=>s+v,0)/scores.length;
+    const {error}=await sb.from('performance_appraisals').insert({
+      employee_id:empId,
+      appraisal_period:document.getElementById('app-period').value,
+      appraisal_date:new Date().toISOString().split('T')[0],
+      quality_score:scores[0], delivery_score:scores[1], initiative_score:scores[2],
+      teamwork_score:scores[3], safety_score:scores[4], leadership_score:scores[5],
+      overall_score:Math.round(overall*10)/10,
+      strengths:document.getElementById('app-strengths').value.trim()||null,
+      improvements:document.getElementById('app-improve').value.trim()||null,
+      development_plan:document.getElementById('app-plan').value.trim()||null,
+      appraiser_id:currentProfile?.id, status:'completed', created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Appraisal saved ✓'); closeModal(); loadAppraisal();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save Appraisal';}}
+}
+
+async function openAppraisalDetail(id){
+  const {data:a}=await sb.from('performance_appraisals').select('*,employee:employees(full_name,department,position)').eq('id',id).single();
+  if(!a) return;
+  const sc=Number(a.overall_score||0);
+  const scoreColor=s=>s>=4.5?'#10B981':s>=3.5?'#3B82F6':s>=2.5?'#C9A84C':s>=1.5?'#F97316':'#EF4444';
+  const scoreLabel=s=>s>=4.5?'Outstanding':s>=3.5?'Exceeds Expectations':s>=2.5?'Meets Expectations':s>=1.5?'Needs Improvement':'Unsatisfactory';
+  openModal(`⭐ Appraisal — ${a.employee?.full_name||'—'}`,`
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;padding:12px;background:var(--n3);border-radius:8px">
+      <div style="text-align:center;flex-shrink:0">
+        <div style="font-size:36px;font-weight:900;color:${scoreColor(sc)}">${sc.toFixed(1)}</div>
+        <div style="font-size:10px;font-weight:700;color:${scoreColor(sc)}">${scoreLabel(sc)}</div>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700">${esc(a.employee?.full_name||'—')}</div>
+        <div style="font-size:10px;color:var(--muted)">${esc(a.employee?.department||'—')} · ${esc(a.appraisal_period||'—')}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px">
+      ${[['Quality',a.quality_score],['Delivery',a.delivery_score],['Initiative',a.initiative_score],
+         ['Teamwork',a.teamwork_score],['Safety',a.safety_score],['Leadership',a.leadership_score]
+      ].map(([l,v])=>`<div style="background:var(--n3);border-radius:6px;padding:8px;text-align:center">
+        <div style="font-size:9px;color:var(--muted)">${l}</div>
+        <div style="font-size:18px;font-weight:800;color:${scoreColor(Number(v||0))}">${v||'—'}</div>
+      </div>`).join('')}
+    </div>
+    ${a.strengths?`<div style="margin-bottom:8px;padding:8px;background:var(--n3);border-radius:6px;font-size:11px"><b style="color:#10B981">✅ Strengths:</b><br>${esc(a.strengths)}</div>`:''}
+    ${a.improvements?`<div style="margin-bottom:8px;padding:8px;background:var(--n3);border-radius:6px;font-size:11px"><b style="color:#F97316">🔄 Improvements:</b><br>${esc(a.improvements)}</div>`:''}
+    ${a.development_plan?`<div style="padding:8px;background:var(--n3);border-radius:6px;font-size:11px"><b style="color:#3B82F6">📋 Development Plan:</b><br>${esc(a.development_plan)}</div>`:''}
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+    </div>`);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P9-5 · BUDGET PLANNING
+// ══════════════════════════════════════════════════════════════
+async function loadBudget(tab='overview'){
+  const el=document.getElementById('page-budget');
+  if(!el) return;
+  el.innerHTML='<div class="loading">Loading Budget…</div>';
+  try{
+    const today=new Date();
+    const year=today.getFullYear();
+    const [projR,budgetR,invR]=await Promise.all([
+      sb.from('projects').select('id,project_no,name,bac,ac,ev,pct,status,department').order('project_no'),
+      sb.from('project_budgets').select('*,project:projects(project_no,name,department)').order('budget_year',{ascending:false}),
+      sb.from('invoices').select('invoice_type,status,net_amount,created_at,project_id')
+    ]);
+    const projs=projR.data||[], budgets=budgetR.data||[], invs=invR.data||[];
+
+    // Aggregate budgets vs actual per project
+    const budgetSummary=projs.map(p=>{
+      const pb=budgets.filter(b=>b.project_id===p.id&&b.budget_year===year);
+      const totalBudget=pb.reduce((s,b)=>s+Number(b.budget_amount||0),0);
+      const spent=Number(p.ac||0);
+      const variance=totalBudget-spent;
+      const pct=totalBudget>0?Math.round(spent/totalBudget*100):0;
+      return {
+        project_no:p.project_no, name:(p.name||'').substring(0,30),
+        department:p.department, status:p.status,
+        bac:Number(p.bac||0), totalBudget, spent, variance, pct,
+        overBudget:spent>totalBudget&&totalBudget>0
+      };
+    }).filter(p=>ACTIVE_STATUSES.includes(p.status));
+
+    const totalBudgetAll=budgetSummary.reduce((s,p)=>s+p.totalBudget,0);
+    const totalSpentAll=budgetSummary.reduce((s,p)=>s+p.spent,0);
+    const overBudgetCount=budgetSummary.filter(p=>p.overBudget).length;
+
+    // Monthly budget vs actual for current year
+    const monthlyData=[];
+    for(let i=0;i<12;i++){
+      const m=`${year}-${String(i+1).padStart(2,'0')}`;
+      const actual=invs.filter(x=>x.invoice_type!=='client'&&x.status==='paid'&&x.created_at?.startsWith(m)).reduce((s,x)=>s+Number(x.net_amount),0);
+      const budget=budgets.filter(b=>b.budget_year===year&&b.budget_month===i+1).reduce((s,b)=>s+Number(b.budget_amount||0),0);
+      monthlyData.push({m:new Date(year,i).toLocaleDateString('en-GB',{month:'short'}),budget:Math.round(budget),actual:Math.round(actual)});
+    }
+    const maxMonthly=Math.max(...monthlyData.map(m=>Math.max(m.budget,m.actual)),1);
+
+    const tabBtns=`<div class="tabs">
+      <button class="tab${tab==='overview'?' act':''}" onclick="loadBudget('overview')">📊 Overview</button>
+      <button class="tab${tab==='projects'?' act':''}" onclick="loadBudget('projects')">🏗 By Project</button>
+      <button class="tab${tab==='monthly'?' act':''}" onclick="loadBudget('monthly')">📅 Monthly</button>
+    </div>`;
+
+    let body='';
+    if(tab==='overview'){
+      body=`
+      <div class="grid4" style="margin-bottom:14px">
+        ${kpi('Total Budget', fmtKWD(totalBudgetAll), '#C9A84C', year+' planned')}
+        ${kpi('Total Spent',  fmtKWD(totalSpentAll),  totalSpentAll>totalBudgetAll?'#EF4444':'#10B981', 'Actual cost')}
+        ${kpi('Variance',     fmtKWD(totalBudgetAll-totalSpentAll), (totalBudgetAll-totalSpentAll)>=0?'#10B981':'#EF4444', 'Budget - Actual')}
+        ${kpi('Over Budget',  overBudgetCount, overBudgetCount>0?'#EF4444':'#10B981', 'Projects over budget')}
+      </div>
+      <!-- Monthly chart -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--gold);margin-bottom:8px">Budget vs Actual — Monthly (${year})</div>
+        <div style="display:flex;align-items:flex-end;gap:4px;height:80px;margin-bottom:6px">
+          ${monthlyData.map(m=>`
+          <div style="flex:1;display:flex;flex-direction:column;gap:2px;align-items:center">
+            <div style="width:100%;display:flex;gap:1px;align-items:flex-end;height:65px">
+              <div style="flex:1;background:#3B82F677;border-radius:2px 2px 0 0;height:${Math.max(m.budget/maxMonthly*65,2)}px" title="Budget: ${fmtKWD(m.budget)}"></div>
+              <div style="flex:1;background:${m.actual>m.budget&&m.budget>0?'#EF4444':'#10B981'}88;border-radius:2px 2px 0 0;height:${Math.max(m.actual/maxMonthly*65,2)}px" title="Actual: ${fmtKWD(m.actual)}"></div>
+            </div>
+            <div style="font-size:8px;color:var(--faint)">${m.m}</div>
+          </div>`).join('')}
+        </div>
+        <div style="display:flex;gap:12px;font-size:9px;color:var(--muted)">
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:8px;background:#3B82F6;border-radius:2px"></span>Budget</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:8px;background:#10B981;border-radius:2px"></span>Actual</span>
+        </div>
+      </div>`;
+    } else if(tab==='projects'){
+      body=budgetSummary.length===0?'<div class="empty">No active projects</div>':`
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+        ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openNewBudgetModal()">+ Add Budget Line</button>`:''}
+      </div>
+      <table><thead><tr>
+        <th>Project</th><th>Dept</th><th style="text-align:right">BAC</th>
+        <th style="text-align:right">Budget ${year}</th><th style="text-align:right">Spent</th>
+        <th style="text-align:right">Variance</th><th style="text-align:center">%</th><th style="text-align:center">Status</th>
+      </tr></thead><tbody>
+      ${budgetSummary.map(p=>`<tr>
+        <td style="font-weight:700;font-size:11px">${esc(p.project_no)}</td>
+        <td style="color:var(--muted);font-size:10px">${esc(p.department||'—')}</td>
+        <td style="text-align:right">${fmtKWD(p.bac)}</td>
+        <td style="text-align:right;color:#3B82F6;font-weight:700">${p.totalBudget>0?fmtKWD(p.totalBudget):'<span style="color:var(--faint)">Not set</span>'}</td>
+        <td style="text-align:right;font-weight:700">${fmtKWD(p.spent)}</td>
+        <td style="text-align:right;font-weight:700;color:${p.variance>=0?'#10B981':'#EF4444'}">${p.variance>=0?'+':''}${fmtKWD(p.variance)}</td>
+        <td style="text-align:center">
+          <div style="display:flex;align-items:center;gap:4px;justify-content:center">
+            <div style="width:40px;background:var(--bdr);border-radius:3px;height:5px;overflow:hidden">
+              <div style="height:100%;width:${Math.min(p.pct,100)}%;background:${p.overBudget?'#EF4444':'#10B981'};border-radius:3px"></div>
+            </div>
+            <span style="font-size:10px;color:${p.overBudget?'#EF4444':'var(--muted)'}">${p.pct}%</span>
+          </div>
+        </td>
+        <td style="text-align:center">${p.overBudget?pill('Over Budget','#EF4444'):pill('On Budget','#10B981')}</td>
+      </tr>`).join('')}
+      </tbody></table>`;
+    } else {
+      body=`<table><thead><tr>
+        <th>Month</th><th style="text-align:right">Budget</th><th style="text-align:right">Actual</th>
+        <th style="text-align:right">Variance</th><th style="text-align:center">Status</th>
+      </tr></thead><tbody>
+      ${monthlyData.map(m=>`<tr>
+        <td style="font-weight:600">${m.m} ${year}</td>
+        <td style="text-align:right;color:#3B82F6;font-weight:700">${m.budget>0?fmtKWD(m.budget):'<span style="color:var(--faint)">—</span>'}</td>
+        <td style="text-align:right;font-weight:700">${m.actual>0?fmtKWD(m.actual):'<span style="color:var(--faint)">—</span>'}</td>
+        <td style="text-align:right;font-weight:700;color:${m.budget>0&&m.actual>m.budget?'#EF4444':'#10B981'}">${m.budget>0?(m.budget-m.actual>=0?'+':'')+fmtKWD(m.budget-m.actual):'—'}</td>
+        <td style="text-align:center">${m.budget>0?(m.actual>m.budget?pill('Over','#EF4444'):pill('On Track','#10B981')):'<span style="color:var(--faint)">No budget</span>'}</td>
+      </tr>`).join('')}
+      </tbody></table>`;
+    }
+
+    el.innerHTML=`
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">💵</span>
+        <div><h1>Budget Planning</h1><div class="sub">Project Budgets · Monthly Planning · Variance Analysis · ${year}</div></div>
+      </div>
+      ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openNewBudgetModal()">+ Budget Line</button>`:''}
+    </div>
+    <div class="card">${tabBtns}${body}</div>`;
+  }catch(err){ el.innerHTML=`<div class="empty">Error: ${err.message}</div>`; }
+}
+
+function openNewBudgetModal(){
+  const projs=window._cachedProjects||[];
+  const year=new Date().getFullYear();
+  openModal('+ Add Budget Line',`
+    <div class="form-row">
+      <div class="form-field"><label>Project *</label>
+        <select id="bgt-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select Project —</option>
+          ${projs.map(p=>`<option value="${p.id}">${esc(p.project_no)} — ${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Year</label>
+        <select id="bgt-year" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          ${[year-1,year,year+1].map(y=>`<option value="${y}"${y===year?' selected':''}>${y}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Month (0=Annual)</label>
+        <select id="bgt-month" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="0">Annual / Total</option>
+          ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m,i)=>`<option value="${i+1}">${m}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Budget Category</label>
+        <select id="bgt-cat" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          ${['Labor','Materials','Equipment','Subcontractor','Overhead','Contingency','Other'].map(c=>`<option>${c}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Budget Amount (KWD) *</label><input id="bgt-amt" type="number" step="0.001" placeholder="0.000"/></div>
+      <div class="form-field"><label>Notes</label><input id="bgt-notes" placeholder="Optional notes"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveBudgetLine(event)">Save</button>
+    </div>`);
+}
+
+async function saveBudgetLine(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const projId=document.getElementById('bgt-proj').value;
+    const amt=Number(document.getElementById('bgt-amt').value);
+    if(!projId||!amt){showToast('Project and amount required','error');return;}
+    const month=Number(document.getElementById('bgt-month').value);
+    const {error}=await sb.from('project_budgets').insert({
+      project_id:projId,
+      budget_year:Number(document.getElementById('bgt-year').value),
+      budget_month:month||null,
+      budget_category:document.getElementById('bgt-cat').value,
+      budget_amount:amt,
+      notes:document.getElementById('bgt-notes').value.trim()||null,
+      created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Budget line saved ✓'); closeModal(); loadBudget();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save';}}
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P9-6 · NOTIFICATION SCHEDULING
+//  Auto-send notifications based on triggers + schedule
+// ══════════════════════════════════════════════════════════════
+const NOTIF_TRIGGERS = [
+  {id:'cert_expiry_30',  icon:'🏆', name:'Certification Expiry',    desc:'Send when employee certification expires in ≤30 days',       interval_days:30},
+  {id:'insurance_exp_30',icon:'🛡', name:'Insurance Policy Expiry', desc:'Send when policy/bond expires in ≤30 days',                  interval_days:30},
+  {id:'contract_exp_30', icon:'📜', name:'Contract Expiry',         desc:'Send when contract expires in ≤30 days',                     interval_days:30},
+  {id:'tender_deadline', icon:'📋', name:'Tender Deadline',         desc:'Send 7 days before tender submission deadline',              interval_days:7},
+  {id:'maintenance_due', icon:'🔧', name:'Maintenance Due',         desc:'Send when asset maintenance is due in ≤7 days',              interval_days:7},
+  {id:'ar_overdue_7',    icon:'💰', name:'AR Overdue Alert',        desc:'Send when AR invoice is >7 days past due',                   interval_days:7},
+  {id:'weekly_evm_auto', icon:'📊', name:'Weekly EVM Auto-send',    desc:'Auto-send EVM summary every Monday',                         interval_days:7},
+];
+
+function openNotifScheduler(){
+  const stored=JSON.parse(localStorage.getItem('sp360_notif_schedule')||'{}');
+  openModal('🔔 Notification Scheduler',`
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px">
+      Enable automatic notifications based on system events and schedules.
+    </div>
+    <div id="sched-list">
+    ${NOTIF_TRIGGERS.map(t=>{
+      const enabled=stored[t.id]?.enabled||false;
+      return`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bdr)">
+        <span style="font-size:18px;flex-shrink:0">${t.icon}</span>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;color:var(--text)">${t.name}</div>
+          <div style="font-size:10px;color:var(--muted)">${t.desc}</div>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0">
+          <input type="checkbox" id="sched-${t.id}" ${enabled?'checked':''} style="width:16px;height:16px;accent-color:#C9A84C"/>
+          <span style="font-size:10px;color:${enabled?'#10B981':'var(--faint)'}">${enabled?'ON':'OFF'}</span>
+        </label>
+      </div>`;}).join('')}
+    </div>
+    <div style="margin-top:12px;padding:10px;background:var(--n3);border-radius:6px;font-size:10px;color:var(--muted)">
+      💡 Scheduled notifications run when you open the ERP. Enable email notifications via the Email Notification Center for external delivery.
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNotifSchedule()">Save Schedule</button>
+    </div>`);
+}
+
+function saveNotifSchedule(){
+  const schedule={};
+  NOTIF_TRIGGERS.forEach(t=>{
+    const cb=document.getElementById('sched-'+t.id);
+    if(cb) schedule[t.id]={enabled:cb.checked, interval_days:t.interval_days};
+  });
+  localStorage.setItem('sp360_notif_schedule', JSON.stringify(schedule));
+  showToast('Notification schedule saved ✓');
+  closeModal();
+  // Run immediately
+  runScheduledNotifications();
+}
+
+async function runScheduledNotifications(){
+  const schedule=JSON.parse(localStorage.getItem('sp360_notif_schedule')||'{}');
+  const enabled=Object.entries(schedule).filter(([,v])=>v?.enabled);
+  if(enabled.length===0) return;
+
+  const today=new Date();
+  let triggered=0;
+
+  for(const [triggerId,config] of enabled){
+    try{
+      const days=config.interval_days||30;
+      const cutoff=new Date(today.getTime()+days*86400000).toISOString().split('T')[0];
+
+      if(triggerId==='cert_expiry_30'){
+        const {data}=await sb.from('employee_certifications').select('*,employee:employees(full_name)').lte('expiry_date',cutoff).gte('expiry_date',today.toISOString().split('T')[0]).eq('status','active');
+        if(data?.length>0){ showToast(`🏆 ${data.length} certification(s) expiring in ${days}d`); triggered++; }
+      }
+      if(triggerId==='insurance_exp_30'){
+        const [{data:pols},{data:bonds}]=await Promise.all([
+          sb.from('insurance_policies').select('policy_no').lte('expiry_date',cutoff).gte('expiry_date',today.toISOString().split('T')[0]).eq('status','active'),
+          sb.from('performance_bonds').select('bond_no').lte('expiry_date',cutoff).gte('expiry_date',today.toISOString().split('T')[0]).eq('status','active')
+        ]);
+        const cnt=(pols?.length||0)+(bonds?.length||0);
+        if(cnt>0){ showToast(`🛡 ${cnt} insurance/bond(s) expiring in ${days}d`); triggered++; }
+      }
+      if(triggerId==='ar_overdue_7'){
+        const {data}=await sb.from('invoices').select('id').eq('invoice_type','client').not('status','in','(paid,cancelled)').lt('due_date',today.toISOString().split('T')[0]);
+        if(data?.length>0){ showToast(`💰 ${data.length} AR invoice(s) overdue`); triggered++; }
+      }
+      if(triggerId==='tender_deadline'){
+        const {data}=await sb.from('tenders').select('tender_no').lte('submission_deadline',cutoff).gte('submission_deadline',today.toISOString().split('T')[0]).eq('status','open');
+        if(data?.length>0){ showToast(`📋 ${data.length} tender deadline(s) in ${days}d`); triggered++; }
+      }
+      if(triggerId==='maintenance_due'){
+        const {data}=await sb.from('asset_maintenance').select('id').lte('scheduled_date',cutoff).gte('scheduled_date',today.toISOString().split('T')[0]).eq('status','scheduled');
+        if(data?.length>0){ showToast(`🔧 ${data.length} maintenance task(s) due in ${days}d`); triggered++; }
+      }
+      if(triggerId==='weekly_evm_auto'){
+        const dayOfWeek=today.getDay();
+        const lastRun=localStorage.getItem('sp360_last_evm_auto');
+        const todayStr=today.toISOString().split('T')[0];
+        if(dayOfWeek===1&&lastRun!==todayStr){
+          localStorage.setItem('sp360_last_evm_auto',todayStr);
+          showToast('📊 Weekly EVM auto-notification queued');
+          triggered++;
+        }
+      }
+    }catch(e){ console.warn('Notification trigger failed:',triggerId,e.message); }
+  }
+
+  if(triggered>0) console.log(`[SP360] ${triggered} scheduled notification(s) triggered`);
+}
+
+// Hook into enterApp
+const _origEnterApp_notif = typeof enterApp === 'function' ? enterApp : null;
 
 async function installPWA(){
   if(!_pwaPrompt){
