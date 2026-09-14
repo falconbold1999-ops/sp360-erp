@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-<title>SP360 ERP v3.2 — Smart Projects 360</title>
+<title>SP360 ERP v3.3 — Smart Projects 360</title>
 <!-- PWA -->
 <meta name="theme-color" content="#1E3A5F"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -508,7 +508,7 @@ img,canvas,svg{max-width:100%;height:auto}
     <div class="auth-logo">
       <div class="auth-logo-sq">SP</div>
       <div>
-        <div class="auth-title">SP360 ERP v3.2</div>
+        <div class="auth-title">SP360 ERP v3.3</div>
         <div class="auth-sub">Smart Projects 360 · Kuwait · Production System</div>
       </div>
     </div>
@@ -531,7 +531,7 @@ img,canvas,svg{max-width:100%;height:auto}
     <button onclick="toggleSide()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 6px;border-radius:5px">☰</button>
     <div class="logo-sq">SP</div>
     <div class="logo-txt"><div class="t1">SP360 ERP</div><div class="t2">Smart Projects 360 · Kuwait</div></div>
-    <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v3.2</span>
+    <span onclick="openAboutModal()" style="font-size:9px;color:var(--gold);background:#C9A84C18;border:1px solid #C9A84C33;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">v3.3</span>
     <span id="mfa-btn" onclick="openMFASetupModal()" style="display:none;font-size:9px;color:#10B981;background:#10B98118;border:1px solid #10B98133;border-radius:4px;padding:2px 6px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">🔐 MFA</span>
     <button id="notif-bell" onclick="openNotifDrawer()" style="position:relative;background:none;border:1px solid transparent;border-radius:8px;padding:5px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;color:var(--muted);font-size:13px;transition:all .15s" title="Notifications">
       🔔
@@ -563,6 +563,8 @@ img,canvas,svg{max-width:100%;height:auto}
         <button class="nav-btn" id="nav-bizdev" onclick="navTo('bizdev',this)"><span class="nav-icon">🎯</span>Business Dev</button>
         <button class="nav-btn" id="nav-projects" onclick="navTo('projects',this)"><span class="nav-icon">🏗</span>Projects</button>
         <button class="nav-btn" id="nav-gantt" onclick="navTo('gantt',this)"><span class="nav-icon">📅</span>Gantt</button>
+        <button class="nav-btn" id="nav-resources" onclick="navTo('resources',this)"><span class="nav-icon">👷</span>Resources</button>
+        <button class="nav-btn" id="nav-scorecard" onclick="navTo('scorecard',this)"><span class="nav-icon">🎯</span>Scorecard</button>
         <div class="nav-section">Operations</div>
         <button class="nav-btn" id="nav-procurement" onclick="navTo('procurement',this)"><span class="nav-icon">📦</span>Procurement</button>
         <button class="nav-btn" id="nav-finance" onclick="navTo('finance',this)"><span class="nav-icon">💰</span>Finance</button>
@@ -576,8 +578,9 @@ img,canvas,svg{max-width:100%;height:auto}
         <button class="nav-btn" id="nav-audit" onclick="navTo('audit',this)"><span class="nav-icon">📋</span>Audit Trail</button>
         <button class="nav-btn" id="nav-users" onclick="navTo('users',this)"><span class="nav-icon">👤</span>Users</button>
         <button class="nav-btn" id="nav-ceo" onclick="navTo('ceo',this)"><span class="nav-icon">👔</span>CEO Report</button>
+        <button class="nav-btn" id="nav-system" onclick="navTo('system',this)"><span class="nav-icon">⚙️</span>System</button>
       </nav>
-      <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v3.2 · Production<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
+      <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v3.3 · Production<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
     </aside>
 
     <main>
@@ -595,6 +598,9 @@ img,canvas,svg{max-width:100%;height:auto}
       <div class="page" id="page-users"></div>
       <div class="page" id="page-ceo"></div>
       <div class="page" id="page-gantt"></div>
+      <div class="page" id="page-system"></div>
+      <div class="page" id="page-resources"></div>
+      <div class="page" id="page-scorecard"></div>
     </main>
   </div>
 </div>
@@ -692,10 +698,10 @@ img,canvas,svg{max-width:100%;height:auto}
 <script>
 
 // ═══════════════════════════════════════════════════════════
-//  SP360 ERP v3.2 — Supabase Production System
+//  SP360 ERP v3.3 — Supabase Production System
 // ═══════════════════════════════════════════════════════════
 /* ═══════════════════════════════════════════════════════════════════════
-   SP360 ERP v3.2 — P2: Notifications Center + Advanced CEO Report
+   SP360 ERP v3.3 — P2: Notifications Center + Advanced CEO Report
    ═══════════════════════════════════════════════════════════════════════
    FIX-1 P0: SPI HTML rendering — fixed missing > in 2 <td> literals
              Locations: Monthly Report table, CEO Report EVM table
@@ -732,11 +738,11 @@ var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 // Page visibility per role
 const ROLE_PAGES = {
-  'Admin':             ['dashboard','bizdev','projects','gantt','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo'],
-  'PMO Manager':       ['dashboard','bizdev','projects','gantt','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo'],
-  'CEO':               ['dashboard','ceo','projects','gantt','bizdev','finance'],
-  'Finance Manager':   ['dashboard','projects','gantt','procurement','finance','inventory','workflow','audit'],
-  'Project Manager':   ['dashboard','projects','gantt','procurement','qhse','documents','workflow'],
+  'Admin':             ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system'],
+  'PMO Manager':       ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system'],
+  'CEO':               ['dashboard','ceo','projects','gantt','resources','scorecard','bizdev','finance'],
+  'Finance Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','finance','inventory','workflow','audit'],
+  'Project Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','inventory','qhse','documents','workflow'],
   'Procurement Lead':  ['dashboard','projects','gantt','procurement','inventory','workflow'],
   'BD Manager':        ['dashboard','bizdev','projects','gantt'],
   'QHSE Engineer':     ['dashboard','projects','gantt','qhse','documents'],
@@ -1118,7 +1124,7 @@ function enterApp(){
 
   // ── Apply role-based nav visibility ──────────────────────
   const allowed = ROLE_PAGES[currentProfile?.role] || ['dashboard'];
-  ['bizdev','projects','gantt','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo'].forEach(p=>{
+  ['bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system'].forEach(p=>{
     const btn = document.getElementById('nav-'+p);
     if(btn) btn.style.display = allowed.includes(p) ? '' : 'none';
   });
@@ -1171,7 +1177,7 @@ function enterApp(){
 const SESSION_CONFIG = {
   IDLE_MS:     30 * 60 * 1000,            // 30 min idle (matches sp360_config)
   ABSOLUTE_MS:  8 * 60 * 60 * 1000,       // 8 hours absolute (matches sp360_config)
-  MFA_REQUIRED_ROLES: [], // Temporarily disabled — enroll first
+  MFA_REQUIRED_ROLES: ['Admin','PMO Manager','Finance Manager'], // Mandatory for sensitive roles
 };
 // Load session config from database (overrides defaults if available)
 (async()=>{
@@ -1363,7 +1369,7 @@ function navTo(id,btn){
     procurement:()=>loadProc(curProcTab),finance:loadFinance,
     hr:()=>loadHR(curHRTab),qhse:()=>loadQHSE(curQHSETab),
     inventory:loadInventory,documents:()=>loadDocs(curDocTab),workflow:loadWorkflow,audit:loadAudit,
-    users:loadUsers,ceo:loadCEO
+    users:loadUsers,ceo:loadCEO,system:loadSystem,resources:loadResources,scorecard:loadScorecard
   };
   if(loaders[id])loaders[id]();
 }
@@ -2384,7 +2390,7 @@ async function loadProjects(tab){
     }).join('')}
     </tbody></table>
     <div style="margin-top:14px;padding:10px;background:var(--n3);border-radius:8px;font-size:10px;color:var(--faint);text-align:center">
-      SP360 ERP v3.2 · Monthly Progress Report · ${monthStr} · Confidential
+      SP360 ERP v3.3 · Monthly Progress Report · ${monthStr} · Confidential
     </div>`;
   }
 
@@ -2393,6 +2399,7 @@ async function loadProjects(tab){
     <div class="page-head-left"><span style="font-size:22px">🏗</span><div><h1>Projects</h1><div class="sub">Portfolio · Life Cycle · Progress · PMBOK Aligned</div></div></div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-ghost btn-sm" onclick="exportPortfolioExcel()">📊 Export Excel</button>
+      <button class="btn btn-ghost btn-sm" onclick="loadBudgetVsActual(null)" style="background:#3B82F611;border-color:#3B82F644;color:#3B82F6">📈 Budget vs Actual</button>
       <button class="btn btn-primary btn-sm" onclick="openNewProjectModal()">+ New Project</button>
     </div>
   </div>
@@ -3295,7 +3302,10 @@ async function loadFinance(tab='overview'){
     const totalCr=L.reduce((s,r)=>s+Number(r.total_credit||0),0);
     const balanced=Math.abs(totalDr-totalCr)<0.01;
     kpis=kpi('Accounts',L.length,'#E2E8F0')+kpi('Total Debit',fmtKWD(totalDr),'#3B82F6')+kpi('Total Credit',fmtKWD(totalCr),'#EF4444')+kpi('Balanced',balanced?'✅ Yes':'❌ No',balanced?'#10B981':'#EF4444');
-    body=`<div style="margin-bottom:10px;padding:8px 12px;background:${balanced?'#10B98122':'#EF444422'};border:1px solid ${balanced?'#10B98144':'#EF444444'};border-radius:6px;font-size:12px;font-weight:700;color:${balanced?'#10B981':'#EF4444'}">${balanced?'✅ Trial Balance is balanced':'❌ Trial Balance is NOT balanced — check journal entries'}</div>
+    body=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap">
+      <div style="padding:8px 12px;background:${balanced?'#10B98122':'#EF444422'};border:1px solid ${balanced?'#10B98144':'#EF444444'};border-radius:6px;font-size:12px;font-weight:700;color:${balanced?'#10B981':'#EF4444'}">${balanced?'✅ Trial Balance is balanced':'❌ Trial Balance is NOT balanced — check journal entries'}</div>
+      <button onclick="exportTrialBalanceExcel()" class="btn btn-ghost btn-sm" style="white-space:nowrap">📊 Export Excel</button>
+    </div>
     <table><thead><tr><th>Code</th><th>Account</th><th>Type</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th style="text-align:right">Balance</th></tr></thead><tbody>
     ${L.map(r=>{const bal=Number(r.balance||0);return`<tr>
       <td style="color:var(--gold);font-size:10px">${esc(r.account_code)}</td>
@@ -3484,7 +3494,7 @@ async function loadHR(tab='employees'){
     const thisMon=L.filter(r=>r.period_month===period);
     kpis=kpi('This Month',thisMon.length,'#E2E8F0')+kpi('Gross',fmtKWD(thisMon.reduce((s,r)=>s+Number(r.gross_salary||0),0)),'#3B82F6')+kpi('Deductions',fmtKWD(thisMon.reduce((s,r)=>s+Number(r.total_deductions||0),0)),'#EF4444')+kpi('Net Payable',fmtKWD(thisMon.reduce((s,r)=>s+Number(r.net_salary||0),0)),'#10B981');
     body=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:12px;color:var(--muted)">Period: <b style="color:var(--gold)">${period}</b></span>${isPMO?`<button class="btn btn-primary btn-sm" onclick="openRunPayrollModal()">▶ Run Payroll</button>`:''}</div>
-    <table><thead><tr><th>Employee</th><th>Period</th><th style="text-align:right">Basic</th><th style="text-align:right">Allowances</th><th style="text-align:right">Gross</th><th style="text-align:right">Deductions</th><th style="text-align:right">Net</th><th style="text-align:center">Status</th></tr></thead><tbody>
+    <table><thead><tr><th>Employee</th><th>Period</th><th style="text-align:right">Basic</th><th style="text-align:right">Allowances</th><th style="text-align:right">Gross</th><th style="text-align:right">Deductions</th><th style="text-align:right">Net</th><th style="text-align:center">Status</th><th style="text-align:center">Payslip</th></tr></thead><tbody>
     ${L.map(r=>`<tr>
       <td style="font-weight:700;font-size:11px">${esc(r.employee?.full_name||'—')}</td>
       <td style="color:var(--muted);font-size:11px;font-family:monospace">${r.period_month||'—'}</td>
@@ -3494,6 +3504,7 @@ async function loadHR(tab='employees'){
       <td style="text-align:right;color:#EF4444">${fmtKWD(r.total_deductions||0)}</td>
       <td style="text-align:right;font-weight:900;color:#10B981">${fmtKWD(r.net_salary||0)}</td>
       <td style="text-align:center">${pill(r.status,r.status==='paid'?'#10B981':r.status==='processed'?'#3B82F6':'#F97316')}</td>
+      <td style="text-align:center"><button onclick="exportPayslip('${r.id}')" style="background:#1E3A5F;border:1px solid #C9A84C44;color:#C9A84C;border-radius:5px;padding:3px 8px;font-size:9px;font-weight:700;cursor:pointer" title="Download Payslip PDF">📄 Slip</button></td>
     </tr>`).join('')}</tbody></table>`;
 
   } else if(tab==='payroll_config'){
@@ -4893,12 +4904,12 @@ function buildEmailHTML(subject, bodyText){
       <div style="width:44px;height:44px;background:#C9A84C;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#0D1B2A;font-size:18px">SP</div>
       <div>
         <div style="color:#C9A84C;font-size:18px;font-weight:800">${safeSubject}</div>
-        <div style="color:#94A3B8;font-size:11px;margin-top:2px">SP360 ERP v3.2 · Smart Projects 360 · Kuwait</div>
+        <div style="color:#94A3B8;font-size:11px;margin-top:2px">SP360 ERP v3.3 · Smart Projects 360 · Kuwait</div>
       </div>
     </div>
     <div style="padding:24px 28px">${htmlLines}</div>
     <div style="background:#F1F5F9;padding:14px 28px;text-align:center;font-size:11px;color:#94A3B8;border-top:1px solid #E2E8F0">
-      SP360 ERP v3.2 · Confidential — For Internal Use Only<br>
+      SP360 ERP v3.3 · Confidential — For Internal Use Only<br>
       <a href="https://falconbold1999-ops.github.io/sp360-erp/" style="color:#C9A84C">Open SP360 ERP</a>
     </div>
   </div></body></html>`;
@@ -4981,7 +4992,7 @@ function openEmailAllModal(){
       <input id="eall-subject" value="SP360 ERP — Team Notification"/>
     </div>
     <div class="form-field"><label>Message</label>
-      <textarea id="eall-body" rows="6">Dear SP360 Team,\n\nThis is a notification from SP360 ERP v3.2.\n\nPlease log in to review your pending items.\n\nRegards,\nSP360 PMO Team</textarea>
+      <textarea id="eall-body" rows="6">Dear SP360 Team,\n\nThis is a notification from SP360 ERP v3.3.\n\nPlease log in to review your pending items.\n\nRegards,\nSP360 PMO Team</textarea>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
@@ -5019,7 +5030,7 @@ async function sendEmailNotification(type){
   if(type==='pending_approvals'){
     const pending=wfs.filter(w=>w.status==='pending'||w.status==='overdue');
     subject=`⚡ ${pending.length} Pending Approvals — SP360 ERP — ${today}`;
-    body=`Dear SP360 Team,\n\nThis is an automated notification from SP360 ERP v3.2.\n\nYou have ${pending.length} item(s) awaiting approval:\n\n`
+    body=`Dear SP360 Team,\n\nThis is an automated notification from SP360 ERP v3.3.\n\nYou have ${pending.length} item(s) awaiting approval:\n\n`
       +pending.slice(0,10).map(w=>`  • ${w.ref_no} — ${w.current_step} [${w.status.toUpperCase()}]`).join('\n')
       +`\n\nPlease log in to SP360 ERP to take action:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   } else if(type==='weekly_evm'){
@@ -5033,7 +5044,7 @@ async function sendEmailNotification(type){
       +`\n\nFull report: https://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   } else if(type==='ceo_report'){
     subject=`👔 CEO Flash Report Ready — SP360 ERP — ${today}`;
-    body=`Dear Team,\n\nThe CEO Flash Report for ${today} has been updated in SP360 ERP v3.2.\n\nLog in → CEO Report → Export PDF:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
+    body=`Dear Team,\n\nThe CEO Flash Report for ${today} has been updated in SP360 ERP v3.3.\n\nLog in → CEO Report → Export PDF:\nhttps://falconbold1999-ops.github.io/sp360-erp/\n\nRegards,\nSP360 PMO Team`;
   }
 
   if(recipients.length===0){ showToast('No active users found','error'); return; }
@@ -5387,7 +5398,7 @@ async function loadCEO(){
   <div class="print-header" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div>
-        <div style="font-size:18pt;font-weight:900;color:#1E3A5F">SP360 ERP v3.2 — CEO Flash Report</div>
+        <div style="font-size:18pt;font-weight:900;color:#1E3A5F">SP360 ERP v3.3 — CEO Flash Report</div>
         <div style="font-size:9pt;color:#475569">${monthStr} · Smart Projects 360 · Kuwait · Confidential</div>
       </div>
       <div style="font-size:8pt;color:#94A3B8">Generated: ${new Date().toLocaleDateString('en-GB')}</div>
@@ -5395,7 +5406,7 @@ async function loadCEO(){
   </div>
   <!-- PRINT FOOTER -->
   <div class="print-footer" style="display:none">
-    SP360 ERP v3.2 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only &nbsp;|&nbsp; Smart Projects 360 · Kuwait
+    SP360 ERP v3.3 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only &nbsp;|&nbsp; Smart Projects 360 · Kuwait
   </div>
 
   <div class="page-head">
@@ -5615,7 +5626,7 @@ async function loadCEO(){
   </div>
 
   <div style="margin-top:12px;padding:10px 14px;background:var(--n3);border-radius:8px;font-size:10px;color:var(--faint);text-align:center">
-    SP360 ERP v3.2 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only
+    SP360 ERP v3.3 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only
   </div>
 
   <!-- ── P2-2: UPCOMING MILESTONES ──────────────────────── -->
@@ -5734,7 +5745,7 @@ async function loadCEO(){
   </div>
 
   <div style="margin-top:12px;padding:10px 14px;background:var(--n3);border-radius:8px;font-size:10px;color:var(--faint);text-align:center">
-    SP360 ERP v3.2 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only
+    SP360 ERP v3.3 · CEO Flash Report · ${monthStr} · Confidential — For Internal Use Only
   </div>`;
 
   // Render Portfolio S-Curve
@@ -5837,7 +5848,7 @@ async function loadGantt(){
 
   try{
     const {data:projs} = await sb.from('projects')
-      .select('id,project_no,name,status,department,pct,cpi,rag_status,start_date,end_date,client')
+      .select('id,project_no,name,status,department,pct,cpi,spi,start_date,end_date,client')
       .order('start_date',{ascending:true});
 
     const all = projs||[];
@@ -5938,7 +5949,7 @@ async function loadGantt(){
             const barLeft  = dayPct(p.start_date);
             const barWidth = dayWidth(p.start_date, p.end_date);
             const barColor = Number(p.cpi)>0 ? cpiCol(p.cpi) : '#94A3B8';
-            const rag      = ragCol(p.rag_status||'amber');
+            const rag      = ragCol(ragScore(p)>=1?'green':ragScore(p)>=0.9?'amber':'red');
             const isOverdue= new Date(p.end_date)<today && p.status!=='completed';
             const pct      = Math.min(Number(p.pct)||0, 100);
 
@@ -6038,7 +6049,7 @@ async function openGanttDetail(id){
         ['BAC',         fmtKWD(p.bac||0)],
         ['EAC',         fmtKWD(eac)],
         ['VAC',         fmtKWD((p.bac||0)-eac)],
-        ['RAG',         p.rag_status ? `<span style="color:${ragScore(p)>=1?'#10B981':ragScore(p)>=0.9?'#F97316':'#EF4444'};font-weight:700;text-transform:capitalize">${p.rag_status}</span>` : '—']
+        ['RAG',         `<span style="color:${ragScore(p)>=1?'#10B981':ragScore(p)>=0.9?'#F97316':'#EF4444'};font-weight:700">${ragScore(p)>=1?'Green':ragScore(p)>=0.9?'Amber':'Red'}</span>`]
       ].map(([l,v])=>`<div style="background:var(--n3);border-radius:6px;padding:8px 10px">
         <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">${l}</div>
         <div style="font-size:12px;color:var(--text)">${v}</div>
@@ -6663,7 +6674,7 @@ async function exportPortfolioExcel(){
   const today = new Date().toLocaleDateString('en-GB');
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'SP360 ERP v3.2';
+  wb.creator = 'SP360 ERP v3.3';
   wb.created = new Date();
 
   // ── SHEET 1: Portfolio EVM ──────────────────────────────────
@@ -6692,7 +6703,7 @@ async function exportPortfolioExcel(){
   ];
 
   xlTitleBlock(ws1,
-    'SP360 ERP v3.2 — Portfolio EVM Report',
+    'SP360 ERP v3.3 — Portfolio EVM Report',
     `${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential  ·  Generated: ${today}`, 17);
 
   // KPI band
@@ -6846,7 +6857,7 @@ async function exportPortfolioExcel(){
     {key:'spi',     width:10},{key:'cv',     width:14},
     {key:'pct',     width:12},{key:'status', width:16}
   ];
-  xlTitleBlock(ws2,'SP360 ERP v3.2 — EVM Variance Summary',
+  xlTitleBlock(ws2,'SP360 ERP v3.3 — EVM Variance Summary',
     `${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential`,10);
   const hdr2=ws2.addRow(['Project No','Project Name','BAC (KWD)','EV (KWD)',
     'AC (KWD)','CPI','SPI','CV (KWD)','% Complete','Phase']);
@@ -6887,7 +6898,7 @@ async function exportPortfolioExcel(){
     {key:'ac',    width:14},{key:'spi',   width:10},
     {key:'cpi',   width:10}
   ];
-  xlTitleBlock(ws3,'SP360 ERP v3.2 — S-Curve EVM Snapshots',
+  xlTitleBlock(ws3,'SP360 ERP v3.3 — S-Curve EVM Snapshots',
     `${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential`,9);
   const hdr3=ws3.addRow(['Project No','Project Name','Period','Date',
     'PV (KWD)','EV (KWD)','AC (KWD)','SPI','CPI']);
@@ -6928,7 +6939,7 @@ async function exportPortfolioExcel(){
     {key:'vac',   width:16},{key:'tcpi',  width:11},
     {key:'trend', width:18},{key:'rag',   width:10}
   ];
-  xlTitleBlock(ws4,'SP360 ERP v3.2 — Trend Analysis & Forecasting',
+  xlTitleBlock(ws4,'SP360 ERP v3.3 — Trend Analysis & Forecasting',
     `${month}  ·  ETC = EAC−AC  ·  TCPI = (BAC−EV)÷(BAC−AC)  ·  ${today}`,12);
   const hdr4=ws4.addRow(['Project No','Project Name','Phase','%','CPI','SPI',
     'EAC (KWD)','ETC (KWD)','VAC (KWD)','TCPI','Performance Forecast','RAG']);
@@ -6990,7 +7001,7 @@ async function exportMonthlyExcel(){
   const today=new Date().toLocaleDateString('en-GB');
 
   const wb=new ExcelJS.Workbook();
-  wb.creator='SP360 ERP v3.2'; wb.created=new Date();
+  wb.creator='SP360 ERP v3.3'; wb.created=new Date();
   const ws=wb.addWorksheet('Monthly Report',{
     views:[{state:'frozen',xSplit:0,ySplit:5}],
     pageSetup:{paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1}
@@ -7005,7 +7016,7 @@ async function exportMonthlyExcel(){
   ];
 
   xlTitleBlock(ws,
-    `SP360 ERP v3.2 — Monthly Progress Report — ${month}`,
+    `SP360 ERP v3.3 — Monthly Progress Report — ${month}`,
     `Smart Projects 360  ·  Kuwait  ·  Confidential  ·  Generated: ${today}`,12);
 
   const hdr=ws.addRow(['Project','Client','Phase','Plan %','Actual %',
@@ -7072,7 +7083,7 @@ async function exportCOExcel(){
   const today=new Date().toLocaleDateString('en-GB');
 
   const wb=new ExcelJS.Workbook();
-  wb.creator='SP360 ERP v3.2'; wb.created=new Date();
+  wb.creator='SP360 ERP v3.3'; wb.created=new Date();
   const ws=wb.addWorksheet('Change Orders',{
     views:[{state:'frozen',xSplit:0,ySplit:5}]
   });
@@ -7085,7 +7096,7 @@ async function exportCOExcel(){
   ];
 
   xlTitleBlock(ws,
-    `SP360 ERP v3.2 — Change Order Register — ${month}`,
+    `SP360 ERP v3.3 — Change Order Register — ${month}`,
     `Smart Projects 360  ·  Kuwait  ·  Confidential  ·  Generated: ${today}`,10);
 
   // Summary KPIs
@@ -7158,7 +7169,7 @@ async function exportCEOPDF(){
   // Header
   doc.setFillColor(...navy); doc.rect(0,0,297,22,'F');
   doc.setTextColor(...gold); doc.setFontSize(16); doc.setFont('helvetica','bold');
-  doc.text('SP360 ERP v3.2 — CEO Flash Report',14,10);
+  doc.text('SP360 ERP v3.3 — CEO Flash Report',14,10);
   doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(...white);
   doc.text(`${month}  ·  Smart Projects 360  ·  Kuwait  ·  Confidential`,14,17);
   doc.text(`Generated: ${today}`,250,17);
@@ -7293,7 +7304,7 @@ async function exportCEOPDF(){
     doc.setPage(i);
     doc.setFillColor(...navy); doc.rect(0,200,297,10,'F');
     doc.setTextColor(...white); doc.setFontSize(6); doc.setFont('helvetica','normal');
-    doc.text(`SP360 ERP v3.2  ·  CEO Flash Report  ·  ${month}  ·  Confidential — For Internal Use Only`,14,206);
+    doc.text(`SP360 ERP v3.3  ·  CEO Flash Report  ·  ${month}  ·  Confidential — For Internal Use Only`,14,206);
     doc.text(`Page ${i} of ${pageCount}`,283,206,{align:'right'});
   }
 
@@ -7303,11 +7314,11 @@ async function exportCEOPDF(){
 
 // ── ABOUT & CHANGELOG ────────────────────────────────────────
 function openAboutModal(){
-  openModal('SP360 ERP v3.2 — About & Changelog',`
+  openModal('SP360 ERP v3.3 — About & Changelog',`
   <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:12px 14px;background:#1E3A5F18;border-radius:8px">
     <div style="width:48px;height:48px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#0D1B2A;font-size:20px;flex-shrink:0">SP</div>
     <div>
-      <div style="font-size:16px;font-weight:800;color:var(--gold)">SP360 ERP v3.2</div>
+      <div style="font-size:16px;font-weight:800;color:var(--gold)">SP360 ERP v3.3</div>
       <div style="font-size:11px;color:var(--muted)">Smart Projects 360 · Kuwait · Production System</div>
       <div style="font-size:10px;color:var(--faint);margin-top:2px">Supabase · GitHub Pages · PWA · Single-file Architecture</div>
     </div>
@@ -7344,7 +7355,7 @@ function openAboutModal(){
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
     ${[
-      ['Version','v3.2 (P2: Notifications + CEO + BI Integration)'],
+      ['Version','v3.3 (P3: RBAC + Gantt + Mobile + Production Hardening)'],
       ['Database','Supabase (PostgreSQL)'],
       ['Migrations','020 migrations applied'],
       ['Security','RLS + Server-side RPCs'],
@@ -7367,7 +7378,7 @@ function openAboutModal(){
 // ── SESSION RESTORE ─────────────────────────────────────────
 // Session security policy:
 // - Restore a valid Supabase session after refresh/PWA resume
-// - Idle timeout: auto-logout after 4 hours of inactivity
+// - Idle timeout: auto-logout after 30 minutes of inactivity (SESSION_IDLE_MS)
 // - Absolute timeout: force re-login every 12 hours
 (()=>{
   const IDLE_MS = SESSION_CONFIG.IDLE_MS; // unified
@@ -7660,9 +7671,9 @@ async function fetchNotifications(){
 
     // 3. Projects — RAG Red alerts
     const {data:proj} = await sb.from('projects')
-      .select('id,name,rag_status,cpi,spi')
+      .select('id,name,cpi,spi')
       .eq('status','active')
-      .eq('rag_status','red')
+      
       .limit(15);
 
     (proj||[]).forEach(p=>{
@@ -8064,7 +8075,7 @@ async function generateBIExcel(id){
     const payload = await ds.fetch();
     const ts = new Date().toISOString().split('T')[0];
     const wb = new ExcelJS.Workbook();
-    wb.creator = 'SP360 ERP v3.2 — Smart Projects 360 Kuwait';
+    wb.creator = 'SP360 ERP v3.3 — Smart Projects 360 Kuwait';
     wb.created = new Date();
 
     // ── Route to correct formatter ──
@@ -8125,7 +8136,7 @@ function biDataRow(ws, values, numCols=[]){
 async function biExcelPortfolioKPIs(wb, payload){
   const ws = wb.addWorksheet('Portfolio KPIs');
   const d  = payload.data[0];
-  xlTitleBlock(ws,'SP360 ERP v3.2 — Portfolio KPIs Snapshot',`Generated: ${payload.report_date} · Smart Projects 360 Kuwait`,2);
+  xlTitleBlock(ws,'SP360 ERP v3.3 — Portfolio KPIs Snapshot',`Generated: ${payload.report_date} · Smart Projects 360 Kuwait`,2);
   xlKPIBand(ws,[
     ['Active Projects', d.active_projects, XL.gold],
     ['Portfolio CPI',   d.portfolio_cpi,   d.portfolio_cpi>=1?XL.green:XL.red],
@@ -8158,20 +8169,20 @@ async function biExcelPortfolioKPIs(wb, payload){
 // ── Project EVM Excel ─────────────────────────────────────────
 async function biExcelProjectEVM(wb, payload){
   const ws = wb.addWorksheet('Project EVM');
-  const cols = ['project_no','name','client','department','status','pct_complete','rag_status',
+  const cols = ['project_no','name','client','department','status','pct_complete','rag_status_calc',
     'bac','ev','ac','pv','cpi','spi','eac','etc','vac','cv','sv','tcpi','cpi_status','start_date','end_date'];
   const labels = ['Proj No','Name','Client','Dept','Status','%','RAG',
     'BAC','EV','AC','PV','CPI','SPI','EAC','ETC','VAC','CV','SV','TCPI','CPI Status','Start','End'];
   const numCols = [8,9,10,11,12,13,14,15,16,17,18,19]; // 1-indexed
 
-  xlTitleBlock(ws,'SP360 ERP v3.2 — Project EVM Detail',`Generated: ${new Date().toLocaleDateString('en-GB')} · ${payload.data.length} projects`,cols.length);
+  xlTitleBlock(ws,'SP360 ERP v3.3 — Project EVM Detail',`Generated: ${new Date().toLocaleDateString('en-GB')} · ${payload.data.length} projects`,cols.length);
   biHeaderRow(ws, labels);
   payload.data.forEach(p=>{
     const vals = cols.map(c=>p[c]!=null?p[c]:'—');
     const row  = biDataRow(ws, vals, numCols);
     // RAG color
     const ragCell = row.getCell(7);
-    const ragColor = p.rag_status==='green'?'FF10B981':p.rag_status==='red'?'FFEF4444':'FFF97316';
+    const ragColor = ragScore(p)>=1?'FF10B981':ragScore(p)<0.9?'FFEF4444':'FFF97316';
     ragCell.fill = {type:'pattern',pattern:'solid',fgColor:{argb:ragColor+'33'}};
     ragCell.font = {...ragCell.font, color:{argb:ragColor}, bold:true};
     // CPI color
@@ -8193,7 +8204,7 @@ async function biExcelProjectEVM(wb, payload){
 async function biExcelFinancial(wb, payload){
   // Sheet 1 — Summary
   const ws1 = wb.addWorksheet('Financial Summary');
-  xlTitleBlock(ws1,'SP360 ERP v3.2 — Financial Summary',`Generated: ${new Date().toLocaleDateString('en-GB')} · Smart Projects 360 Kuwait`,2);
+  xlTitleBlock(ws1,'SP360 ERP v3.3 — Financial Summary',`Generated: ${new Date().toLocaleDateString('en-GB')} · Smart Projects 360 Kuwait`,2);
   const s = payload.summary;
   biHeaderRow(ws1,['Metric','Amount (KWD)'],[35,20]);
   [
@@ -8212,7 +8223,7 @@ async function biExcelFinancial(wb, payload){
 
   // Sheet 2 — Cash Flow
   const ws2 = wb.addWorksheet('Cash Flow 6M');
-  xlTitleBlock(ws2,'SP360 ERP v3.2 — Cash Flow (Last 6 Months)',`Generated: ${new Date().toLocaleDateString('en-GB')}`,4);
+  xlTitleBlock(ws2,'SP360 ERP v3.3 — Cash Flow (Last 6 Months)',`Generated: ${new Date().toLocaleDateString('en-GB')}`,4);
   biHeaderRow(ws2,['Month','Inflow (KWD)','Outflow (KWD)','Net (KWD)'],[14,16,16,14]);
   payload.cash_flow_6m.forEach(r=>{
     const row=biDataRow(ws2,[r.month,r.inflow,r.outflow,r.net],[2,3,4]);
@@ -8225,7 +8236,7 @@ async function biExcelFinancial(wb, payload){
 // ── Workflow Excel ────────────────────────────────────────────
 async function biExcelWorkflow(wb, payload){
   const ws1 = wb.addWorksheet('Workflow Summary');
-  xlTitleBlock(ws1,'SP360 ERP v3.2 — Workflow Status',`Generated: ${new Date().toLocaleDateString('en-GB')}`,4);
+  xlTitleBlock(ws1,'SP360 ERP v3.3 — Workflow Status',`Generated: ${new Date().toLocaleDateString('en-GB')}`,4);
   const s=payload.summary;
   xlKPIBand(ws1,[
     ['Total',   s.total_items, XL.gold],
@@ -8238,7 +8249,7 @@ async function biExcelWorkflow(wb, payload){
   biAutoWidth(ws1);
 
   const ws2 = wb.addWorksheet('Aging Detail');
-  xlTitleBlock(ws2,'SP360 ERP v3.2 — Workflow Aging',`Pending & Overdue items`,5);
+  xlTitleBlock(ws2,'SP360 ERP v3.3 — Workflow Aging',`Pending & Overdue items`,5);
   biHeaderRow(ws2,['ID','Title','Type','Status','Age (days)','Due Date','Bucket'],[8,35,16,12,12,14,10]);
   payload.aging_detail.forEach(r=>biDataRow(ws2,[r.id,r.title,r.entity_type,r.status,r.age_days,r.due_date||'—',r.bucket],[5]));
   ws2.views=[{state:'frozen',ySplit:5}];
@@ -8248,13 +8259,13 @@ async function biExcelWorkflow(wb, payload){
 // ── QHSE & HR Excel ──────────────────────────────────────────
 async function biExcelQHSEHR(wb, payload){
   const ws1 = wb.addWorksheet('NCR Summary');
-  xlTitleBlock(ws1,'SP360 ERP v3.2 — QHSE NCR Summary',`Generated: ${new Date().toLocaleDateString('en-GB')}`,4);
+  xlTitleBlock(ws1,'SP360 ERP v3.3 — QHSE NCR Summary',`Generated: ${new Date().toLocaleDateString('en-GB')}`,4);
   biHeaderRow(ws1,['Severity','Total','Open','Closed'],[14,10,10,10]);
   payload.ncr_by_severity.forEach(r=>biDataRow(ws1,[r.severity,r.total,r.open,r.closed],[2,3,4]));
   biAutoWidth(ws1);
 
   const ws2 = wb.addWorksheet('Headcount by Dept');
-  xlTitleBlock(ws2,'SP360 ERP v3.2 — Headcount by Department',`Generated: ${new Date().toLocaleDateString('en-GB')}`,5);
+  xlTitleBlock(ws2,'SP360 ERP v3.3 — Headcount by Department',`Generated: ${new Date().toLocaleDateString('en-GB')}`,5);
   biHeaderRow(ws2,['Department','Total','Active','Permanent','Contract'],[20,10,10,12,10]);
   payload.headcount_by_dept.forEach(r=>biDataRow(ws2,[r.department,r.total,r.active,r.permanent,r.contract],[2,3,4,5]));
   biAutoWidth(ws2);
@@ -8266,7 +8277,7 @@ async function biExcelQHSEHR(wb, payload){
 
 async function biPortfolioKPIs(){
   const [projR, snapR] = await Promise.all([
-    sb.from('projects').select('id,project_no,name,status,bac,ev,ac,pv,cpi,spi,pct,rag_status,department,client'),
+    sb.from('projects').select('id,project_no,name,status,bac,ev,ac,pv,cpi,spi,pct,department,client'),
     sb.from('project_evm_snapshots').select('project_id,snapshot_date,pv,ev,ac').order('snapshot_date',{ascending:false}).limit(1)
   ]);
   const projs = (projR.data||[]).filter(p=>['planning','execution','monitoring','closeout'].includes(p.status));
@@ -8285,12 +8296,12 @@ async function biPortfolioKPIs(){
   const wRem      = totalBAC - totalEV;
   const bRem      = totalBAC - totalAC;
   const portTCPI  = wRem>0 && bRem>0 ? wRem/bRem : null;
-  const ragCounts = projs.reduce((m,p)=>{ m[p.rag_status||'N/A']=(m[p.rag_status||'N/A']||0)+1; return m; },{});
+  const ragCounts = projs.reduce((m,p)=>{ const r=ragScore(p)>=1?'green':ragScore(p)>=0.9?'amber':'red'; m[r]=(m[r]||0)+1; return m; },{});
 
   return {
     generated_at:   new Date().toISOString(),
     report_date:    new Date().toLocaleDateString('en-GB'),
-    source:         'SP360 ERP v3.2 — Smart Projects 360 Kuwait',
+    source:         'SP360 ERP v3.3 — Smart Projects 360 Kuwait',
     data: [{
       metric: 'Portfolio Summary',
       active_projects:   projs.length,
@@ -8315,7 +8326,7 @@ async function biPortfolioKPIs(){
 
 async function biProjectEVM(){
   const {data:projs} = await sb.from('projects')
-    .select('id,project_no,name,client,status,department,bac,ev,ac,pv,cpi,spi,pct,rag_status,start_date,end_date,contract_value')
+    .select('id,project_no,name,client,status,department,bac,ev,ac,pv,cpi,spi,pct,start_date,end_date,contract_value')
     .order('project_no');
 
   const data = (projs||[]).map(p=>{
@@ -8335,7 +8346,7 @@ async function biProjectEVM(){
       department:      p.department,
       status:          p.status,
       pct_complete:    Number(p.pct)||0,
-      rag_status:      p.rag_status||'N/A',
+      rag_status_calc: ragScore(p)>=1?'green':ragScore(p)>=0.9?'amber':'red',
       contract_value:  Math.round(Number(p.contract_value)||0),
       bac:             Math.round(bac),
       ev:              Math.round(ev),
@@ -8354,7 +8365,7 @@ async function biProjectEVM(){
       end_date:        p.end_date
     };
   });
-  return { generated_at:new Date().toISOString(), source:'SP360 ERP v3.2', data };
+  return { generated_at:new Date().toISOString(), source:'SP360 ERP v3.3', data };
 }
 
 async function biFinancialSummary(){
@@ -8381,7 +8392,7 @@ async function biFinancialSummary(){
 
   return {
     generated_at: new Date().toISOString(),
-    source: 'SP360 ERP v3.2',
+    source: 'SP360 ERP v3.3',
     summary: {
       revenue_collected_kwd:  Math.round(rev),
       cost_paid_kwd:          Math.round(cost),
@@ -8427,7 +8438,7 @@ async function biWorkflowStatus(){
 
   return {
     generated_at: new Date().toISOString(),
-    source: 'SP360 ERP v3.2',
+    source: 'SP360 ERP v3.3',
     summary: {
       total_items:    W.length,
       pending:        W.filter(w=>w.status==='pending').length,
@@ -8465,7 +8476,7 @@ async function biQHSEHR(){
 
   return {
     generated_at: new Date().toISOString(),
-    source: 'SP360 ERP v3.2',
+    source: 'SP360 ERP v3.3',
     qhse_summary: {
       total_ncrs:    N.length,
       open_ncrs:     N.filter(n=>n.status==='open').length,
@@ -8769,6 +8780,1301 @@ async function sendEmailNotification(type){
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape' && document.getElementById('email-center-panel')?.style.display==='flex') closeEmailCenter();
 },{passive:true});
+
+// ══════════════════════════════════════════════════════════════
+//  P4-1 · SYSTEM HEALTH DASHBOARD
+// ══════════════════════════════════════════════════════════════
+async function loadSystem(){
+  const el = document.getElementById('page-system');
+  if(!el) return;
+  el.innerHTML = '<div class="loading">Loading System Dashboard…</div>';
+
+  try{
+    const today = new Date();
+    const [errR, auditR, wfR, projR, invR, userR] = await Promise.all([
+      sb.from('error_logs').select('id,severity,module,created_at,error_msg').order('created_at',{ascending:false}).limit(50),
+      sb.from('audit_log').select('id,table_name,action,created_at').order('created_at',{ascending:false}).limit(100),
+      sb.from('workflow_items').select('id,status,entity_type').in('status',['pending','overdue']),
+      sb.from('projects').select('id,status,cpi,pct').in('status',['planning','execution','monitoring','closeout']),
+      sb.from('material_items').select('id,current_qty,reorder_level').not('reorder_level','is',null),
+      sb.from('user_profiles').select('id,role,is_active,last_sign_in_at')
+    ]);
+
+    const errs   = errR.data||[];
+    const audits = auditR.data||[];
+    const wfs    = wfR.data||[];
+    const projs  = projR.data||[];
+    const items  = invR.data||[];
+    const users  = userR.data||[];
+
+    // Health scores
+    const critErrs   = errs.filter(e=>e.severity==='critical').length;
+    const overdueWF  = wfs.filter(w=>w.status==='overdue').length;
+    const critCPI    = projs.filter(p=>Number(p.cpi)<0.9).length;
+    const lowStock   = items.filter(i=>Number(i.current_qty)<=Number(i.reorder_level)).length;
+    const activeUsers= users.filter(u=>u.is_active!==false).length;
+
+    // Overall health score
+    let healthScore = 100;
+    if(critErrs>0)  healthScore -= Math.min(critErrs*5, 25);
+    if(overdueWF>0) healthScore -= Math.min(overdueWF*3, 15);
+    if(critCPI>0)   healthScore -= Math.min(critCPI*5, 20);
+    if(lowStock>0)  healthScore -= Math.min(lowStock*2, 10);
+    healthScore = Math.max(healthScore, 0);
+
+    const healthColor = healthScore>=85?'#10B981':healthScore>=70?'#F97316':'#EF4444';
+    const healthLabel = healthScore>=85?'Healthy':healthScore>=70?'Needs Attention':'Critical';
+
+    // Error breakdown by module
+    const byModule = errs.reduce((m,e)=>{ m[e.module||'Unknown']=(m[e.module||'Unknown']||0)+1; return m; },{});
+    const topModules = Object.entries(byModule).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+    // Activity timeline (last 10 audits)
+    const recent = audits.slice(0,10);
+
+    // Error trend (last 7 days)
+    const trend = [];
+    for(let i=6;i>=0;i--){
+      const d = new Date(today); d.setDate(d.getDate()-i);
+      const ds = d.toISOString().split('T')[0];
+      const cnt = errs.filter(e=>e.created_at?.startsWith(ds)).length;
+      trend.push({day:d.toLocaleDateString('en-GB',{weekday:'short'}), cnt});
+    }
+    const maxTrend = Math.max(...trend.map(t=>t.cnt), 1);
+
+    el.innerHTML = `
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">⚙️</span>
+        <div><h1>System Health Dashboard</h1><div class="sub">Real-time monitoring · SP360 ERP v3.3 · ${today.toLocaleString('en-GB')}</div></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="loadSystem()">🔄 Refresh</button>
+        <button class="btn btn-ghost btn-sm" onclick="navTo('audit',document.getElementById('nav-audit'))">📋 Audit Trail</button>
+      </div>
+    </div>
+
+    <!-- Health Score + KPIs -->
+    <div style="display:grid;grid-template-columns:200px 1fr;gap:14px;margin-bottom:14px">
+      <!-- Score gauge -->
+      <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">System Health</div>
+        <div style="position:relative;width:100px;height:100px">
+          <svg viewBox="0 0 100 100" style="width:100%;transform:rotate(-90deg)">
+            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--bdr)" stroke-width="12"/>
+            <circle cx="50" cy="50" r="40" fill="none" stroke="${healthColor}" stroke-width="12"
+              stroke-dasharray="${2*Math.PI*40*healthScore/100} ${2*Math.PI*40*(1-healthScore/100)}"
+              stroke-linecap="round"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+            <div style="font-size:22px;font-weight:900;color:${healthColor}">${healthScore}</div>
+            <div style="font-size:8px;color:var(--faint)">/100</div>
+          </div>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:${healthColor};margin-top:6px">${healthLabel}</div>
+      </div>
+
+      <!-- KPIs grid -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        ${kpi('Critical Errors', critErrs, critErrs>0?'#EF4444':'#10B981', 'Last 50 logged')}
+        ${kpi('Overdue Workflows', overdueWF, overdueWF>0?'#F97316':'#10B981', 'Pending action')}
+        ${kpi('At-Risk Projects', critCPI, critCPI>0?'#EF4444':'#10B981', 'CPI < 0.90')}
+        ${kpi('Low Stock Items', lowStock, lowStock>0?'#F97316':'#10B981', 'Below reorder level')}
+        ${kpi('Active Users', activeUsers, '#C9A84C', `${users.length} total accounts`)}
+        ${kpi('Audit Events', audits.length, '#3B82F6', 'Last 100 actions')}
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-bottom:14px">
+      <!-- Error Trend (7 days) -->
+      <div class="card">
+        <div class="sec-head"><div class="sec-title"><span>📈</span>Error Trend — Last 7 Days</div></div>
+        <div style="display:flex;align-items:flex-end;gap:6px;height:80px;padding-top:8px">
+          ${trend.map(t=>`
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+            <div style="font-size:9px;color:${t.cnt>0?'#EF4444':'var(--faint)'};font-weight:700">${t.cnt||''}</div>
+            <div style="width:100%;background:${t.cnt>0?'#EF4444':'var(--bdr)'};border-radius:3px 3px 0 0;height:${Math.max(t.cnt/maxTrend*60,2)}px;min-height:2px"></div>
+            <div style="font-size:8px;color:var(--faint)">${t.day}</div>
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- Error by Module -->
+      <div class="card">
+        <div class="sec-head"><div class="sec-title"><span>🔴</span>Errors by Module</div></div>
+        ${topModules.length===0
+          ? '<div class="empty">No errors logged ✅</div>'
+          : topModules.map(([mod,cnt])=>`
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <div style="font-size:11px;color:var(--text);width:100px;flex-shrink:0">${esc(mod)}</div>
+            <div style="flex:1;background:var(--bdr);border-radius:3px;height:8px;overflow:hidden">
+              <div style="height:100%;width:${(cnt/topModules[0][1]*100).toFixed(0)}%;background:#EF4444;border-radius:3px"></div>
+            </div>
+            <div style="font-size:11px;font-weight:700;color:#EF4444;width:24px;text-align:right">${cnt}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-bottom:14px">
+      <!-- Recent Activity -->
+      <div class="card">
+        <div class="sec-head"><div class="sec-title"><span>⚡</span>Recent System Activity</div></div>
+        ${recent.length===0
+          ? '<div class="empty">No recent activity</div>'
+          : recent.map(a=>{
+              const ts = new Date(a.created_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+              const actColor = a.action?.includes('DELETE')?'#EF4444':a.action?.includes('CREATE')?'#10B981':'#3B82F6';
+              return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--bdr)">
+                <span style="font-size:9px;background:${actColor}22;color:${actColor};border-radius:3px;padding:1px 5px;font-weight:700;flex-shrink:0">${esc(a.action?.split('_')[0]||'—')}</span>
+                <span style="font-size:10px;color:var(--text);flex:1">${esc(a.table_name||'—')}</span>
+                <span style="font-size:9px;color:var(--faint)">${ts}</span>
+              </div>`;
+            }).join('')}
+      </div>
+
+      <!-- System Checks -->
+      <div class="card">
+        <div class="sec-head"><div class="sec-title"><span>🔍</span>Live System Checks</div></div>
+        <div id="sys-health-results" style="font-size:11px;color:var(--muted)">Click Run to check…</div>
+        <button onclick="runSystemChecks()" class="btn btn-primary btn-sm" style="margin-top:12px;width:100%">🔍 Run All Checks</button>
+      </div>
+    </div>
+
+    <!-- Recent Critical Errors -->
+    ${critErrs>0 ? `
+    <div class="card" style="border-left:3px solid #EF4444">
+      <div class="sec-head"><div class="sec-title"><span>🚨</span>Critical Errors — Requires Attention</div></div>
+      <table><thead><tr><th>Error ID</th><th>Module</th><th>Action</th><th>Time</th><th>Message</th></tr></thead><tbody>
+      ${errs.filter(e=>e.severity==='critical').slice(0,10).map(e=>`<tr>
+        <td style="font-family:monospace;font-size:9px;color:var(--gold)">${esc(e.error_id||'—')}</td>
+        <td style="font-size:10px">${esc(e.module||'—')}</td>
+        <td style="font-size:10px;color:var(--muted)">${esc(e.action||'—')}</td>
+        <td style="font-size:10px;color:var(--faint);white-space:nowrap">${new Date(e.created_at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
+        <td style="font-size:10px;color:#EF4444;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.error_msg||'—')}</td>
+      </tr>`).join('')}
+      </tbody></table>
+    </div>` : `
+    <div class="card" style="text-align:center;padding:20px;border-left:3px solid #10B981">
+      <div style="font-size:24px;margin-bottom:6px">✅</div>
+      <div style="font-size:13px;font-weight:700;color:#10B981">No Critical Errors</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">System running cleanly</div>
+    </div>`}`;
+
+  }catch(err){
+    el.innerHTML = `<div class="empty">Error loading system dashboard: ${err.message}</div>`;
+    console.error('loadSystem error:',err);
+  }
+}
+
+// ── Live system checks (extended version of health check) ─────
+async function runSystemChecks(){
+  const el = document.getElementById('sys-health-results');
+  if(!el) return;
+  el.innerHTML = '<div style="color:var(--muted)">⏳ Running checks…</div>';
+
+  const checks = [];
+  const check = async(name, fn)=>{
+    const start = Date.now();
+    try{
+      const result = await fn();
+      checks.push({name, ok:result!==false, ms:Date.now()-start, msg:result===true?'':String(result||'')});
+    }catch(e){
+      checks.push({name, ok:false, ms:Date.now()-start, msg:e.message});
+    }
+  };
+
+  await check('Database Connection',    async()=>{ const {error}=await sb.from('user_profiles').select('id').limit(1); return error?false:'✓ Connected'; });
+  await check('Auth Session',           async()=>{ const {data:{session}}=await sb.auth.getSession(); return session?`✓ ${currentProfile?.full_name}`:'✗ No session'; });
+  await check('Projects Table',         async()=>{ const {error}=await sb.from('projects').select('id').limit(1); return error?false:'✓ Accessible'; });
+  await check('Workflow Items',         async()=>{ const {error}=await sb.from('workflow_items').select('id').limit(1); return error?false:'✓ Accessible'; });
+  await check('Invoice Table',          async()=>{ const {error}=await sb.from('invoices').select('id').limit(1); return error?false:'✓ Accessible'; });
+  await check('Payroll Config',         async()=>{ const {data,error}=await sb.from('payroll_config').select('id').eq('is_active',true).limit(1); return error?false:data?.length>0?'✓ Config active':'⚠ No active config'; });
+  await check('Error Log Table',        async()=>{ const {error}=await sb.from('error_logs').select('id').limit(1); return error?false:'✓ Accessible'; });
+  await check('Audit Log',             async()=>{ const {error}=await sb.from('audit_log').select('id').limit(1); return error?false:'✓ Accessible'; });
+  await check('RPC sp360_role',         async()=>{ const {data,error}=await sb.rpc('sp360_role'); return error?false:`✓ Role: ${data||'—'}`; });
+  await check('PWA Service Worker',     async()=>{ if(!('serviceWorker' in navigator)) return '⚠ Not supported'; const r=await navigator.serviceWorker.getRegistrations(); return r.length>0?'✓ Registered':'⚠ Not registered'; });
+
+  const passed = checks.filter(c=>c.ok).length;
+  el.innerHTML = `
+    <div style="margin-bottom:8px;padding:6px 10px;background:${passed===checks.length?'#10B98122':'#EF444422'};border-radius:5px;font-size:10px;font-weight:700;color:${passed===checks.length?'#10B981':'#EF4444'}">
+      ${passed===checks.length?'✅':'⚠️'} ${passed}/${checks.length} passed
+    </div>
+    ${checks.map(c=>`
+    <div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--bdr);font-size:10px">
+      <span>${c.ok?'✅':'❌'}</span>
+      <span style="flex:1;color:var(--text)">${c.name}</span>
+      <span style="color:var(--faint)">${c.ms}ms</span>
+      <span style="color:${c.ok?'var(--muted)':'#EF4444'}">${c.msg}</span>
+    </div>`).join('')}`;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P4-2 · PAYROLL SLIP (PDF Export per employee)
+// ══════════════════════════════════════════════════════════════
+async function exportPayslip(runId){
+  try{
+    const {data:run,error}=await sb.from('payroll_runs')
+      .select('*,employee:employees(full_name,employee_no,department,position,employee_contracts(basic_salary,allowances))')
+      .eq('id',runId).single();
+    if(error||!run){showToast('Payroll record not found','error');return;}
+
+    const {data:cfg}=await sb.from('payroll_config').select('*').eq('is_active',true).limit(1);
+    const payConfig=cfg?.[0]||{};
+
+    const emp  = run.employee||{};
+    const basic= Number(run.basic_salary||0);
+    const allow= Number(run.allowances||0);
+    const gross= Number(run.gross_salary||0);
+    const nssf = Number(run.nssf_deduction||0);
+    const tax  = Number(run.tax_deduction||0);
+    const other= Number(run.other_deductions||0);
+    const net  = Number(run.net_salary||0);
+    const erNSSF= basic*Number(payConfig.nssf_employer_pct||11)/100;
+
+    // Build PDF using jsPDF
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+
+    // Header — navy background
+    doc.setFillColor(30,58,95);
+    doc.rect(0,0,210,40,'F');
+    doc.setTextColor(201,168,76);
+    doc.setFontSize(18);
+    doc.setFont('helvetica','bold');
+    doc.text('SMART PROJECTS 360',14,16);
+    doc.setTextColor(148,163,184);
+    doc.setFontSize(9);
+    doc.setFont('helvetica','normal');
+    doc.text('Kuwait · SP360 ERP v3.3 · Payroll Management System',14,23);
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(14);
+    doc.setFont('helvetica','bold');
+    doc.text('PAYROLL SLIP',14,33);
+    doc.setFontSize(10);
+    doc.text(`Period: ${run.period_month||'—'}`,120,20);
+    doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')}`,120,27);
+    doc.text(`Status: ${(run.status||'').toUpperCase()}`,120,34);
+
+    // Employee info box
+    doc.setFillColor(241,245,249);
+    doc.rect(0,44,210,28,'F');
+    doc.setTextColor(30,58,95);
+    doc.setFontSize(11);
+    doc.setFont('helvetica','bold');
+    doc.text('EMPLOYEE INFORMATION',14,53);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.setTextColor(71,85,105);
+    doc.text(`Name: ${emp.full_name||'—'}`,14,60);
+    doc.text(`Employee No: ${emp.employee_no||'—'}`,14,66);
+    doc.text(`Department: ${emp.department||'—'}`,100,60);
+    doc.text(`Position: ${emp.position||'—'}`,100,66);
+
+    // Earnings table
+    let y=82;
+    doc.setFillColor(30,58,95);
+    doc.rect(14,y-5,182,7,'F');
+    doc.setTextColor(201,168,76);
+    doc.setFontSize(9);
+    doc.setFont('helvetica','bold');
+    doc.text('EARNINGS',16,y);
+    doc.text('AMOUNT (KWD)',160,y,'right');
+    y+=6;
+
+    const earningsRows=[
+      ['Basic Salary',basic],
+      ['Allowances',allow],
+    ];
+    earningsRows.forEach(([lbl,val],i)=>{
+      doc.setFillColor(i%2===0?255:248,i%2===0?255:250,i%2===0?255:252);
+      doc.rect(14,y-4,182,7,'F');
+      doc.setTextColor(15,23,42);
+      doc.setFont('helvetica','normal');
+      doc.text(lbl,16,y);
+      doc.text(`KWD ${val.toFixed(3)}`,196,y,'right');
+      y+=7;
+    });
+
+    // Gross total
+    doc.setFillColor(30,58,95);
+    doc.rect(14,y-4,182,7,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.text('GROSS SALARY',16,y);
+    doc.text(`KWD ${gross.toFixed(3)}`,196,y,'right');
+    y+=14;
+
+    // Deductions table
+    doc.setFillColor(239,68,68);
+    doc.rect(14,y-5,182,7,'F');
+    doc.setTextColor(255,255,255);
+    doc.text('DEDUCTIONS',16,y);
+    doc.text('AMOUNT (KWD)',160,y,'right');
+    y+=6;
+
+    const deductRows=[
+      ['NSSF (Employee '+( payConfig.nssf_employee_pct||5)+'%)', nssf],
+      ['Income Tax ('+(payConfig.income_tax_pct||0)+'%)', tax],
+      ['Other Deductions', other],
+    ];
+    deductRows.forEach(([lbl,val],i)=>{
+      doc.setFillColor(i%2===0?255:254,i%2===0?242:242,i%2===0?242:242);
+      doc.rect(14,y-4,182,7,'F');
+      doc.setTextColor(15,23,42);
+      doc.setFont('helvetica','normal');
+      doc.text(lbl,16,y);
+      doc.text(`KWD ${val.toFixed(3)}`,196,y,'right');
+      y+=7;
+    });
+
+    // Total deductions
+    const totalDeduct = nssf+tax+other;
+    doc.setFillColor(220,38,38);
+    doc.rect(14,y-4,182,7,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.text('TOTAL DEDUCTIONS',16,y);
+    doc.text(`KWD ${totalDeduct.toFixed(3)}`,196,y,'right');
+    y+=14;
+
+    // NET SALARY — prominent
+    doc.setFillColor(16,185,129);
+    doc.rect(14,y-6,182,12,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(13);
+    doc.text('NET SALARY',16,y+1);
+    doc.text(`KWD ${net.toFixed(3)}`,196,y+1,'right');
+    y+=20;
+
+    // Employer contribution
+    doc.setFontSize(8);
+    doc.setTextColor(100,116,139);
+    doc.setFont('helvetica','normal');
+    doc.text(`Employer NSSF Contribution (${payConfig.nssf_employer_pct||11}%): KWD ${erNSSF.toFixed(3)} (not deducted from employee)`,14,y);
+    y+=10;
+
+    // Footer
+    doc.setDrawColor(201,168,76);
+    doc.line(14,y,196,y);
+    y+=5;
+    doc.setTextColor(100,116,139);
+    doc.setFontSize(8);
+    doc.text('This is a computer-generated payslip. SP360 ERP v3.3 · Smart Projects 360 · Kuwait · Confidential',105,y,'center');
+
+    doc.save(`Payslip_${emp.employee_no||'EMP'}_${run.period_month||'period'}.pdf`);
+    showToast('Payslip exported ✓');
+
+  }catch(e){
+    showToast('Payslip error: '+e.message,'error');
+    logError('HR','exportPayslip',e);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P4-3 · GL AUTO-POSTING ENGINE
+//  Generates journal entries from invoice events
+// ══════════════════════════════════════════════════════════════
+
+// Auto-post GL entries when invoice status changes
+async function glAutoPost(invoiceId, eventType){
+  try{
+    const {data:inv} = await sb.from('invoices')
+      .select('*,project:projects(name,project_no)')
+      .eq('id',invoiceId).single();
+    if(!inv) return;
+
+    const amount = Number(inv.net_amount)||0;
+    if(amount<=0) return;
+
+    let entries = [];
+    const ref   = inv.invoice_no || inv.id;
+    const desc  = `${inv.invoice_type==='client'?'AR':'AP'} — ${inv.invoice_no} — ${inv.project?.project_no||'N/A'}`;
+    const today = new Date().toISOString().split('T')[0];
+
+    if(eventType==='invoice_created'){
+      if(inv.invoice_type==='client'){
+        // DR Accounts Receivable, CR Revenue
+        entries=[
+          {account_code:'1100',account_name:'Accounts Receivable',debit:amount,credit:0,description:desc},
+          {account_code:'4000',account_name:'Revenue',debit:0,credit:amount,description:desc}
+        ];
+      } else {
+        // DR Expense, CR Accounts Payable
+        entries=[
+          {account_code:'5000',account_name:'Cost of Services',debit:amount,credit:0,description:desc},
+          {account_code:'2100',account_name:'Accounts Payable',debit:0,credit:amount,description:desc}
+        ];
+      }
+    } else if(eventType==='invoice_paid'){
+      if(inv.invoice_type==='client'){
+        // DR Cash/Bank, CR Accounts Receivable
+        entries=[
+          {account_code:'1000',account_name:'Cash & Bank',debit:amount,credit:0,description:'Receipt — '+desc},
+          {account_code:'1100',account_name:'Accounts Receivable',debit:0,credit:amount,description:'Receipt — '+desc}
+        ];
+      } else {
+        // DR Accounts Payable, CR Cash/Bank
+        entries=[
+          {account_code:'2100',account_name:'Accounts Payable',debit:amount,credit:0,description:'Payment — '+desc},
+          {account_code:'1000',account_name:'Cash & Bank',debit:0,credit:amount,description:'Payment — '+desc}
+        ];
+      }
+    }
+
+    if(entries.length===0) return;
+
+    // Get next journal number
+    const {data:jNo} = await sb.rpc('next_ref_no',{p_prefix:'JE'});
+
+    // Insert journal entry header
+    const {data:je,error:jeErr} = await sb.from('journal_entries').insert({
+      entry_no:       jNo,
+      entry_date:     today,
+      entry_type:     'auto',
+      reference_type: 'invoice',
+      reference_id:   invoiceId,
+      description:    desc,
+      total_debit:    amount,
+      total_credit:   amount,
+      status:         'posted',
+      posted_by:      currentProfile?.id,
+      created_by:     currentProfile?.id
+    }).select('id').single();
+
+    if(jeErr){
+      console.warn('GL auto-post header failed:',jeErr.message);
+      return;
+    }
+
+    // Insert journal lines
+    const lines = entries.map((e,i)=>({
+      journal_id:   je.id,
+      line_no:      i+1,
+      account_code: e.account_code,
+      account_name: e.account_name,
+      debit:        e.debit,
+      credit:       e.credit,
+      description:  e.description,
+      project_id:   inv.project_id||null
+    }));
+
+    const {error:linesErr} = await sb.from('journal_lines').insert(lines);
+    if(linesErr) console.warn('GL auto-post lines failed:',linesErr.message);
+    else console.log(`GL auto-posted: ${jNo} for invoice ${ref} (${eventType})`);
+
+  }catch(e){
+    console.warn('glAutoPost failed (non-blocking):',e.message);
+  }
+}
+
+// ── Hook GL auto-posting into invoice save ────────────────────
+// Call this after saveInvoice succeeds
+async function _afterInvoiceSave(invoiceId, isNew, isPaid){
+  if(isNew) await glAutoPost(invoiceId, 'invoice_created');
+  if(isPaid) await glAutoPost(invoiceId, 'invoice_paid');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P4-4 · INVENTORY ATOMIC GUARD
+//  Prevents split-brain stock movements in the UI
+// ══════════════════════════════════════════════════════════════
+let _inventoryLocked = false;
+
+async function recordStockMovementSafe(params){
+  if(_inventoryLocked){
+    showToast('⚠️ Another stock movement is in progress — please wait','error');
+    return false;
+  }
+  _inventoryLocked = true;
+  try{
+    // Try atomic RPC first (if deployed)
+    const {data,error} = await sb.rpc('record_stock_movement_atomic',{
+      p_item_id:       params.itemId,
+      p_movement_type: params.type,
+      p_quantity:      params.qty,
+      p_unit_cost:     params.unitCost||0,
+      p_reference_type:params.refType||null,
+      p_reference_id:  params.refId||null,
+      p_project_id:    params.projectId||null,
+      p_notes:         params.notes||null,
+      p_created_by:    currentProfile?.id
+    });
+
+    if(error){
+      // Fallback: check if it's a "function doesn't exist" error
+      if(error.message?.includes('does not exist')||error.code==='42883'){
+        console.warn('record_stock_movement_atomic not deployed — using fallback');
+        return await _recordStockMovementFallback(params);
+      }
+      showToast('Stock movement error: '+error.message,'error');
+      logError('Inventory','recordStockMovement',error,params);
+      return false;
+    }
+
+    if(!data?.ok){
+      showToast('Stock movement failed: '+(data?.error||'Unknown error'),'error');
+      return false;
+    }
+
+    await writeAudit('stock_movements',data.movement_id,'STOCK_MOVEMENT',null,params,'Stock movement recorded');
+    return data;
+
+  }catch(e){
+    showToast('Stock movement error: '+e.message,'error');
+    logError('Inventory','recordStockMovement',e,params);
+    return false;
+  }finally{
+    _inventoryLocked = false;
+  }
+}
+
+// Fallback when atomic RPC not deployed — still with guards
+async function _recordStockMovementFallback(params){
+  try{
+    // Step 1: Get current stock with row-level check
+    const {data:item,error:itemErr} = await sb.from('material_items')
+      .select('id,current_qty,item_code,item_name')
+      .eq('id',params.itemId).single();
+
+    if(itemErr||!item){
+      showToast('Item not found','error');
+      return false;
+    }
+
+    // Step 2: Validate stock availability for outbound
+    if(['issue','transfer_out'].includes(params.type)){
+      if(Number(item.current_qty)<params.qty){
+        showToast(`Insufficient stock: available ${item.current_qty}, requested ${params.qty}`,'error');
+        return false;
+      }
+    }
+
+    // Step 3: Get movement number
+    const {data:mvNo} = await sb.rpc('next_ref_no',{p_prefix:'MV'});
+
+    // Step 4: Insert ledger entry
+    const newQty = ['issue','transfer_out','return_vendor'].includes(params.type)
+      ? Number(item.current_qty)-params.qty
+      : Number(item.current_qty)+params.qty;
+
+    const {data:mv,error:mvErr} = await sb.from('stock_movements').insert({
+      movement_no:    mvNo,
+      item_id:        params.itemId,
+      movement_type:  params.type,
+      quantity:       params.qty,
+      unit_cost:      params.unitCost||0,
+      total_value:    params.qty*(params.unitCost||0),
+      qty_before:     Number(item.current_qty),
+      qty_after:      newQty,
+      reference_type: params.refType||null,
+      reference_id:   params.refId||null,
+      project_id:     params.projectId||null,
+      notes:          params.notes||null,
+      created_by:     currentProfile?.id
+    }).select('id').single();
+
+    if(mvErr){
+      showToast('Ledger insert failed: '+mvErr.message,'error');
+      logError('Inventory','stockLedgerInsert',mvErr,params);
+      return false;
+    }
+
+    // Step 5: Update stock balance
+    const {error:updErr} = await sb.from('material_items')
+      .update({current_qty:newQty, updated_at:new Date().toISOString()})
+      .eq('id',params.itemId);
+
+    if(updErr){
+      // CRITICAL: ledger inserted but stock not updated — log as critical
+      await logError('Inventory','stockBalanceUpdate',updErr,{...params,mvId:mv.id,severity:'critical'});
+      showToast('⚠️ CRITICAL: Ledger recorded but stock balance failed to update. Contact Admin.','error');
+      return false;
+    }
+
+    return {ok:true, movement_id:mv.id, movement_no:mvNo, new_qty:newQty};
+
+  }catch(e){
+    logError('Inventory','stockMovementFallback',e,params);
+    return false;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P4-5 · PAYROLL SLIP BUTTON IN HR TABLE
+//  Inject payslip export button into existing payroll table
+// ══════════════════════════════════════════════════════════════
+// Patch into loadHR — add payslip button per row
+// Called after loadHR renders the payroll tab
+function _injectPayslipButtons(){
+  // Find all payroll table rows and add payslip button
+  // This is handled via onclick in the table template below
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P4-6 · VALIDATION ENGINE
+//  Server-side style validation for critical forms
+// ══════════════════════════════════════════════════════════════
+const VALIDATION_RULES = {
+  invoice: {
+    net_amount:      {min:0.001, msg:'Invoice amount must be > 0'},
+    invoice_date:    {required:true, msg:'Invoice date required'},
+    invoice_type:    {required:true, msg:'Invoice type required'},
+  },
+  project: {
+    bac:             {min:0.001, msg:'BAC must be > 0'},
+    contract_value:  {min:0.001, msg:'Contract value must be > 0'},
+    name:            {required:true, minLen:3, msg:'Project name must be at least 3 characters'},
+  },
+  purchase_order: {
+    total_amount:    {min:0.001, msg:'PO amount must be > 0'},
+    vendor_id:       {required:true, msg:'Vendor required'},
+  },
+  stock_movement: {
+    quantity:        {min:0.001, msg:'Quantity must be > 0'},
+    item_id:         {required:true, msg:'Item required'},
+  }
+};
+
+function validateForm(entity, data){
+  const rules = VALIDATION_RULES[entity];
+  if(!rules) return {ok:true};
+  const errors = [];
+  for(const [field,rule] of Object.entries(rules)){
+    const val = data[field];
+    if(rule.required && (val===null||val===undefined||val===''))
+      errors.push(rule.msg||`${field} is required`);
+    if(rule.min!==undefined && Number(val)<rule.min)
+      errors.push(rule.msg||`${field} minimum is ${rule.min}`);
+    if(rule.minLen!==undefined && String(val||'').length<rule.minLen)
+      errors.push(rule.msg||`${field} too short`);
+  }
+  return {ok:errors.length===0, errors};
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P5-1 · RESOURCE MANAGEMENT
+//  Employee allocation across projects + utilization tracking
+// ══════════════════════════════════════════════════════════════
+async function loadResources(){
+  const el = document.getElementById('page-resources');
+  if(!el) return;
+  el.innerHTML = '<div class="loading">Loading Resources…</div>';
+  try{
+    const [empR, projR, allocR] = await Promise.all([
+      sb.from('employees').select('id,full_name,employee_no,department,position,status').eq('status','active').order('full_name'),
+      sb.from('projects').select('id,project_no,name,status,department,pct').in('status',['planning','execution','monitoring']).order('project_no'),
+      sb.from('resource_allocations').select('*,employee:employees(full_name,employee_no,department),project:projects(project_no,name,status)').order('created_at',{ascending:false}).limit(200)
+    ]);
+    const emps  = empR.data||[];
+    const projs = projR.data||[];
+    const allocs = allocR.data||[];
+
+    // Utilization per employee
+    const utilMap = {};
+    allocs.filter(a=>a.status==='active').forEach(a=>{
+      if(!utilMap[a.employee_id]) utilMap[a.employee_id] = 0;
+      utilMap[a.employee_id] += Number(a.allocation_pct||0);
+    });
+
+    // Dept summary
+    const depts = [...new Set(emps.map(e=>e.department).filter(Boolean))].sort();
+    const deptUtil = depts.map(d=>{
+      const dEmps = emps.filter(e=>e.department===d);
+      const avgUtil = dEmps.length ? dEmps.reduce((s,e)=>s+(utilMap[e.id]||0),0)/dEmps.length : 0;
+      return {dept:d, count:dEmps.length, avgUtil:Math.round(avgUtil)};
+    });
+
+    const overAllocated = emps.filter(e=>(utilMap[e.id]||0)>100).length;
+    const unallocated   = emps.filter(e=>!(utilMap[e.id]>0)).length;
+
+    const canEdit = can('create');
+
+    el.innerHTML = `
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">👷</span>
+        <div><h1>Resource Management</h1><div class="sub">Employee Allocation · Utilization · Project Staffing</div></div>
+      </div>
+      ${canEdit ? `<button class="btn btn-primary btn-sm" onclick="openAllocModal()">+ Allocate Resource</button>` : ''}
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Active Employees', emps.length, '#C9A84C', 'Available for allocation')}
+      ${kpi('Active Projects',  projs.length, '#3B82F6', 'Requiring resources')}
+      ${kpi('Over-Allocated',   overAllocated, overAllocated>0?'#EF4444':'#10B981', '>100% allocation')}
+      ${kpi('Unallocated',      unallocated, unallocated>0?'#F97316':'#10B981', 'No active project')}
+    </div>
+
+    <div class="grid2" style="margin-bottom:14px">
+      <!-- Utilization by department -->
+      <div class="card">
+        <div class="sec-head"><div class="sec-title"><span>📊</span>Utilization by Department</div></div>
+        ${deptUtil.map(d=>`
+        <div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:11px;font-weight:700;color:var(--text)">${esc(d.dept)}</span>
+            <span style="font-size:10px;color:${d.avgUtil>100?'#EF4444':d.avgUtil>80?'#F97316':'#10B981'};font-weight:700">${d.avgUtil}% avg · ${d.count} staff</span>
+          </div>
+          <div style="background:var(--bdr);border-radius:4px;height:8px;overflow:hidden">
+            <div style="height:100%;width:${Math.min(d.avgUtil,100)}%;background:${d.avgUtil>100?'#EF4444':d.avgUtil>80?'#F97316':'#3B82F6'};border-radius:4px;transition:width .3s"></div>
+          </div>
+        </div>`).join('')}
+      </div>
+
+      <!-- Project capacity -->
+      <div class="card">
+        <div class="sec-head"><div class="sec-title"><span>🏗</span>Project Headcount</div></div>
+        ${projs.slice(0,8).map(p=>{
+          const pAllocs = allocs.filter(a=>a.project_id===p.id&&a.status==='active');
+          return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bdr)">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:11px;font-weight:700;color:var(--gold)">${esc(p.project_no)}</div>
+              <div style="font-size:10px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:14px;font-weight:800;color:var(--text)">${pAllocs.length}</div>
+              <div style="font-size:9px;color:var(--faint)">staff</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- Allocation table -->
+    <div class="card">
+      <div class="sec-head">
+        <div class="sec-title"><span>📋</span>Active Allocations</div>
+        <div style="font-size:10px;color:var(--muted)">${allocs.filter(a=>a.status==='active').length} active</div>
+      </div>
+      ${allocs.length===0
+        ? '<div class="empty">No allocations yet — click + Allocate Resource to start</div>'
+        : `<table><thead><tr>
+            <th>Employee</th><th>Department</th><th>Project</th><th style="text-align:center">Allocation %</th><th>Role</th><th>From</th><th>To</th><th style="text-align:center">Status</th>
+            ${canEdit?'<th></th>':''}
+          </tr></thead><tbody>
+          ${allocs.slice(0,50).map(a=>{
+            const util = utilMap[a.employee_id]||0;
+            const pct  = Number(a.allocation_pct||0);
+            const col  = util>100?'#EF4444':util>80?'#F97316':'#10B981';
+            return `<tr>
+              <td style="font-weight:700;font-size:11px">${esc(a.employee?.full_name||'—')}</td>
+              <td style="font-size:10px;color:var(--muted)">${esc(a.employee?.department||'—')}</td>
+              <td style="color:var(--gold);font-size:10px">${esc(a.project?.project_no||'—')}</td>
+              <td style="text-align:center">
+                <div style="display:flex;align-items:center;gap:4px;justify-content:center">
+                  <div style="width:40px;background:var(--bdr);border-radius:3px;height:6px;overflow:hidden">
+                    <div style="height:100%;width:${Math.min(pct,100)}%;background:${col};border-radius:3px"></div>
+                  </div>
+                  <span style="font-size:10px;font-weight:700;color:${col}">${pct}%</span>
+                </div>
+              </td>
+              <td style="font-size:10px;color:var(--muted)">${esc(a.role_on_project||'—')}</td>
+              <td style="font-size:10px;color:var(--faint)">${a.start_date||'—'}</td>
+              <td style="font-size:10px;color:var(--faint)">${a.end_date||'Open'}</td>
+              <td style="text-align:center">${pill(a.status||'active',a.status==='active'?'#10B981':'#94A3B8')}</td>
+              ${canEdit?`<td><button onclick="endAllocation('${a.id}')" style="background:none;border:none;color:var(--faint);cursor:pointer;font-size:11px" title="End allocation">✕</button></td>`:''}
+            </tr>`;
+          }).join('')}
+          </tbody></table>`}
+    </div>`;
+
+  }catch(err){
+    el.innerHTML = `<div class="empty">Error: ${err.message}</div>`;
+  }
+}
+
+function openAllocModal(){
+  const emps  = window._cachedEmployees||[];
+  const projs = window._cachedProjects||[];
+  const today = new Date().toISOString().split('T')[0];
+  openModal('Allocate Resource to Project',`
+    <div class="form-row">
+      <div class="form-field"><label>Employee *</label>
+        <select id="alloc-emp" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select Employee —</option>
+          ${emps.map(e=>`<option value="${e.id}">${esc(e.full_name)} (${esc(e.employee_no||'')})</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Project *</label>
+        <select id="alloc-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select Project —</option>
+          ${projs.map(p=>`<option value="${p.id}">${esc(p.project_no)} — ${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Allocation % *</label><input id="alloc-pct" type="number" min="1" max="100" value="100" placeholder="100"/></div>
+      <div class="form-field"><label>Role on Project</label><input id="alloc-role" placeholder="e.g. Site Engineer"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Start Date *</label><input id="alloc-start" type="date" value="${today}"/></div>
+      <div class="form-field"><label>End Date (blank = open)</label><input id="alloc-end" type="date"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAllocation(event)">Allocate</button>
+    </div>`);
+}
+
+async function saveAllocation(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const empId  = document.getElementById('alloc-emp').value;
+    const projId = document.getElementById('alloc-proj').value;
+    const pct    = Number(document.getElementById('alloc-pct').value)||100;
+    const role   = document.getElementById('alloc-role').value.trim();
+    const start  = document.getElementById('alloc-start').value;
+    const end    = document.getElementById('alloc-end').value||null;
+    if(!empId){showToast('Employee required','error');return;}
+    if(!projId){showToast('Project required','error');return;}
+    if(!start){showToast('Start date required','error');return;}
+    if(pct<1||pct>100){showToast('Allocation must be 1-100%','error');return;}
+    const {error}=await sb.from('resource_allocations').insert({
+      employee_id:empId, project_id:projId, allocation_pct:pct,
+      role_on_project:role||null, start_date:start, end_date:end,
+      status:'active', created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Resource allocated ✓');
+    closeModal(); loadResources();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Allocate';}}
+}
+
+async function endAllocation(id){
+  if(!confirm('End this allocation?')) return;
+  const {error}=await sb.from('resource_allocations').update({
+    status:'ended', end_date:new Date().toISOString().split('T')[0]
+  }).eq('id',id);
+  if(error){showToast('Error: '+error.message,'error');return;}
+  showToast('Allocation ended ✓');
+  loadResources();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P5-2 · KPI SCORECARD
+//  Executive KPI dashboard with targets, actuals, trend
+// ══════════════════════════════════════════════════════════════
+async function loadScorecard(){
+  const el = document.getElementById('page-scorecard');
+  if(!el) return;
+  el.innerHTML = '<div class="loading">Loading Scorecard…</div>';
+  try{
+    const today = new Date();
+    const [projR, invR, wfR, ncrR, empR] = await Promise.all([
+      sb.from('projects').select('id,status,cpi,spi,pct,bac,ev,ac,pv,department').order('project_no'),
+      sb.from('invoices').select('id,invoice_type,status,net_amount,due_date,created_at').order('created_at',{ascending:false}),
+      sb.from('workflow_items').select('id,status,created_at').in('status',['pending','overdue']),
+      sb.from('ncrs').select('id,severity,status'),
+      sb.from('employees').select('id,status').eq('status','active')
+    ]);
+    const projs  = projR.data||[];
+    const invs   = invR.data||[];
+    const wfs    = wfR.data||[];
+    const ncrs   = ncrR.data||[];
+    const emps   = empR.data||[];
+
+    const active = projs.filter(p=>ACTIVE_STATUSES.includes(p.status));
+    const totalBAC = active.reduce((s,p)=>s+Number(p.bac),0);
+    const totalEV  = active.reduce((s,p)=>s+Number(p.ev),0);
+    const totalAC  = active.reduce((s,p)=>s+Number(p.ac),0);
+    const totalPV  = active.reduce((s,p)=>s+Number(p.pv),0);
+    const portCPI  = totalAC>0?(totalEV/totalAC):1;
+    const portSPI  = totalPV>0?(totalEV/totalPV):1;
+    const rev      = invs.filter(i=>i.invoice_type==='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+    const cost     = invs.filter(i=>i.invoice_type!=='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+    const arOut    = invs.filter(i=>i.invoice_type==='client'&&!['paid','cancelled'].includes(i.status)).reduce((s,i)=>s+Number(i.net_amount),0);
+    const overdueAR= invs.filter(i=>i.invoice_type==='client'&&!['paid','cancelled'].includes(i.status)&&i.due_date&&new Date(i.due_date)<today).length;
+    const gp       = rev-cost;
+    const gpPct    = rev>0?(gp/rev*100):0;
+    const avgPct   = active.length>0?active.reduce((s,p)=>s+Number(p.pct||0),0)/active.length:0;
+    const openNCR  = ncrs.filter(n=>n.status==='open').length;
+    const critNCR  = ncrs.filter(n=>n.severity==='critical'&&n.status==='open').length;
+    const pendWF   = wfs.length;
+
+    // KPI definitions: {label, value, target, unit, icon, color, desc, direction}
+    const kpis = [
+      // Project Controls
+      {cat:'📊 Project Performance', items:[
+        {label:'Portfolio CPI',      val:portCPI,         target:1.00, fmt:v=>v.toFixed(3), unit:'ratio', dir:'higher', desc:'Cost Performance Index — ≥1.00 target'},
+        {label:'Portfolio SPI',      val:portSPI,         target:1.00, fmt:v=>v.toFixed(3), unit:'ratio', dir:'higher', desc:'Schedule Performance Index — ≥1.00 target'},
+        {label:'Avg % Complete',     val:avgPct,          target:50,   fmt:v=>v.toFixed(1)+'%', unit:'%',  dir:'higher', desc:'Average progress across active projects'},
+        {label:'Active Projects',    val:active.length,   target:null, fmt:v=>v, unit:'count', dir:null,  desc:'Projects in active status'},
+      ]},
+      // Finance
+      {cat:'💰 Financial Performance', items:[
+        {label:'GP Margin',          val:gpPct,           target:25,   fmt:v=>v.toFixed(1)+'%', unit:'%',  dir:'higher', desc:'Gross profit as % of collected revenue'},
+        {label:'AR Outstanding',     val:arOut/1000,      target:null, fmt:v=>'KD '+v.toFixed(0)+'K', unit:'KD', dir:'lower', desc:'Total AR awaiting collection'},
+        {label:'Overdue AR Count',   val:overdueAR,       target:0,    fmt:v=>v, unit:'invoices', dir:'lower', desc:'AR invoices past due date'},
+        {label:'Revenue Collected',  val:rev/1000,        target:null, fmt:v=>'KD '+v.toFixed(0)+'K', unit:'KD', dir:'higher', desc:'Total client invoices paid'},
+      ]},
+      // Quality & Operations
+      {cat:'🛡 Quality & Operations', items:[
+        {label:'Open NCRs',          val:openNCR,         target:0,    fmt:v=>v, unit:'count', dir:'lower', desc:'Non-Conformance Reports open'},
+        {label:'Critical NCRs',      val:critNCR,         target:0,    fmt:v=>v, unit:'count', dir:'lower', desc:'Critical severity NCRs open'},
+        {label:'Pending Approvals',  val:pendWF,          target:0,    fmt:v=>v, unit:'count', dir:'lower', desc:'Workflow items awaiting action'},
+        {label:'Active Headcount',   val:emps.length,     target:null, fmt:v=>v, unit:'staff', dir:null,  desc:'Active employees'},
+      ]},
+    ];
+
+    const renderKPICard = (item)=>{
+      const v = item.val;
+      const t = item.target;
+      let status='neutral', statusColor='#94A3B8', statusIcon='—';
+      if(t!==null && item.dir){
+        const ok = item.dir==='higher' ? v>=t : v<=t;
+        const warn = item.dir==='higher' ? v>=t*0.9 : v<=t*1.1;
+        if(ok){ status='on-track'; statusColor='#10B981'; statusIcon='✅'; }
+        else if(warn){ status='at-risk'; statusColor='#F97316'; statusIcon='⚠️'; }
+        else { status='critical'; statusColor='#EF4444'; statusIcon='🔴'; }
+      }
+      const pct = t!==null ? Math.min(Math.abs(item.dir==='higher'?v/t:(t>0?t/Math.max(v,0.001):1))*100,100) : 50;
+      return `<div style="background:var(--card2);border:1px solid ${statusColor}33;border-left:3px solid ${statusColor};border-radius:8px;padding:12px 14px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px">${esc(item.label)}</div>
+          <span style="font-size:14px">${statusIcon}</span>
+        </div>
+        <div style="font-size:20px;font-weight:900;color:${statusColor};margin-bottom:2px">${item.fmt(v)}</div>
+        ${t!==null?`<div style="font-size:9px;color:var(--faint);margin-bottom:6px">Target: ${item.fmt(t)}</div>
+        <div style="background:var(--bdr);border-radius:3px;height:4px;overflow:hidden">
+          <div style="height:100%;width:${pct.toFixed(0)}%;background:${statusColor};border-radius:3px"></div>
+        </div>`:'<div style="font-size:9px;color:var(--faint);margin-bottom:6px">No target set</div>'}
+        <div style="font-size:9px;color:var(--faint);margin-top:4px">${esc(item.desc)}</div>
+      </div>`;
+    };
+
+    // Score summary
+    const allKPIs   = kpis.flatMap(c=>c.items).filter(k=>k.target!==null&&k.dir);
+    const onTrack   = allKPIs.filter(k=>k.dir==='higher'?k.val>=k.target:k.val<=k.target).length;
+    const scorecard = Math.round(onTrack/allKPIs.length*100);
+
+    el.innerHTML = `
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">🎯</span>
+        <div><h1>Executive KPI Scorecard</h1><div class="sub">Real-time performance vs targets · ${today.toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</div></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="loadScorecard()">🔄 Refresh</button>
+    </div>
+
+    <!-- Scorecard summary -->
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:16px;margin-bottom:16px;align-items:center">
+      <div class="card" style="text-align:center;padding:20px 28px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:6px">Overall Score</div>
+        <div style="font-size:42px;font-weight:900;color:${scorecard>=75?'#10B981':scorecard>=50?'#F97316':'#EF4444'}">${scorecard}%</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">${onTrack}/${allKPIs.length} KPIs on target</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        ${kpi('On Target', onTrack, '#10B981', 'KPIs meeting target')}
+        ${kpi('At Risk', allKPIs.filter(k=>{ const ok=k.dir==='higher'?k.val>=k.target:k.val<=k.target; const warn=k.dir==='higher'?k.val>=k.target*0.9:k.val<=k.target*1.1; return !ok&&warn; }).length, '#F97316', 'Within 10% of target')}
+        ${kpi('Critical', allKPIs.filter(k=>{ const warn=k.dir==='higher'?k.val>=k.target*0.9:k.val<=k.target*1.1; return !warn; }).length, '#EF4444', 'Needs immediate action')}
+      </div>
+    </div>
+
+    <!-- KPI categories -->
+    ${kpis.map(cat=>`
+    <div class="card" style="margin-bottom:14px">
+      <div class="sec-head"><div class="sec-title"><span>${cat.cat.split(' ')[0]}</span>${cat.cat.split(' ').slice(1).join(' ')}</div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
+        ${cat.items.map(renderKPICard).join('')}
+      </div>
+    </div>`).join('')}`;
+
+  }catch(err){
+    el.innerHTML = `<div class="empty">Error: ${err.message}</div>`;
+    console.error('loadScorecard error:',err);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P5-3 · BUDGET vs ACTUAL (per project)
+//  Added as a tab in the Projects page
+// ══════════════════════════════════════════════════════════════
+async function loadBudgetVsActual(projectId){
+  if(!projectId){
+    // Show project selector
+    const {data:projs}=await sb.from('projects').select('id,project_no,name,status').in('status',ACTIVE_STATUSES).order('project_no');
+    openModal('Budget vs Actual — Select Project',`
+      <div class="form-field"><label>Project</label>
+        <select id="bva-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          ${(projs||[]).map(p=>`<option value="${p.id}">${esc(p.project_no)} — ${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="loadBudgetVsActual(document.getElementById('bva-proj').value);closeModal()">View</button>
+      </div>`);
+    return;
+  }
+
+  const [projR, snapR, invR] = await Promise.all([
+    sb.from('projects').select('*').eq('id',projectId).single(),
+    sb.from('project_evm_snapshots').select('*').eq('project_id',projectId).order('snapshot_date'),
+    sb.from('invoices').select('net_amount,invoice_type,status,paid_date').eq('project_id',projectId)
+  ]);
+  const p    = projR.data||{};
+  const snaps= snapR.data||[];
+  const invs = invR.data||[];
+
+  const bac  = Number(p.bac||0);
+  const ev   = Number(p.ev||0);
+  const ac   = Number(p.ac||0);
+  const pv   = Number(p.pv||0);
+  const eac  = Number(p.cpi||1)>0 ? ac+(bac-ev)/Number(p.cpi||1) : bac;
+  const vac  = bac-eac;
+  const cpi  = ac>0?ev/ac:1;
+  const spi  = pv>0?ev/pv:1;
+
+  const revInvs  = invs.filter(i=>i.invoice_type==='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+  const costInvs = invs.filter(i=>i.invoice_type!=='client'&&i.status==='paid').reduce((s,i)=>s+Number(i.net_amount),0);
+
+  openModal(`📊 Budget vs Actual — ${p.project_no||''}`,`
+    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:12px">${esc(p.name||'')}</div>
+
+    <!-- EVM Summary -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+      ${[
+        ['BAC',fmtKWD(bac),'#C9A84C','Budget at Completion'],
+        ['EAC',fmtKWD(eac),eac>bac?'#EF4444':'#10B981','Estimate at Completion'],
+        ['VAC',fmtKWD(vac),vac>=0?'#10B981':'#EF4444','Variance at Completion'],
+        ['EV', fmtKWD(ev),'#3B82F6','Earned Value'],
+        ['AC', fmtKWD(ac),ac>ev?'#EF4444':'#10B981','Actual Cost'],
+        ['PV', fmtKWD(pv),'#8B5CF6','Planned Value'],
+      ].map(([l,v,col,d])=>`
+      <div style="background:var(--n3);border-radius:7px;padding:10px;border-left:3px solid ${col}">
+        <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase">${l}</div>
+        <div style="font-size:15px;font-weight:800;color:${col};margin:3px 0">${v}</div>
+        <div style="font-size:9px;color:var(--faint)">${d}</div>
+      </div>`).join('')}
+    </div>
+
+    <!-- Performance indices -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      <div style="background:var(--n3);border-radius:7px;padding:10px;text-align:center">
+        <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">CPI</div>
+        <div style="font-size:24px;font-weight:900;color:${cpi>=1?'#10B981':cpi>=0.9?'#F97316':'#EF4444'}">${cpi.toFixed(3)}</div>
+        <div style="font-size:9px;color:var(--faint)">${cpi>=1?'On/Under Budget':'Over Budget'}</div>
+      </div>
+      <div style="background:var(--n3);border-radius:7px;padding:10px;text-align:center">
+        <div style="font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">SPI</div>
+        <div style="font-size:24px;font-weight:900;color:${spi>=1?'#10B981':spi>=0.9?'#F97316':'#EF4444'}">${spi.toFixed(3)}</div>
+        <div style="font-size:9px;color:var(--faint)">${spi>=1?'On/Ahead Schedule':'Behind Schedule'}</div>
+      </div>
+    </div>
+
+    <!-- Invoice summary -->
+    <div style="margin-bottom:12px;padding:10px;background:var(--n3);border-radius:7px">
+      <div style="font-size:10px;font-weight:700;color:var(--gold);margin-bottom:6px">Invoice-Based Cash Flow</div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+        <span style="color:var(--muted)">Revenue Invoiced & Collected:</span>
+        <span style="font-weight:700;color:#10B981">${fmtKWD(revInvs)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+        <span style="color:var(--muted)">Cost Invoices Paid:</span>
+        <span style="font-weight:700;color:#EF4444">${fmtKWD(costInvs)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;padding-top:6px;border-top:1px solid var(--bdr)">
+        <span style="color:var(--text)">Cash Profit:</span>
+        <span style="color:${revInvs-costInvs>=0?'#10B981':'#EF4444'}">${fmtKWD(revInvs-costInvs)}</span>
+      </div>
+    </div>
+
+    <!-- EVM trend if snapshots exist -->
+    ${snaps.length>1?`
+    <div style="font-size:10px;font-weight:700;color:var(--gold);margin-bottom:6px">EVM Trend (${snaps.length} snapshots)</div>
+    <div style="overflow-x:auto">
+      <table style="font-size:10px;min-width:400px"><thead><tr>
+        <th>Date</th><th style="text-align:right">PV</th><th style="text-align:right">EV</th><th style="text-align:right">AC</th><th style="text-align:right">CPI</th>
+      </tr></thead><tbody>
+      ${snaps.slice(-8).map(s=>{
+        const cpiS=Number(s.ac)>0?Number(s.ev)/Number(s.ac):1;
+        return`<tr>
+          <td style="color:var(--faint)">${s.snapshot_date}</td>
+          <td style="text-align:right">${fmtKWD(s.pv||0)}</td>
+          <td style="text-align:right;color:#10B981">${fmtKWD(s.ev||0)}</td>
+          <td style="text-align:right;color:#EF4444">${fmtKWD(s.ac||0)}</td>
+          <td style="text-align:right;color:${cpiS>=1?'#10B981':cpiS>=0.9?'#F97316':'#EF4444'};font-weight:700">${cpiS.toFixed(2)}</td>
+        </tr>`;}).join('')}
+      </tbody></table>
+    </div>`:'<div style="font-size:10px;color:var(--faint)">No EVM snapshots recorded yet</div>'}
+
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      <button class="btn btn-primary" onclick="closeModal();navTo('projects',document.getElementById('nav-projects'))">Open Projects</button>
+    </div>`);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P5-4 · FINANCE GL ENHANCEMENTS
+//  Enhanced Trial Balance export + COA hierarchy view
+// ══════════════════════════════════════════════════════════════
+async function exportTrialBalanceExcel(){
+  try{
+    showToast('Building Trial Balance Excel…');
+    const [{data:tb},{data:je}] = await Promise.all([
+      sb.from('v_trial_balance').select('*').order('account_code'),
+      sb.from('journal_entries').select('*').order('entry_date',{ascending:false}).limit(100)
+    ]);
+    const L = tb||[];
+    const J = je||[];
+    const totalDr = L.reduce((s,r)=>s+Number(r.total_debit||0),0);
+    const totalCr = L.reduce((s,r)=>s+Number(r.total_credit||0),0);
+    const balanced= Math.abs(totalDr-totalCr)<0.01;
+
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'SP360 ERP v3.3';
+    wb.created = new Date();
+
+    // Sheet 1 — Trial Balance
+    const ws1 = wb.addWorksheet('Trial Balance');
+    xlTitleBlock(ws1,'SP360 ERP — Trial Balance',
+      `Generated: ${new Date().toLocaleDateString('en-GB')} · Balanced: ${balanced?'YES ✓':'NO ✗'}`, 6);
+    xlKPIBand(ws1,[
+      ['Total Debit',    fmtKWD(totalDr), XL.gold],
+      ['Total Credit',   fmtKWD(totalCr), XL.gold],
+      ['Difference',     fmtKWD(Math.abs(totalDr-totalCr)), balanced?XL.green:XL.red],
+      ['Status',         balanced?'BALANCED':'UNBALANCED', balanced?XL.green:XL.red]
+    ], 6);
+
+    const hdr1 = ws1.addRow(['Code','Account Name','Type','Sub-Type','Total Debit','Total Credit','Balance']);
+    hdr1.eachCell(cell=>{
+      cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1E3A5F'}};
+      cell.font={name:'Calibri',size:10,bold:true,color:{argb:'FFC9A84C'}};
+      cell.border=XL.thinBorder;
+      cell.alignment={horizontal:'center',vertical:'middle'};
+    });
+    hdr1.height=18;
+    ws1.columns=[{width:10},{width:35},{width:15},{width:15},{width:16},{width:16},{width:16}];
+
+    L.forEach((r,i)=>{
+      const bal=Number(r.balance||0);
+      const row=ws1.addRow([
+        r.account_code, r.account_name, r.account_type, r.sub_type||'—',
+        Number(r.total_debit||0), Number(r.total_credit||0), Math.abs(bal)
+      ]);
+      row.eachCell(cell=>{cell.border=XL.thinBorder;cell.font={name:'Calibri',size:10};});
+      row.getCell(5).numFmt='#,##0.000'; row.getCell(5).alignment={horizontal:'right'};
+      row.getCell(6).numFmt='#,##0.000'; row.getCell(6).alignment={horizontal:'right'};
+      const balCell=row.getCell(7);
+      balCell.numFmt='#,##0.000'; balCell.alignment={horizontal:'right'};
+      balCell.font={...balCell.font,bold:true,color:{argb:bal>=0?'FF10B981':'FFEF4444'}};
+      if(i%2===0) row.eachCell(c=>{if(!c.fill?.fgColor?.argb||c.fill.fgColor.argb==='00000000') c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF8FAFC'}};});
+    });
+
+    // Totals row
+    const totRow=ws1.addRow(['','TOTAL','','',totalDr,totalCr,Math.abs(totalDr-totalCr)]);
+    totRow.eachCell(cell=>{
+      cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1E3A5F'}};
+      cell.font={name:'Calibri',size:10,bold:true,color:{argb:'FFC9A84C'}};
+      cell.border=XL.thinBorder;
+    });
+    totRow.getCell(5).numFmt='#,##0.000'; totRow.getCell(6).numFmt='#,##0.000'; totRow.getCell(7).numFmt='#,##0.000';
+    ws1.views=[{state:'frozen',ySplit:6}];
+    ws1.autoFilter={from:{row:6,column:1},to:{row:6,column:7}};
+
+    // Sheet 2 — Journal Entries
+    const ws2=wb.addWorksheet('Journal Entries');
+    xlTitleBlock(ws2,'SP360 ERP — Journal Entries (Last 100)',`Generated: ${new Date().toLocaleDateString('en-GB')}`,6);
+    const hdr2=ws2.addRow(['Entry No','Date','Description','Reference','Total Debit','Total Credit','Status']);
+    hdr2.eachCell(cell=>{
+      cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1E3A5F'}};
+      cell.font={name:'Calibri',size:10,bold:true,color:{argb:'FFC9A84C'}};
+      cell.border=XL.thinBorder;
+    });
+    ws2.columns=[{width:14},{width:12},{width:40},{width:16},{width:16},{width:16},{width:12}];
+    J.forEach((j,i)=>{
+      const row=ws2.addRow([j.entry_no,j.entry_date,j.description,j.reference||'—',Number(j.total_debit||0),Number(j.total_credit||0),j.status]);
+      row.eachCell(cell=>{cell.border=XL.thinBorder;cell.font={name:'Calibri',size:10};});
+      row.getCell(5).numFmt='#,##0.000'; row.getCell(6).numFmt='#,##0.000';
+      if(i%2===0) row.getCell(3).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF8FAFC'}};
+    });
+
+    await xlSave(wb,`SP360_Trial_Balance_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast('Trial Balance Excel exported ✓');
+  }catch(e){
+    showToast('Export error: '+e.message,'error');
+    logError('Finance','exportTrialBalanceExcel',e);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P5-5 · DOCUMENT REVISION LOCK
+//  Prevents concurrent revision uploads
+// ══════════════════════════════════════════════════════════════
+let _docRevisionLocked = false;
+
+async function saveDocumentRevisionSafe(docId, revData){
+  if(_docRevisionLocked){
+    showToast('⚠️ Another document revision is in progress','error');
+    return false;
+  }
+  _docRevisionLocked = true;
+  try{
+    // Try atomic RPC first
+    const {data,error} = await sb.rpc('save_document_revision_atomic',{
+      p_document_id:    docId,
+      p_revision_no:    revData.revision_no,
+      p_revision_title: revData.title,
+      p_file_name:      revData.file_name||null,
+      p_change_notes:   revData.change_notes||null,
+      p_created_by:     currentProfile?.id
+    });
+
+    if(error){
+      if(error.message?.includes('does not exist')||error.code==='42883'){
+        // Fallback: manual steps with audit
+        return await _saveDocRevisionFallback(docId, revData);
+      }
+      showToast('Revision error: '+error.message,'error');
+      return false;
+    }
+
+    if(!data?.ok){ showToast('Revision failed: '+(data?.error||'Unknown'),'error'); return false; }
+    return data;
+
+  }catch(e){
+    showToast('Revision error: '+e.message,'error');
+    logError('Documents','saveRevision',e);
+    return false;
+  }finally{
+    _docRevisionLocked = false;
+  }
+}
+
+async function _saveDocRevisionFallback(docId, revData){
+  try{
+    // Step 1: Supersede all current revisions
+    const {error:supErr}=await sb.from('document_revisions')
+      .update({status:'superseded'})
+      .eq('document_id',docId)
+      .eq('status','current');
+    if(supErr){ logError('Documents','supersede',supErr); }
+
+    // Step 2: Insert new revision
+    const {data:rev,error:insErr}=await sb.from('document_revisions').insert({
+      document_id:  docId,
+      revision_no:  revData.revision_no,
+      title:        revData.title,
+      file_name:    revData.file_name||null,
+      change_notes: revData.change_notes||null,
+      status:       'current',
+      created_by:   currentProfile?.id
+    }).select('id').single();
+    if(insErr){ showToast('Revision insert failed: '+insErr.message,'error'); return false; }
+
+    // Step 3: Update document master
+    const {error:docErr}=await sb.from('documents')
+      .update({current_revision:revData.revision_no, updated_at:new Date().toISOString()})
+      .eq('id',docId);
+    if(docErr){ logError('Documents','updateMaster',docErr,{severity:'critical'}); }
+
+    // Step 4: Audit
+    await writeAudit('document_revisions',rev.id,'REVISION_CREATED',null,revData,'New revision uploaded');
+    return {ok:true, revision_id:rev.id};
+
+  }catch(e){
+    logError('Documents','revisionFallback',e);
+    return false;
+  }
+}
 
 async function installPWA(){
   if(!_pwaPrompt){
