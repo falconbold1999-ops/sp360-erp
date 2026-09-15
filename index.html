@@ -5458,7 +5458,7 @@ async function loadCEO(){
   const today=new Date();
   const monthStr=today.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
 
-  const [projR,invR,wfR,ncrR,oppR,hrR,snapR,vendR]=await Promise.all([
+  const [projR,invR,wfR,ncrR,oppR,hrR,snapR,vendR,crmOppR,crmQuotR,crmCustR,crmLeadR]=await Promise.all([
     sb.from('projects').select('*'),
     sb.from('invoices').select('*'),
     sb.from('workflow_items').select('id,status,entity_type'),
@@ -5466,12 +5466,25 @@ async function loadCEO(){
     sb.from('opportunities').select('id,status,est_value,probability'),
     sb.from('employees').select('id,status,department'),
     sb.from('project_evm_snapshots').select('project_id,snapshot_date,period_label,pv,ev,ac,spi,cpi').order('snapshot_date',{ascending:true}),
-    sb.from('vendors').select('id,is_approved,status')
+    sb.from('vendors').select('id,is_approved,status'),
+    sb.from('crm_opportunities').select('id,stage,estimated_value,probability,title,expected_close_date,customer_id'),
+    sb.from('crm_quotations').select('id,status,value,title'),
+    sb.from('crm_customers').select('id,name,status,type'),
+    sb.from('crm_leads').select('id,status')
   ]);
 
   const projs=projR.data||[], invs=invR.data||[], wfs=wfR.data||[];
   const ncrs=ncrR.data||[], opps=oppR.data||[], emps=hrR.data||[];
   const snaps=snapR.data||[], vendors=vendR.data||[];
+  // CRM
+  const crmOpps=crmOppR.data||[], crmQuots=crmQuotR.data||[];
+  const crmCusts=crmCustR.data||[], crmLeads=crmLeadR.data||[];
+  const crmActiveOpps=crmOpps.filter(o=>!['won','lost'].includes(o.stage));
+  const crmPipelineTotal=crmActiveOpps.reduce((s,o)=>s+Number(o.estimated_value),0);
+  const crmWeightedTotal=crmActiveOpps.reduce((s,o)=>s+(Number(o.estimated_value)*(Number(o.probability)/100)),0);
+  const crmWonVal=crmQuots.filter(q=>q.status==='won').reduce((s,q)=>s+Number(q.value),0);
+  const crmWinRate=crmQuots.length>0?Math.round(crmQuots.filter(q=>q.status==='won').length/crmQuots.length*100):0;
+  const crmTopOpps=crmActiveOpps.sort((a,b)=>Number(b.estimated_value)-Number(a.estimated_value)).slice(0,3);
 
   // Portfolio EVM
   const activeProjs=projs.filter(p=>ACTIVE_STATUSES.includes(p.status));
@@ -5548,7 +5561,7 @@ async function loadCEO(){
   <div class="print-header" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div>
-        <div style="font-size:18pt;font-weight:900;color:#1E3A5F">SP360 ERP v3.3 — CEO Flash Report</div>
+        <div style="font-size:18pt;font-weight:900;color:#1E3A5F">SP360 v4.0 — CEO Flash Report</div>
         <div style="font-size:9pt;color:#475569">${monthStr} · Smart Projects 360 · Kuwait · Confidential</div>
       </div>
       <div style="font-size:8pt;color:#94A3B8">Generated: ${new Date().toLocaleDateString('en-GB')}</div>
@@ -5742,6 +5755,70 @@ async function loadCEO(){
         </div>`).join('')}
       </div>
     </div>
+  </div>
+
+  <!-- CRM PIPELINE SUMMARY — CEO Report -->
+  <div class="card" style="margin-bottom:12px">
+    <div class="sec-head">
+      <div class="sec-title"><span>🎯</span>CRM — Business Development & Sales Pipeline</div>
+      <button onclick="navTo('crm-pipeline',document.getElementById('nav-crm-pipeline'))" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;color:var(--muted);font-size:10px;cursor:pointer;font-family:inherit">Full Pipeline →</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px">
+      <div style="text-align:center;padding:12px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Active Customers</div>
+        <div style="font-size:22px;font-weight:800">${crmCusts.filter(c=>c.status==='active').length}</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Total Pipeline</div>
+        <div style="font-size:16px;font-weight:800;color:var(--gold)">${fmtKWD(crmPipelineTotal)}</div>
+        <div style="font-size:9px;color:var(--faint)">${crmActiveOpps.length} opportunities</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Weighted Pipeline</div>
+        <div style="font-size:16px;font-weight:800;color:var(--violet)">${fmtKWD(crmWeightedTotal)}</div>
+        <div style="font-size:9px;color:var(--faint)">probability-adjusted</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Won Value</div>
+        <div style="font-size:16px;font-weight:800;color:var(--green)">${fmtKWD(crmWonVal)}</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Win Rate</div>
+        <div style="font-size:22px;font-weight:800;color:${crmWinRate>=50?'#10B981':'#F97316'}">${crmWinRate}%</div>
+      </div>
+    </div>
+    <!-- Stage breakdown -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+      ${['prospect','proposal','negotiation'].map(stage=>{
+        const stageOpps=crmActiveOpps.filter(o=>o.stage===stage);
+        const stageVal=stageOpps.reduce((s,o)=>s+Number(o.estimated_value),0);
+        const colors={prospect:'#3B82F6',proposal:'#F97316',negotiation:'#8B5CF6'};
+        return `<div style="padding:10px 12px;background:${colors[stage]}11;border:1px solid ${colors[stage]}33;border-radius:8px">
+          <div style="font-size:10px;color:${colors[stage]};font-weight:700;text-transform:uppercase;margin-bottom:6px">${stage}</div>
+          <div style="font-size:18px;font-weight:800;color:var(--text)">${stageOpps.length} <span style="font-size:11px;color:var(--muted)">opps</span></div>
+          <div style="font-size:12px;color:${colors[stage]};font-weight:700">${fmtKWD(stageVal)}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <!-- Top opportunities -->
+    ${crmTopOpps.length>0?`
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--faint);text-transform:uppercase;margin-bottom:8px">Top Opportunities by Value</div>
+      ${crmTopOpps.map((o,i)=>{
+        const cust=crmCusts.find(c=>c.id===o.customer_id);
+        const colors=['#C9A84C','#94A3B8','#8B5CF6'];
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--card);border-radius:7px;margin-bottom:5px;border-left:3px solid ${colors[i]||'#475569'}">
+          <div>
+            <div style="font-size:12px;font-weight:600">${o.title}</div>
+            <div style="font-size:10px;color:var(--muted)">${cust?.name||'—'} · Close: ${o.expected_close_date?new Date(o.expected_close_date).toLocaleDateString('en-GB',{month:'short',year:'numeric'}):'TBD'}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:13px;font-weight:800;color:var(--gold)">${fmtKWD(o.estimated_value)}</div>
+            <div style="font-size:10px;color:var(--muted)">${o.probability}% probability</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`:''}
   </div>
 
   <!-- QHSE + HR -->
@@ -16027,67 +16104,97 @@ async function saveNewCustomer(){
 }
 
 async function openCustomer360(customerId){
-  const [custR, oppsR, quotsR, actsR] = await Promise.all([
-    sb.from('crm_customers').select('*').eq('id',customerId).single(),
+  const [custR, oppsR, quotsR, actsR, projsR, contsR] = await Promise.all([
+    sb.from('crm_customers').select('*,account_manager:user_profiles!account_manager_id(full_name)').eq('id',customerId).single(),
     sb.from('crm_opportunities').select('*').eq('customer_id',customerId).order('created_at',{ascending:false}),
     sb.from('crm_quotations').select('*').eq('customer_id',customerId).order('created_at',{ascending:false}),
-    sb.from('crm_activities').select('*').eq('customer_id',customerId).order('activity_date',{ascending:false}).limit(10)
+    sb.from('crm_activities').select('*').eq('customer_id',customerId).order('activity_date',{ascending:false}).limit(8),
+    sb.from('projects').select('id,project_no,name,status,pct_complete,cpi,spi,contract_value').eq('customer_id_crm',customerId),
+    sb.from('contracts').select('*').eq('customer_id',customerId).order('created_at',{ascending:false})
   ]);
   const c = custR.data;
-  const opps = oppsR.data||[];
-  const quots = quotsR.data||[];
-  const acts = actsR.data||[];
-  const pipeline = opps.filter(o=>!['won','lost'].includes(o.stage)).reduce((s,o)=>s+o.estimated_value,0);
-  const wonVal = quots.filter(q=>q.status==='won').reduce((s,q)=>s+q.value,0);
+  const opps = oppsR.data||[], quots = quotsR.data||[];
+  const acts = actsR.data||[], projs = projsR.data||[], conts = contsR.data||[];
+  const pipeline = opps.filter(o=>!['won','lost'].includes(o.stage)).reduce((s,o)=>s+Number(o.estimated_value),0);
+  const wonVal = quots.filter(q=>q.status==='won').reduce((s,q)=>s+Number(q.value),0);
+  const totalContVal = conts.reduce((s,ct)=>s+Number(ct.contract_value),0);
 
   openModal(`👁 Customer 360 — ${c.name}`,`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-      <div style="background:var(--card);border:1px solid var(--bdr);border-radius:9px;padding:14px">
-        <div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;margin-bottom:8px">Profile</div>
-        <div style="font-size:14px;font-weight:800;margin-bottom:6px">${c.name}</div>
-        <div style="color:var(--muted);font-size:11px;line-height:1.8">
-          Type: ${crmBadge((c.type||'').replace('_',' '),'#3B82F6')}<br>
-          Status: ${crmBadge(c.status||'active','#10B981')}<br>
-          City: ${c.city||'—'} · Rating: ${c.rating?'⭐'.repeat(c.rating):'—'}
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--card);border-radius:9px;margin-bottom:12px;border:1px solid var(--bdr)">
+      <div style="width:44px;height:44px;border-radius:10px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--n1);font-size:18px;flex-shrink:0">${(c.name||'?').charAt(0)}</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:800">${c.name}</div>
+        <div style="font-size:11px;color:var(--muted)">${(c.type||'').replace('_',' ')} · ${c.city||'Kuwait'} · ${c.rating?'⭐'.repeat(c.rating):'Unrated'}</div>
+      </div>
+      <div>${crmBadge(c.status||'active',c.status==='active'?'#10B981':'#EF4444')}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:12px">
+      <div style="text-align:center;padding:8px;background:var(--card);border-radius:7px;border:1px solid var(--bdr)">
+        <div style="font-size:9px;color:var(--muted)">Opps</div>
+        <div style="font-size:18px;font-weight:800;color:var(--blue)">${opps.length}</div>
+      </div>
+      <div style="text-align:center;padding:8px;background:var(--card);border-radius:7px;border:1px solid var(--bdr)">
+        <div style="font-size:9px;color:var(--muted)">Pipeline</div>
+        <div style="font-size:12px;font-weight:800;color:var(--gold)">${kwd(pipeline)}</div>
+      </div>
+      <div style="text-align:center;padding:8px;background:var(--card);border-radius:7px;border:1px solid var(--bdr)">
+        <div style="font-size:9px;color:var(--muted)">Won</div>
+        <div style="font-size:12px;font-weight:800;color:var(--green)">${kwd(wonVal)}</div>
+      </div>
+      <div style="text-align:center;padding:8px;background:var(--card);border-radius:7px;border:1px solid var(--bdr)">
+        <div style="font-size:9px;color:var(--muted)">Contracts</div>
+        <div style="font-size:18px;font-weight:800;color:var(--violet)">${conts.length}</div>
+      </div>
+      <div style="text-align:center;padding:8px;background:var(--card);border-radius:7px;border:1px solid var(--bdr)">
+        <div style="font-size:9px;color:var(--muted)">Projects</div>
+        <div style="font-size:18px;font-weight:800;color:var(--orange)">${projs.length}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;margin-bottom:6px">🎯 Opportunities</div>
+        <div style="display:flex;flex-direction:column;gap:4px;max-height:150px;overflow-y:auto">
+          ${opps.length===0?'<div style="color:var(--muted);font-size:11px">None yet</div>':
+          opps.slice(0,4).map(o=>`<div style="padding:6px 9px;background:var(--card);border-radius:6px;border-left:3px solid ${stageColor(o.stage)}">
+            <div style="font-size:11px;font-weight:600">${o.title}</div>
+            <div style="display:flex;justify-content:space-between;margin-top:2px">${crmBadge(o.stage,stageColor(o.stage))}<span style="font-size:11px;color:var(--gold)">${kwd(o.estimated_value)}</span></div>
+          </div>`).join('')}
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div class="kpi" style="padding:12px"><div class="kpi-label">Pipeline</div><div class="kpi-val" style="font-size:14px">${kwd(pipeline)}</div></div>
-        <div class="kpi" style="padding:12px"><div class="kpi-label">Won Value</div><div class="kpi-val" style="font-size:14px;color:var(--green)">${kwd(wonVal)}</div></div>
-        <div class="kpi" style="padding:12px"><div class="kpi-label">Opportunities</div><div class="kpi-val" style="font-size:14px">${opps.length}</div></div>
-        <div class="kpi" style="padding:12px"><div class="kpi-label">Quotations</div><div class="kpi-val" style="font-size:14px">${quots.length}</div></div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;margin-bottom:6px">📜 Contracts & Projects</div>
+        <div style="display:flex;flex-direction:column;gap:4px;max-height:150px;overflow-y:auto">
+          ${conts.length===0&&projs.length===0?'<div style="color:var(--muted);font-size:11px">None yet</div>':''}
+          ${conts.map(ct=>`<div style="padding:6px 9px;background:var(--card);border-radius:6px;border-left:3px solid var(--gold)">
+            <div style="font-size:10px;color:var(--gold);font-weight:700">${ct.contract_no}</div>
+            <div style="font-size:11px;font-weight:600">${ct.title}</div>
+            <div style="font-size:11px;color:var(--gold)">${kwd(ct.contract_value)}</div>
+          </div>`).join('')}
+          ${projs.map(p=>`<div style="padding:6px 9px;background:var(--card);border-radius:6px;border-left:3px solid #3B82F6">
+            <div style="font-size:10px;color:var(--blue);font-weight:700">${p.project_no}</div>
+            <div style="font-size:11px;font-weight:600">${p.name}</div>
+            <div style="display:flex;justify-content:space-between;margin-top:2px">
+              <span style="font-size:10px;color:var(--muted)">${p.pct_complete||0}% done</span>
+              <span style="font-size:10px;color:${Number(p.cpi)>=1?'#10B981':'#EF4444'}">CPI ${Number(p.cpi||1).toFixed(2)}</span>
+            </div>
+          </div>`).join('')}
+        </div>
       </div>
     </div>
-
-    <div style="margin-bottom:12px">
-      <div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;margin-bottom:8px">Opportunities</div>
-      ${opps.length===0?'<div style="color:var(--muted);font-size:12px">No opportunities yet</div>':opps.slice(0,5).map(o=>`
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--card);border-radius:7px;margin-bottom:5px">
-          <div>
-            <div style="font-size:12px;font-weight:600">${o.title}</div>
-            <div style="font-size:10px;color:var(--muted)">${o.opp_no} · ${fmtDate(o.expected_close_date)}</div>
-          </div>
-          <div style="text-align:right">
-            ${crmBadge(o.stage, stageColor(o.stage))}
-            <div style="font-size:11px;color:var(--gold);margin-top:3px">${kwd(o.estimated_value)}</div>
-          </div>
-        </div>`).join('')}
-    </div>
-
     <div>
-      <div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;margin-bottom:8px">Recent Activities</div>
-      ${acts.length===0?'<div style="color:var(--muted);font-size:12px">No activities logged</div>':acts.slice(0,5).map(a=>`
-        <div style="display:flex;gap:10px;align-items:flex-start;padding:7px 10px;background:var(--card);border-radius:7px;margin-bottom:5px">
-          <div style="font-size:16px">${{call:'📞',meeting:'🤝',email:'📧',visit:'🚗',task:'✅',note:'📝'}[a.type]||'📌'}</div>
-          <div>
-            <div style="font-size:12px;font-weight:600">${a.subject}</div>
-            <div style="font-size:10px;color:var(--muted)">${fmtDate(a.activity_date)} · ${a.outcome||'—'}</div>
-          </div>
+      <div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;margin-bottom:6px">📞 Recent Activities</div>
+      <div style="display:flex;flex-direction:column;gap:4px;max-height:120px;overflow-y:auto">
+        ${acts.length===0?'<div style="color:var(--muted);font-size:11px">No activities</div>':
+        acts.map(a=>`<div style="display:flex;gap:8px;padding:6px 9px;background:var(--card);border-radius:6px">
+          <div style="font-size:13px">${{call:'📞',meeting:'🤝',email:'📧',visit:'🚗',task:'✅',note:'📝'}[a.type]||'📌'}</div>
+          <div><div style="font-size:11px;font-weight:600">${a.subject}</div>
+          <div style="font-size:10px;color:var(--muted)">${fmtDate(a.activity_date)} · ${a.outcome||'—'}</div></div>
         </div>`).join('')}
+      </div>
     </div>
-
-    <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      ${can('create')?`<button class="btn btn-ghost" onclick="closeModal();openAddActivityModal()">+ Activity</button>`:''}
       ${can('create')?`<button class="btn btn-primary" onclick="closeModal();openAddOpportunityModal('${customerId}')">+ Opportunity</button>`:''}
     </div>
   `);
