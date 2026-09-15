@@ -600,6 +600,9 @@ img,canvas,svg{max-width:100%;height:auto}
         <button class="nav-btn" id="nav-punchlist" onclick="navTo('punchlist',this)"><span class="nav-icon">📌</span>Punch List</button>
         <button class="nav-btn" id="nav-expenses" onclick="navTo('expenses',this)"><span class="nav-icon">🧾</span>Expenses</button>
         <button class="nav-btn" id="nav-ai" onclick="navTo('ai',this)"><span class="nav-icon">🤖</span>AI Assistant</button>
+        <button class="nav-btn" id="nav-retention" onclick="navTo('retention',this)"><span class="nav-icon">🔒</span>Retention</button>
+        <button class="nav-btn" id="nav-sla" onclick="navTo('sla',this)"><span class="nav-icon">⏱</span>SLA</button>
+        <button class="nav-btn" id="nav-templates" onclick="navTo('templates',this)"><span class="nav-icon">📄</span>Templates</button>
         <button class="nav-btn" id="nav-system" onclick="navTo('system',this)"><span class="nav-icon">⚙️</span>System</button>
       </nav>
       <div class="sidebar-foot" style="cursor:pointer" onclick="openAboutModal()" title="About & Changelog">SP360 ERP v3.3 · Production<br><span style="color:var(--gold);font-size:9px">ℹ What's new?</span></div>
@@ -640,6 +643,9 @@ img,canvas,svg{max-width:100%;height:auto}
       <div class="page" id="page-punchlist"></div>
       <div class="page" id="page-expenses"></div>
       <div class="page" id="page-ai"></div>
+      <div class="page" id="page-retention"></div>
+      <div class="page" id="page-sla"></div>
+      <div class="page" id="page-templates"></div>
       <div class="page" id="page-system"></div>
       <div class="page" id="page-resources"></div>
       <div class="page" id="page-scorecard"></div>
@@ -780,12 +786,12 @@ var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 // Page visibility per role
 const ROLE_PAGES = {
-  'Admin':             ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','correspondence','benchmark','import','sitediary','punchlist','expenses','ai'],
-  'PMO Manager':       ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','correspondence','benchmark','import','sitediary','punchlist','expenses','ai'],
-  'CEO':               ['dashboard','ceo','projects','gantt','resources','scorecard','bizdev','finance','contracts','lessons','forecast','reports','subcon','meetings','analytics','tender','insurance','budget','correspondence','benchmark','ai'],
-  'Finance Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','finance','inventory','workflow','audit','contracts','lessons','forecast','reports','assets','subcon','meetings','analytics','insurance','budget','correspondence','benchmark','expenses','ai'],
-  'Project Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','inventory','qhse','documents','workflow','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','budget','correspondence','benchmark','sitediary','punchlist','expenses','ai'],
-  'Procurement Lead':  ['dashboard','projects','gantt','procurement','inventory','workflow','contracts','lessons','assets','subcon','meetings','correspondence'],
+  'Admin':             ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','correspondence','benchmark','import','sitediary','punchlist','expenses','ai','retention','sla','templates'],
+  'PMO Manager':       ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','correspondence','benchmark','import','sitediary','punchlist','expenses','ai','retention','sla','templates'],
+  'CEO':               ['dashboard','ceo','projects','gantt','resources','scorecard','bizdev','finance','contracts','lessons','forecast','reports','subcon','meetings','analytics','tender','insurance','budget','correspondence','benchmark','ai','retention','sla'],
+  'Finance Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','finance','inventory','workflow','audit','contracts','lessons','forecast','reports','assets','subcon','meetings','analytics','insurance','budget','correspondence','benchmark','expenses','ai','retention','sla'],
+  'Project Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','inventory','qhse','documents','workflow','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','budget','correspondence','benchmark','sitediary','punchlist','expenses','ai','retention','sla','templates'],
+  'Procurement Lead':  ['dashboard','projects','gantt','procurement','inventory','workflow','contracts','lessons','assets','subcon','meetings','correspondence','retention','sla','templates'],
   'BD Manager':        ['dashboard','bizdev','projects','gantt','contracts','lessons','tender','correspondence'],
   'QHSE Engineer':     ['dashboard','projects','gantt','qhse','documents','contracts','lessons','sitediary','punchlist'],
   'HR Manager':        ['dashboard','hr','documents','contracts','lessons','training','appraisal','expenses'],
@@ -1166,7 +1172,7 @@ function enterApp(){
 
   // ── Apply role-based nav visibility ──────────────────────
   const allowed = ROLE_PAGES[currentProfile?.role] || ['dashboard'];
-  ['bizdev','projects','gantt','resources','scorecard','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','correspondence','benchmark','import','sitediary','punchlist','expenses','ai','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system'].forEach(p=>{
+  ['bizdev','projects','gantt','resources','scorecard','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','correspondence','benchmark','import','sitediary','punchlist','expenses','ai','retention','sla','templates','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system'].forEach(p=>{
     const btn = document.getElementById('nav-'+p);
     if(btn) btn.style.display = allowed.includes(p) ? '' : 'none';
   });
@@ -1206,6 +1212,7 @@ function enterApp(){
   // P2-1: Init Notifications Center
   setTimeout(()=>{ initNotifRealtime(); _silentRefreshNotifs(); }, 1200);
   setTimeout(()=>{ runScheduledNotifications(); }, 3000);
+  setTimeout(()=>{ initFAB(); }, 1500);
   loadWfBadge();
   initRealtime();
   initSessionGuard();
@@ -1412,7 +1419,7 @@ function navTo(id,btn){
     procurement:()=>loadProc(curProcTab),finance:loadFinance,
     hr:()=>loadHR(curHRTab),qhse:()=>loadQHSE(curQHSETab),
     inventory:loadInventory,documents:()=>loadDocs(curDocTab),workflow:loadWorkflow,audit:loadAudit,
-    users:loadUsers,ceo:loadCEO,system:loadSystem,resources:loadResources,scorecard:loadScorecard,contracts:loadContracts,lessons:loadLessons,forecast:loadForecast,reports:loadReports,training:loadTraining,assets:loadAssets,subcon:loadSubcon,meetings:loadMeetings,analytics:loadAnalytics,tender:loadTender,insurance:loadInsurance,appraisal:loadAppraisal,budget:loadBudget,correspondence:loadCorrespondence,benchmark:loadBenchmark,import:loadImportExport,sitediary:loadSiteDiary,punchlist:loadPunchList,expenses:loadExpenses,ai:loadAI
+    users:loadUsers,ceo:loadCEO,system:loadSystem,resources:loadResources,scorecard:loadScorecard,contracts:loadContracts,lessons:loadLessons,forecast:loadForecast,reports:loadReports,training:loadTraining,assets:loadAssets,subcon:loadSubcon,meetings:loadMeetings,analytics:loadAnalytics,tender:loadTender,insurance:loadInsurance,appraisal:loadAppraisal,budget:loadBudget,correspondence:loadCorrespondence,benchmark:loadBenchmark,import:loadImportExport,sitediary:loadSiteDiary,punchlist:loadPunchList,expenses:loadExpenses,ai:loadAI,retention:loadRetention,sla:loadSLA,templates:loadTemplates
   };
   if(loaders[id])loaders[id]();
 }
@@ -1510,7 +1517,10 @@ async function loadDashboard(){
     <div class="page-head-left"><span style="font-size:22px">📊</span>
       <div><h1>Executive Dashboard</h1><div class="sub">Portfolio · ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div></div>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="exportPortfolioExcel()">📊 Export Excel</button>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="openDashboardCustomizer()">⚙️ Customize</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportPortfolioExcel()">📊 Export Excel</button>
+    </div>
   </div>
 
   <!-- KPI Row 1 -->
@@ -3397,8 +3407,12 @@ async function loadFinance(tab='overview'){
     <div class="page-head-left"><span style="font-size:22px">💰</span>
       <div><h1>Finance</h1><div class="sub">AR · AP · Cash Flow · Retention</div></div>
     </div>
-    ${(currentProfile?.role==='PMO Manager'||currentProfile?.role==='Finance Manager')?
-      `<button class="btn btn-primary btn-sm" onclick="openNewInvoiceModal()">+ New Invoice</button>`:''}
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="navTo('retention',document.getElementById('nav-retention'))" style="background:#F9731611;border-color:#F9731633;color:#F97316">🔒 Retention</button>
+      ${(currentProfile?.role==='PMO Manager'||currentProfile?.role==='Finance Manager')?
+        `<button class="btn btn-primary btn-sm" onclick="openNewInvoiceModal()">+ New Invoice</button>`:''}
+    </div>
+  </div>
   </div>
   <div class="card">${tabs}${body}</div>`;
   }catch(e){ pageError('page-finance',e); }
@@ -15012,6 +15026,729 @@ Respond in the same language as the user's message (Arabic or English).`;
   }
 }
 
+// ══════════════════════════════════════════════════════════════
+//  P12-1 · DASHBOARD CUSTOMIZATION
+//  Per-user widget preferences stored in localStorage
+// ══════════════════════════════════════════════════════════════
+const DASHBOARD_WIDGETS = [
+  {id:'kpi_row1',      label:'KPI Row 1 (Portfolio Value, CPI, SPI, GP)',  default:true},
+  {id:'kpi_row2',      label:'KPI Row 2 (AR, Approvals, NCRs, BAC)',       default:true},
+  {id:'perf_gauges',   label:'Performance Gauge Charts (CPI/SPI)',          default:true},
+  {id:'status_donut',  label:'Project Status Donut Chart',                 default:true},
+  {id:'rag_donut',     label:'Portfolio RAG Status Donut',                  default:true},
+  {id:'scurve',        label:'Portfolio S-Curve (EVM)',                     default:true},
+  {id:'finance_chart', label:'Finance Overview Bar Chart',                  default:true},
+  {id:'dept_chart',    label:'BAC by Department Chart',                     default:true},
+  {id:'evm_table',     label:'Project EVM Summary Table',                  default:true},
+  {id:'approval_queue',label:'Approval Queue',                              default:true},
+];
+
+function getDashboardPrefs(){
+  const saved=localStorage.getItem('sp360_dashboard_prefs');
+  if(saved) return JSON.parse(saved);
+  const defaults={};
+  DASHBOARD_WIDGETS.forEach(w=>{ defaults[w.id]=w.default; });
+  return defaults;
+}
+
+function openDashboardCustomizer(){
+  const prefs=getDashboardPrefs();
+  openModal('⚙️ Customize Dashboard',`
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px">
+      Choose which widgets to show on your dashboard. Changes apply immediately.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${DASHBOARD_WIDGETS.map(w=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--n3);border-radius:6px">
+        <input type="checkbox" id="dw-${w.id}" ${prefs[w.id]!==false?'checked':''}
+          style="width:16px;height:16px;accent-color:#C9A84C;cursor:pointer"/>
+        <label for="dw-${w.id}" style="font-size:11px;color:var(--text);cursor:pointer;flex:1">${w.label}</label>
+      </div>`).join('')}
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-ghost btn-sm" onclick="resetDashboardPrefs()">Reset</button>
+      <button class="btn btn-primary" onclick="saveDashboardPrefs()">Apply</button>
+    </div>`);
+}
+
+function saveDashboardPrefs(){
+  const prefs={};
+  DASHBOARD_WIDGETS.forEach(w=>{
+    const cb=document.getElementById('dw-'+w.id);
+    if(cb) prefs[w.id]=cb.checked;
+  });
+  localStorage.setItem('sp360_dashboard_prefs',JSON.stringify(prefs));
+  showToast('Dashboard preferences saved ✓');
+  closeModal();
+  loadDashboard();
+}
+
+function resetDashboardPrefs(){
+  localStorage.removeItem('sp360_dashboard_prefs');
+  showToast('Dashboard reset to defaults ✓');
+  closeModal();
+  loadDashboard();
+}
+
+// Apply prefs to hide/show sections — called inside loadDashboard
+function applyDashboardPrefs(html){
+  const prefs=getDashboardPrefs();
+  // Widget IDs map to section IDs in the rendered HTML
+  if(prefs.kpi_row2===false) html=html.replace(/<!-- WIDGET:kpi_row2 -->[\s\S]*?<!-- \/WIDGET:kpi_row2 -->/,'');
+  return html;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P12-2 · PROJECT TEMPLATES
+// ══════════════════════════════════════════════════════════════
+const PROJECT_TEMPLATES = [
+  {
+    id:'security_system',
+    icon:'📹',
+    name:'Security System',
+    desc:'CCTV, Access Control, Intrusion Detection',
+    color:'#EF4444',
+    defaults:{department:'Security', status:'planning'},
+    tasks:['Site Survey & Design','Material Procurement','Cable Infrastructure','Equipment Installation','Testing & Commissioning','Client Training','Handover Documentation']
+  },
+  {
+    id:'av_broadcast',
+    icon:'📺',
+    name:'AV / Broadcast',
+    desc:'Audio Visual, Broadcast, Display Systems',
+    color:'#3B82F6',
+    defaults:{department:'AV/Broadcast', status:'planning'},
+    tasks:['System Design & Engineering','Procurement','Cable & Infrastructure','AV Equipment Installation','System Integration','Commissioning & Testing','Handover']
+  },
+  {
+    id:'network_wireless',
+    icon:'📡',
+    name:'Network & Wireless',
+    desc:'LAN, WAN, WiFi, Wireless Networks',
+    color:'#10B981',
+    defaults:{department:'Wireless', status:'planning'},
+    tasks:['Network Design','Site Survey','Procurement','Physical Infrastructure','Network Equipment Installation','Configuration','Testing & Acceptance']
+  },
+  {
+    id:'power_systems',
+    icon:'⚡',
+    name:'Power Systems',
+    desc:'UPS, Power Distribution, Generators',
+    color:'#C9A84C',
+    defaults:{department:'Power', status:'planning'},
+    tasks:['Electrical Design','Load Calculation','Procurement','Electrical Works','Equipment Installation','Testing & Commissioning','Documentation']
+  },
+  {
+    id:'civil_works',
+    icon:'🏗',
+    name:'Civil Works',
+    desc:'Civil, Construction, Infrastructure',
+    color:'#8B5CF6',
+    defaults:{department:'Civil', status:'planning'},
+    tasks:['Survey & Design','Permits & Approvals','Mobilization','Foundation Works','Structure','Finishing','Testing & Handover']
+  },
+  {
+    id:'it_infrastructure',
+    icon:'💻',
+    name:'IT Infrastructure',
+    desc:'Servers, Storage, Data Center',
+    color:'#F97316',
+    defaults:{department:'IT', status:'planning'},
+    tasks:['Requirements Analysis','Architecture Design','Procurement','Hardware Installation','OS & Software Setup','Security Hardening','Testing & Go-Live']
+  },
+];
+
+async function loadTemplates(){
+  const el=document.getElementById('page-templates');
+  if(!el) return;
+
+  const {data:userTemplates}=await sb.from('project_templates').select('*').order('created_at',{ascending:false});
+  const custom=userTemplates||[];
+
+  el.innerHTML=`
+  <div class="page-head">
+    <div class="page-head-left"><span style="font-size:22px">📄</span>
+      <div><h1>Project Templates</h1><div class="sub">Standard Templates · Custom Templates · Document Templates</div></div>
+    </div>
+    ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openSaveTemplateModal()">+ Save Current as Template</button>`:''}
+  </div>
+
+  <!-- Built-in templates -->
+  <div style="font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Built-in SP360 Templates</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-bottom:20px">
+    ${PROJECT_TEMPLATES.map(t=>`
+    <div style="border:1px solid var(--bdr);border-left:3px solid ${t.color};border-radius:10px;padding:14px;background:var(--card2)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:20px">${t.icon}</span>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:${t.color}">${t.name}</div>
+          <div style="font-size:10px;color:var(--muted)">${t.desc}</div>
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:4px">TASKS (${t.tasks.length}):</div>
+        ${t.tasks.slice(0,4).map((task,i)=>`<div style="font-size:10px;color:var(--text);padding:2px 0">
+          <span style="color:var(--gold);font-size:9px">${i+1}.</span> ${task}
+        </div>`).join('')}
+        ${t.tasks.length>4?`<div style="font-size:9px;color:var(--faint)">…+${t.tasks.length-4} more</div>`:''}
+      </div>
+      <button onclick="applyProjectTemplate('${t.id}')"
+        style="width:100%;background:${t.color}22;border:1px solid ${t.color}44;color:${t.color};border-radius:6px;padding:7px;font-size:10px;font-weight:700;cursor:pointer">
+        🚀 Create Project from Template
+      </button>
+    </div>`).join('')}
+  </div>
+
+  <!-- Document templates -->
+  <div style="font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Document Templates</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:20px">
+    ${[
+      {icon:'📋',name:'Project Charter',    desc:'Initial project authorization'},
+      {icon:'📊',name:'EVM Report',          desc:'Earned value analysis'},
+      {icon:'⚠️',name:'Risk Register',       desc:'Risk identification & mitigation'},
+      {icon:'📝',name:'Meeting Minutes',     desc:'Standard meeting template'},
+      {icon:'✉️',name:'Transmittal Letter', desc:'Document submission letter'},
+      {icon:'📜',name:'Variation Notice',    desc:'VO formal notification'},
+      {icon:'🔍',name:'Inspection Report',  desc:'Site inspection checklist'},
+      {icon:'✅',name:'Handover Certificate',desc:'Project completion certificate'},
+    ].map(t=>`
+    <div style="border:1px solid var(--bdr);border-radius:8px;padding:10px 12px;background:var(--card2);display:flex;align-items:center;gap:8px">
+      <span style="font-size:18px;flex-shrink:0">${t.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:700;color:var(--text)">${t.name}</div>
+        <div style="font-size:9px;color:var(--muted)">${t.desc}</div>
+      </div>
+      <button onclick="generateDocTemplate('${t.name}')"
+        style="background:var(--n3);border:1px solid var(--bdr);color:var(--muted);border-radius:5px;padding:4px 8px;font-size:9px;cursor:pointer;flex-shrink:0">
+        📄 PDF
+      </button>
+    </div>`).join('')}
+  </div>
+
+  ${custom.length>0?`
+  <div style="font-size:11px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Custom Templates (${custom.length})</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">
+    ${custom.map(t=>`
+    <div style="border:1px solid var(--bdr);border-radius:8px;padding:12px;background:var(--card2)">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px">${esc(t.template_name||'—')}</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">${esc(t.description||'—')}</div>
+      <div style="display:flex;gap:6px">
+        <button onclick="applyCustomTemplate('${t.id}')" class="btn btn-primary btn-sm" style="flex:1;font-size:9px">🚀 Use</button>
+        ${can('delete')?`<button onclick="deleteCustomTemplate('${t.id}')" style="background:none;border:none;color:#EF4444;cursor:pointer;font-size:11px" title="Delete">🗑</button>`:''}
+      </div>
+    </div>`).join('')}
+  </div>`:''}`;
+}
+
+async function applyProjectTemplate(templateId){
+  const t=PROJECT_TEMPLATES.find(x=>x.id===templateId);
+  if(!t) return;
+  openModal(`🚀 Create Project — ${t.name}`,`
+    <div style="margin-bottom:12px;padding:10px;background:${t.color}11;border:1px solid ${t.color}33;border-radius:6px;font-size:11px;color:${t.color}">
+      ${t.icon} Using template: <b>${t.name}</b> · ${t.tasks.length} tasks will be created automatically
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Project Name *</label><input id="tpl-name" placeholder="${t.name} — Client Name"/></div>
+      <div class="form-field"><label>Client *</label><input id="tpl-client" placeholder="Client organization"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Contract Value (KWD) *</label><input id="tpl-val" type="number" step="0.001" placeholder="0.000"/></div>
+      <div class="form-field"><label>Start Date</label><input id="tpl-start" type="date" value="${new Date().toISOString().split('T')[0]}"/></div>
+    </div>
+    <div class="form-field"><label>Planned End Date</label><input id="tpl-end" type="date"/></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="createFromTemplate(event,'${templateId}')">Create Project</button>
+    </div>`);
+}
+
+async function createFromTemplate(e, templateId){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Creating…';}
+  try{
+    const t=PROJECT_TEMPLATES.find(x=>x.id===templateId);
+    const name=document.getElementById('tpl-name').value.trim();
+    const client=document.getElementById('tpl-client').value.trim();
+    const val=Number(document.getElementById('tpl-val').value);
+    if(!name||!client||!val){showToast('Name, client and value required','error');return;}
+    const {data:no}=await sb.rpc('next_ref_no',{p_prefix:'SP360'});
+    const {data:proj,error}=await sb.from('projects').insert({
+      project_no:no, name, client,
+      department:t.defaults.department,
+      status:t.defaults.status,
+      contract_value:val, bac:val,
+      start_date:document.getElementById('tpl-start').value||null,
+      end_date:document.getElementById('tpl-end').value||null,
+      pct:0, cpi:1, ev:0, ac:0, pv:0,
+      created_by:currentProfile?.id
+    }).select('id').single();
+    if(error){showToast('Error: '+error.message,'error');return;}
+
+    // Create tasks from template
+    if(proj?.id&&t.tasks.length>0){
+      const taskInserts=t.tasks.map((task,i)=>({
+        project_id:proj.id, task_no:`T${String(i+1).padStart(2,'0')}`,
+        title:task, status:'pending', pct:0,
+        created_by:currentProfile?.id
+      }));
+      await sb.from('project_tasks').insert(taskInserts);
+    }
+
+    await writeAudit('projects',proj?.id,'PROJECT_CREATED_FROM_TEMPLATE',null,{project_no:no,template:templateId},'Project created from template');
+    showToast(`${no} created with ${t.tasks.length} tasks ✓`);
+    closeModal();
+    navTo('projects',document.getElementById('nav-projects'));
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Create Project';}}
+}
+
+async function generateDocTemplate(templateName){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const today=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+
+  doc.setFillColor(30,58,95); doc.rect(0,0,210,38,'F');
+  doc.setTextColor(201,168,76); doc.setFontSize(16); doc.setFont('helvetica','bold');
+  doc.text(templateName.toUpperCase(),14,16);
+  doc.setTextColor(255,255,255); doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.text('Smart Projects 360 · Kuwait',14,25);
+  doc.text(`Document No: ___________    Date: ${today}`,14,32);
+
+  let y=48;
+  const addSection=(title,fields)=>{
+    if(y>250){doc.addPage();y=20;}
+    doc.setFillColor(241,245,249); doc.rect(14,y-5,182,8,'F');
+    doc.setTextColor(30,58,95); doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    doc.text(title,16,y); y+=10;
+    fields.forEach(f=>{
+      doc.setFont('helvetica','normal'); doc.setTextColor(71,85,105); doc.setFontSize(9);
+      doc.text(f+':',16,y); doc.setTextColor(15,23,42);
+      doc.setDrawColor(200,210,220); doc.line(50,y+1,196,y+1);
+      y+=8;
+    });
+    y+=4;
+  };
+
+  if(templateName==='Project Charter'){
+    addSection('PROJECT INFORMATION',['Project No','Project Name','Client','Department','Project Manager']);
+    addSection('SCOPE & OBJECTIVES',['Scope Summary','Key Deliverables','Exclusions']);
+    addSection('TIMELINE & BUDGET',['Start Date','Planned Completion','Contract Value (KWD)','Contingency (KWD)']);
+    addSection('AUTHORIZATION',['Prepared by','Reviewed by','Approved by (PMO)','Client Signature']);
+  } else if(templateName==='Transmittal Letter'){
+    addSection('TRANSMITTAL DETAILS',['To (Name/Title)','Organization','Project','Transmittal No']);
+    addSection('DOCUMENT LIST',['Document No','Document Title','Revision','Copies']);
+    addSection('REMARKS',['Purpose','Action Required','Response Required by']);
+    addSection('AUTHORIZATION',['Transmitted by','Date','Signature']);
+  } else if(templateName==='Handover Certificate'){
+    addSection('PROJECT DETAILS',['Project No','Project Name','Contract Value (KWD)','Completion Date']);
+    addSection('SCOPE CONFIRMATION',['Scope Completed','Punch List Items','Outstanding Issues']);
+    addSection('FINANCIAL SUMMARY',['Final Account Value','Retention Amount','Retention Release Date']);
+    addSection('SIGNATORIES',['Contractor Representative','Client Representative','Date of Handover']);
+  } else {
+    addSection('GENERAL INFORMATION',['Project','Prepared by','Date','Reference']);
+    addSection('DETAILS',['Description','Scope','Notes','Action Required']);
+    addSection('AUTHORIZATION',['Prepared by','Approved by','Date']);
+  }
+
+  doc.setFontSize(8); doc.setTextColor(148,163,184);
+  const pages=doc.getNumberOfPages();
+  for(let i=1;i<=pages;i++){
+    doc.setPage(i);
+    doc.text(`SP360 ERP v3.3 · ${templateName} Template · Page ${i}/${pages} · Confidential`,105,290,'center');
+  }
+
+  doc.save(`SP360_Template_${templateName.replace(/\s+/g,'_')}.pdf`);
+  showToast(`${templateName} template downloaded ✓`);
+}
+
+function openSaveTemplateModal(){
+  openModal('💾 Save as Custom Template',`
+    <div class="form-field"><label>Template Name *</label><input id="ctt-name" placeholder="e.g. Standard Fiber Project"/></div>
+    <div class="form-field"><label>Description</label><input id="ctt-desc" placeholder="Brief description of this template"/></div>
+    <div class="form-field"><label>Department</label><input id="ctt-dept" placeholder="e.g. Security, IT, Civil"/></div>
+    <div style="padding:8px;background:var(--n3);border-radius:6px;font-size:10px;color:var(--muted)">
+      This will save the current project structure as a reusable template for future projects.
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCustomTemplate(event)">Save Template</button>
+    </div>`);
+}
+
+async function saveCustomTemplate(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const name=document.getElementById('ctt-name').value.trim();
+    if(!name){showToast('Template name required','error');return;}
+    const {error}=await sb.from('project_templates').insert({
+      template_name:name,
+      description:document.getElementById('ctt-desc').value.trim()||null,
+      department:document.getElementById('ctt-dept').value.trim()||null,
+      created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Template saved ✓'); closeModal(); loadTemplates();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save Template';}}
+}
+
+async function deleteCustomTemplate(id){
+  if(!confirm('Delete this template?')) return;
+  await sb.from('project_templates').delete().eq('id',id);
+  showToast('Template deleted'); loadTemplates();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P12-3 · SLA MANAGEMENT
+// ══════════════════════════════════════════════════════════════
+async function loadSLA(){
+  const el=document.getElementById('page-sla');
+  if(!el) return;
+  el.innerHTML='<div class="loading">Loading SLA…</div>';
+  try{
+    const today=new Date();
+    const [slaR,wfR]=await Promise.all([
+      sb.from('sla_definitions').select('*').order('priority'),
+      sb.from('workflow_items').select('id,ref_no,entity_type,status,created_at,due_date,current_step').order('created_at',{ascending:false}).limit(200)
+    ]);
+    const slas=slaR.data||[], wfs=wfR.data||[];
+
+    // Default SLAs if none defined
+    const defaultSLAs=[
+      {id:'def1',entity_type:'purchase_order',   sla_name:'PO Approval',           target_hours:24,  escalation_hours:48,  priority:1},
+      {id:'def2',entity_type:'invoice',           sla_name:'Invoice Review',        target_hours:48,  escalation_hours:72,  priority:2},
+      {id:'def3',entity_type:'change_order',      sla_name:'Change Order Review',   target_hours:72,  escalation_hours:120, priority:3},
+      {id:'def4',entity_type:'document_review',   sla_name:'Document Review',       target_hours:48,  escalation_hours:96,  priority:2},
+      {id:'def5',entity_type:'rfq',               sla_name:'RFQ Response',          target_hours:168, escalation_hours:240, priority:4},
+    ];
+    const activeSLAs=slas.length>0?slas:defaultSLAs;
+
+    // Calculate compliance per type
+    const slaCompliance=activeSLAs.map(sla=>{
+      const typeWFs=wfs.filter(w=>w.entity_type===sla.entity_type||sla.entity_type==='*');
+      const targetMs=sla.target_hours*3600000;
+      const compliant=typeWFs.filter(w=>{
+        if(!w.created_at) return true;
+        const age=today-new Date(w.created_at);
+        return w.status==='approved'||w.status==='rejected'||age<=targetMs;
+      }).length;
+      const breach=typeWFs.filter(w=>{
+        if(!w.created_at) return false;
+        const age=today-new Date(w.created_at);
+        return (w.status==='pending'||w.status==='overdue')&&age>targetMs;
+      });
+      const pct=typeWFs.length>0?Math.round(compliant/typeWFs.length*100):100;
+      return {...sla, total:typeWFs.length, compliant, breach:breach.length, pct};
+    });
+
+    const overallPct=wfs.length>0?Math.round(wfs.filter(w=>w.status!=='overdue').length/wfs.length*100):100;
+    const totalBreaches=slaCompliance.reduce((s,x)=>s+x.breach,0);
+
+    el.innerHTML=`
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">⏱</span>
+        <div><h1>SLA Management</h1><div class="sub">Service Level Agreements · Compliance Tracking · Breach Alerts</div></div>
+      </div>
+      ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openNewSLAModal()">+ Define SLA</button>`:''}
+    </div>
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Overall SLA', overallPct+'%', overallPct>=90?'#10B981':overallPct>=75?'#F97316':'#EF4444', 'Compliance rate')}
+      ${kpi('Total Items',  wfs.length,    '#C9A84C', 'Workflow items tracked')}
+      ${kpi('SLA Breaches', totalBreaches, totalBreaches>0?'#EF4444':'#10B981', 'Items over target')}
+      ${kpi('SLA Rules',    activeSLAs.length, '#3B82F6', 'Defined rules')}
+    </div>
+
+    <!-- Compliance per type -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="sec-head"><div class="sec-title"><span>📊</span>SLA Compliance by Type</div></div>
+      ${slaCompliance.map(sla=>`
+      <div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div>
+            <span style="font-size:11px;font-weight:700;color:var(--text)">${esc(sla.sla_name)}</span>
+            <span style="font-size:9px;color:var(--muted);margin-left:6px">Target: ${sla.target_hours}h</span>
+          </div>
+          <div style="text-align:right">
+            <span style="font-size:13px;font-weight:900;color:${sla.pct>=90?'#10B981':sla.pct>=75?'#F97316':'#EF4444'}">${sla.pct}%</span>
+            ${sla.breach>0?`<span style="font-size:9px;color:#EF4444;margin-left:6px">⚠️ ${sla.breach} breach(es)</span>`:''}
+          </div>
+        </div>
+        <div style="background:var(--bdr);border-radius:4px;height:8px;overflow:hidden">
+          <div style="height:100%;width:${sla.pct}%;background:${sla.pct>=90?'#10B981':sla.pct>=75?'#F97316':'#EF4444'};border-radius:4px;transition:width .3s"></div>
+        </div>
+        <div style="font-size:9px;color:var(--faint);margin-top:2px">${sla.total} items · ${sla.compliant} compliant · ${sla.breach} breached</div>
+      </div>`).join('')}
+    </div>
+
+    <!-- Breach details -->
+    ${totalBreaches>0?`
+    <div class="card" style="border-left:3px solid #EF4444">
+      <div class="sec-head"><div class="sec-title"><span>🚨</span>SLA Breaches — Immediate Action Required</div></div>
+      <table><thead><tr><th>Ref</th><th>Type</th><th>Step</th><th>Age</th><th>Target</th><th style="text-align:center">Status</th></tr></thead><tbody>
+      ${wfs.filter(w=>{
+        const sla=activeSLAs.find(s=>s.entity_type===w.entity_type);
+        if(!sla||!w.created_at) return false;
+        return (w.status==='pending'||w.status==='overdue')&&(today-new Date(w.created_at))>sla.target_hours*3600000;
+      }).slice(0,15).map(w=>{
+        const sla=activeSLAs.find(s=>s.entity_type===w.entity_type)||{target_hours:48};
+        const ageH=Math.round((today-new Date(w.created_at))/3600000);
+        return`<tr>
+          <td style="color:var(--gold);font-weight:700;font-size:10px">${esc(w.ref_no||'—')}</td>
+          <td style="font-size:10px">${esc(w.entity_type||'—')}</td>
+          <td style="font-size:10px;color:var(--muted)">${esc(w.current_step||'—')}</td>
+          <td style="font-size:10px;color:#EF4444;font-weight:700">${ageH}h</td>
+          <td style="font-size:10px;color:var(--faint)">${sla.target_hours}h limit</td>
+          <td style="text-align:center">${pill('Breached','#EF4444')}</td>
+        </tr>`;}).join('')}
+      </tbody></table>
+    </div>`:'<div class="card" style="text-align:center;padding:20px;border-left:3px solid #10B981"><div style="font-size:24px;margin-bottom:6px">✅</div><div style="font-size:13px;font-weight:700;color:#10B981">No SLA Breaches</div><div style="font-size:11px;color:var(--muted)">All workflow items within target response times</div></div>'}`;
+  }catch(err){ el.innerHTML=`<div class="empty">Error: ${err.message}</div>`; }
+}
+
+function openNewSLAModal(){
+  openModal('+ Define SLA Rule',`
+    <div class="form-row">
+      <div class="form-field"><label>SLA Name *</label><input id="sla-name" placeholder="e.g. PO Approval SLA"/></div>
+      <div class="form-field"><label>Entity Type *</label>
+        <select id="sla-etype" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          ${['purchase_order','invoice','change_order','document_review','rfq','ncr','tender'].map(t=>`<option value="${t}">${t.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase())}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Target (hours) *</label><input id="sla-target" type="number" min="1" placeholder="24"/></div>
+      <div class="form-field"><label>Escalation (hours) *</label><input id="sla-esc" type="number" min="1" placeholder="48"/></div>
+    </div>
+    <div class="form-field"><label>Priority (1=Highest)</label><input id="sla-prio" type="number" min="1" max="10" value="3"/></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSLARule(event)">Save SLA Rule</button>
+    </div>`);
+}
+
+async function saveSLARule(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const name=document.getElementById('sla-name').value.trim();
+    const target=Number(document.getElementById('sla-target').value);
+    const esc2=Number(document.getElementById('sla-esc').value);
+    if(!name||!target){showToast('Name and target hours required','error');return;}
+    const {error}=await sb.from('sla_definitions').insert({
+      sla_name:name, entity_type:document.getElementById('sla-etype').value,
+      target_hours:target, escalation_hours:esc2||target*2,
+      priority:Number(document.getElementById('sla-prio').value)||3,
+      created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('SLA rule saved ✓'); closeModal(); loadSLA();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save SLA Rule';}}
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P12-4 · RETENTION MANAGEMENT
+// ══════════════════════════════════════════════════════════════
+async function loadRetention(){
+  const el=document.getElementById('page-retention');
+  if(!el) return;
+  el.innerHTML='<div class="loading">Loading Retention…</div>';
+  try{
+    const today=new Date();
+    const [retR,projR]=await Promise.all([
+      sb.from('retention_records').select('*,project:projects(project_no,name,client,contract_value)').order('created_at',{ascending:false}),
+      sb.from('projects').select('id,project_no,name,client,contract_value,status').in('status',[...ACTIVE_STATUSES,'completed']).order('project_no')
+    ]);
+    const rets=retR.data||[], projs=projR.data||[];
+
+    const totalHeld=rets.filter(r=>r.status==='held').reduce((s,r)=>s+Number(r.amount||0),0);
+    const totalReleased=rets.filter(r=>r.status==='released').reduce((s,r)=>s+Number(r.amount||0),0);
+    const dueSoon=rets.filter(r=>r.status==='held'&&r.release_date&&Math.ceil((new Date(r.release_date)-today)/86400000)<=30);
+
+    el.innerHTML=`
+    <div class="page-head">
+      <div class="page-head-left"><span style="font-size:22px">🔒</span>
+        <div><h1>Retention Management</h1><div class="sub">Deferred Payments · Release Tracking · Cash Flow Impact</div></div>
+      </div>
+      ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openNewRetentionModal()">+ Add Retention</button>`:''}
+    </div>
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Total Held',      fmtKWD(totalHeld),     '#F97316', 'Retention withheld')}
+      ${kpi('Total Released',  fmtKWD(totalReleased),  '#10B981', 'Paid out')}
+      ${kpi('Due ≤30 Days',    dueSoon.length,          dueSoon.length>0?'#C9A84C':'#10B981', 'Release expected')}
+      ${kpi('Records',         rets.length,              '#3B82F6', 'All retention entries')}
+    </div>
+
+    ${dueSoon.length>0?`
+    <div class="card" style="margin-bottom:14px;border-left:3px solid #C9A84C">
+      <div class="sec-head"><div class="sec-title"><span>📅</span>Retention Due for Release (≤30 days)</div></div>
+      ${dueSoon.map(r=>{
+        const daysLeft=Math.ceil((new Date(r.release_date)-today)/86400000);
+        return`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--bdr)">
+          <div style="flex:1">
+            <div style="font-size:11px;font-weight:700;color:var(--gold)">${esc(r.project?.project_no||'—')} — ${esc(r.retention_type||'—')}</div>
+            <div style="font-size:10px;color:var(--muted)">${esc(r.project?.client||'—')}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:13px;font-weight:700;color:var(--gold)">${fmtKWD(r.amount||0)}</div>
+            <div style="font-size:9px;color:${daysLeft<=7?'#EF4444':'#C9A84C'}">${daysLeft}d left</div>
+          </div>
+          ${can('edit')?`<button onclick="releaseRetention('${r.id}')" class="btn btn-primary btn-sm" style="font-size:9px">Release</button>`:''}
+        </div>`;}).join('')}
+    </div>`:''}
+
+    <div class="card">
+      <div class="sec-head"><div class="sec-title"><span>📋</span>All Retention Records</div></div>
+      ${rets.length===0?'<div class="empty">No retention records. Add retention when issuing invoices.</div>':`
+      <div style="overflow-x:auto">
+        <table><thead><tr>
+          <th>Project</th><th>Client</th><th>Type</th>
+          <th style="text-align:right">Amount</th><th style="text-align:right">%</th>
+          <th>Due Date</th><th style="text-align:center">Status</th><th></th>
+        </tr></thead><tbody>
+        ${rets.map(r=>{
+          const daysLeft=r.release_date?Math.ceil((new Date(r.release_date)-today)/86400000):null;
+          return`<tr>
+            <td style="color:var(--gold);font-weight:700;font-size:10px">${esc(r.project?.project_no||'—')}</td>
+            <td style="font-size:10px;color:var(--muted)">${esc(r.project?.client||r.client_name||'—')}</td>
+            <td><span style="font-size:9px;background:${r.retention_type==='AR'?'#10B98122':'#3B82F622'};color:${r.retention_type==='AR'?'#10B981':'#3B82F6'};border-radius:4px;padding:2px 6px">${esc(r.retention_type||'—')}</span></td>
+            <td style="text-align:right;font-weight:700;color:var(--gold)">${fmtKWD(r.amount||0)}</td>
+            <td style="text-align:right;color:var(--muted)">${r.pct||'—'}%</td>
+            <td style="font-size:10px;color:${daysLeft!==null&&r.status==='held'&&daysLeft<=30?'#C9A84C':'var(--faint)'};font-weight:${daysLeft!==null&&daysLeft<=30?'700':'400'}">
+              ${r.release_date||'—'}${daysLeft!==null&&r.status==='held'?`<br><span style="font-size:9px">${daysLeft<0?'Overdue':daysLeft+'d'}</span>`:''}
+            </td>
+            <td style="text-align:center">${pill(r.status||'held',r.status==='released'?'#10B981':r.status==='partial'?'#3B82F6':'#F97316')}</td>
+            <td>${r.status==='held'&&can('edit')?`<button onclick="releaseRetention('${r.id}')" style="background:none;border:none;color:#10B981;cursor:pointer;font-size:11px" title="Release">✅</button>`:''}
+            </td>
+          </tr>`;}).join('')}
+        </tbody></table>
+      </div>`}
+    </div>`;
+  }catch(err){ el.innerHTML=`<div class="empty">Error: ${err.message}</div>`; }
+}
+
+function openNewRetentionModal(){
+  const projs=window._cachedProjects||[];
+  openModal('+ Add Retention Record',`
+    <div class="form-row">
+      <div class="form-field"><label>Project *</label>
+        <select id="ret-proj" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="">— Select Project —</option>
+          ${projs.map(p=>`<option value="${p.id}">${esc(p.project_no)} — ${esc(p.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Type</label>
+        <select id="ret-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:10px;color:var(--text)">
+          <option value="AR">AR Retention (from Client)</option>
+          <option value="AP">AP Retention (to Subcon)</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Retention % *</label><input id="ret-pct" type="number" step="0.1" placeholder="5" oninput="calcRetAmt()"/></div>
+      <div class="form-field"><label>Base Amount (KWD)</label><input id="ret-base" type="number" step="0.001" placeholder="Contract value" oninput="calcRetAmt()"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-field"><label>Retention Amount (KWD)</label><input id="ret-amt" type="number" step="0.001" placeholder="Auto-calculated"/></div>
+      <div class="form-field"><label>Expected Release Date</label><input id="ret-date" type="date"/></div>
+    </div>
+    <div class="form-field"><label>Notes</label><input id="ret-notes" placeholder="e.g. Per Clause 14.3 of contract"/></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRetention(event)">Save</button>
+    </div>`);
+}
+
+function calcRetAmt(){
+  const pct=Number(document.getElementById('ret-pct')?.value||0);
+  const base=Number(document.getElementById('ret-base')?.value||0);
+  const amtEl=document.getElementById('ret-amt');
+  if(amtEl&&pct>0&&base>0) amtEl.value=(base*pct/100).toFixed(3);
+}
+
+async function saveRetention(e){
+  const btn=e?.target; if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const projId=document.getElementById('ret-proj').value;
+    const amt=Number(document.getElementById('ret-amt').value);
+    if(!projId||!amt){showToast('Project and amount required','error');return;}
+    const {error}=await sb.from('retention_records').insert({
+      project_id:projId,
+      retention_type:document.getElementById('ret-type').value,
+      pct:Number(document.getElementById('ret-pct').value)||null,
+      amount:amt,
+      release_date:document.getElementById('ret-date').value||null,
+      notes:document.getElementById('ret-notes').value.trim()||null,
+      status:'held', created_by:currentProfile?.id
+    });
+    if(error){showToast('Error: '+error.message,'error');return;}
+    showToast('Retention recorded ✓'); closeModal(); loadRetention();
+  }catch(e2){showToast('Error: '+e2.message,'error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='Save';}}
+}
+
+async function releaseRetention(id){
+  if(!confirm('Mark retention as released?')) return;
+  const {error}=await sb.from('retention_records').update({
+    status:'released', released_at:new Date().toISOString(), released_by:currentProfile?.id
+  }).eq('id',id);
+  if(error){showToast('Error: '+error.message,'error');return;}
+  showToast('Retention released ✓');
+  loadRetention();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P12-5 · MOBILE QUICK ACTIONS (FAB Menu)
+// ══════════════════════════════════════════════════════════════
+let _fabOpen=false;
+
+function initFAB(){
+  // Only show on mobile
+  if(window.innerWidth>768) return;
+  if(document.getElementById('fab-container')) return;
+
+  const fab=document.createElement('div');
+  fab.id='fab-container';
+  fab.style.cssText='position:fixed;bottom:80px;right:16px;z-index:1000;display:flex;flex-direction:column-reverse;align-items:flex-end;gap:10px';
+
+  const actions=[
+    {icon:'🏗',label:'New Project',   fn:"navTo('projects',document.getElementById('nav-projects'))"},
+    {icon:'💰',label:'New Invoice',   fn:"navTo('finance',document.getElementById('nav-finance'))"},
+    {icon:'⚡',label:'New Workflow',  fn:"navTo('workflow',document.getElementById('nav-workflow'))"},
+    {icon:'📔',label:'Site Diary',    fn:"navTo('sitediary',document.getElementById('nav-sitediary'))"},
+    {icon:'📌',label:'Punch Item',    fn:"navTo('punchlist',document.getElementById('nav-punchlist'))"},
+  ];
+
+  const actionsHtml=actions.map(a=>`
+    <div class="fab-action" onclick="${a.fn};toggleFAB()" style="display:none;flex-direction:row-reverse;align-items:center;gap:8px">
+      <div style="width:44px;height:44px;background:#1E3A5F;border:2px solid #C9A84C;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;box-shadow:0 4px 12px #0006">${a.icon}</div>
+      <div style="background:#1E3A5F;color:#C9A84C;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px #0004">${a.label}</div>
+    </div>`).join('');
+
+  fab.innerHTML=`
+    ${actionsHtml}
+    <div onclick="toggleFAB()" id="fab-main"
+      style="width:52px;height:52px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;box-shadow:0 4px 16px #0008;transition:transform .2s">
+      ➕
+    </div>`;
+  document.body.appendChild(fab);
+}
+
+function toggleFAB(){
+  _fabOpen=!_fabOpen;
+  const main=document.getElementById('fab-main');
+  if(main) main.style.transform=_fabOpen?'rotate(45deg)':'rotate(0)';
+  document.querySelectorAll('.fab-action').forEach(a=>{
+    a.style.display=_fabOpen?'flex':'none';
+  });
+}
+
+// Hook FAB into enterApp
+const _origEnterApp_fab=typeof enterApp==='function'?enterApp:null;
+
+// ══════════════════════════════════════════════════════════════
+//  P12-6 · DASHBOARD CUSTOMIZATION — Add button to dashboard
+// ══════════════════════════════════════════════════════════════
+// Hook: add customizer button to dashboard header
 async function installPWA(){
   if(!_pwaPrompt){
     // Fallback: show manual instructions
