@@ -1467,24 +1467,30 @@ async function loadDashboard(){
   const el=document.getElementById('page-dashboard');
   try{
   el.innerHTML=`<div class="loading">Loading dashboard…</div>`;
-  const [projR,invR,wfR,ncrR,snapR,crmOppR,crmQuotR,crmLeadR,crmCustR,tsR,msR]=await Promise.all([
+
+  // ── Core queries (must succeed) ───────────────────────────
+  const [projR,invR,wfR,ncrR,snapR]=await Promise.all([
     sb.from('projects').select('id,project_no,name,contract_value,bac,ac,ev,pv,pct,cpi,spi,status,department'),
     sb.from('invoices').select('invoice_type,net_amount,status'),
     sb.from('workflow_items').select('id,ref_no,entity_type,current_step,status,raised_date'),
     sb.from('ncrs').select('id,severity,status'),
-    sb.from('project_evm_snapshots').select('period_label,snapshot_date,pv,ev,ac').order('snapshot_date',{ascending:true}),
-    sb.from('crm_opportunities').select('id,stage,estimated_value,probability,expected_close_date'),
-    sb.from('crm_quotations').select('id,status,value'),
-    sb.from('crm_leads').select('id,status'),
-    sb.from('crm_customers').select('id,status'),
-    sb.from('timesheets').select('id,project_id,hours_regular,hours_overtime,period,status').order('period',{ascending:false}).limit(300),
-    sb.from('project_milestones').select('id,project_id,name,planned_date,status')
+    sb.from('project_evm_snapshots').select('period_label,snapshot_date,pv,ev,ac').order('snapshot_date',{ascending:true})
   ]);
   const projs=projR.data||[], invs=invR.data||[], wfs=wfR.data||[];
   const ncrs=ncrR.data||[], snaps=snapR.data||[];
-  // CRM data
-  const crmOpps=crmOppR.data||[], crmQuots=crmQuotR.data||[];
-  const crmLeads=crmLeadR.data||[], crmCusts=crmCustR.data||[];
+
+  // ── Optional queries (fail silently) ─────────────────────
+  const safeQuery = async (fn) => { try { const r=await fn(); return r.data||[]; } catch(e){ return []; }};
+  const [crmOpps,crmQuots,crmLeads,crmCusts,tsData,msData] = await Promise.all([
+    safeQuery(()=>sb.from('crm_opportunities').select('id,stage,estimated_value,probability,expected_close_date')),
+    safeQuery(()=>sb.from('crm_quotations').select('id,status,value')),
+    safeQuery(()=>sb.from('crm_leads').select('id,status')),
+    safeQuery(()=>sb.from('crm_customers').select('id,status')),
+    safeQuery(()=>sb.from('timesheets').select('id,project_id,hours_regular,hours_overtime,period,status').order('period',{ascending:false}).limit(300)),
+    safeQuery(()=>sb.from('project_milestones').select('id,project_id,name,planned_date,status'))
+  ]);
+
+  // CRM calcs
   const crmActiveOpps=crmOpps.filter(o=>!['won','lost'].includes(o.stage));
   const crmPipeline=crmActiveOpps.reduce((s,o)=>s+Number(o.estimated_value),0);
   const crmWeighted=crmActiveOpps.reduce((s,o)=>s+(Number(o.estimated_value)*(Number(o.probability)/100)),0);
@@ -1492,14 +1498,12 @@ async function loadDashboard(){
   const crmWinRate=crmQuots.length>0?Math.round(crmQuots.filter(q=>q.status==='won').length/crmQuots.length*100):0;
   const crmNewLeads=crmLeads.filter(l=>l.status==='new').length;
   // Time & Milestones
-  const tsData=tsR.data||[], msData=msR.data||[];
   const today=new Date();
   const curPeriod=today.toISOString().slice(0,7);
   const tsThisMonth=tsData.filter(t=>t.period===curPeriod);
   const totalHoursMonth=tsThisMonth.reduce((s,t)=>s+Number(t.hours_regular||0)+Number(t.hours_overtime||0),0);
   const overdueMs=msData.filter(m=>m.status==='pending'&&m.planned_date&&new Date(m.planned_date)<today);
   const upcomingMs=msData.filter(m=>m.status==='pending'&&m.planned_date&&new Date(m.planned_date)>=today&&(new Date(m.planned_date)-today)/86400000<=14);
-
   const activeP=projs.filter(p=>isActiveProject(p));
   const totalEV=activeP.reduce((s,p)=>s+Number(p.ev),0);
   const totalAC=activeP.reduce((s,p)=>s+Number(p.ac),0);
@@ -5620,10 +5624,10 @@ async function loadCEO(){
     sb.from('employees').select('id,status,department'),
     sb.from('project_evm_snapshots').select('project_id,snapshot_date,period_label,pv,ev,ac,spi,cpi').order('snapshot_date',{ascending:true}),
     sb.from('vendors').select('id,is_approved,status'),
-    sb.from('crm_opportunities').select('id,stage,estimated_value,probability,title,expected_close_date,customer_id'),
-    sb.from('crm_quotations').select('id,status,value,title'),
-    sb.from('crm_customers').select('id,name,status,type'),
-    sb.from('crm_leads').select('id,status')
+    sb.from('crm_opportunities').select('id,stage,estimated_value,probability,title,expected_close_date,customer_id').catch(()=>({data:[]})),
+    sb.from('crm_quotations').select('id,status,value,title').catch(()=>({data:[]})),
+    sb.from('crm_customers').select('id,name,status,type').catch(()=>({data:[]})),
+    sb.from('crm_leads').select('id,status').catch(()=>({data:[]}))
   ]);
 
   const projs=projR.data||[], invs=invR.data||[], wfs=wfR.data||[];
