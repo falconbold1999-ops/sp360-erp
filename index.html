@@ -765,7 +765,7 @@ img,canvas,svg{max-width:100%;height:auto}
 <script>
 
 // ═══════════════════════════════════════════════════════════
-//  SP360 v4.0 — Integrated ERP + CRM + Project Controls
+//  SP360 ERP v3.3 — Supabase Production System
 // ═══════════════════════════════════════════════════════════
 /* ═══════════════════════════════════════════════════════════════════════
    SP360 ERP v3.3 — P2: Notifications Center + Advanced CEO Report
@@ -1193,7 +1193,16 @@ function enterApp(){
 
   // ── Apply role-based nav visibility ──────────────────────
   const allowed = ROLE_PAGES[currentProfile?.role] || ['dashboard'];
-  ['bizdev','projects','gantt','resources','scorecard','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','correspondence','benchmark','import','sitediary','punchlist','expenses','ai','retention','sla','templates','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system'].forEach(p=>{
+  // Build full list from all ROLE_PAGES values + CRM + P13
+  const allPages = [...new Set([
+    'bizdev','projects','gantt','resources','scorecard','contracts','lessons','forecast','reports',
+    'training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget',
+    'correspondence','benchmark','import','sitediary','punchlist','expenses','ai','retention',
+    'sla','templates','procurement','finance','hr','qhse','inventory','documents','workflow',
+    'audit','users','ceo','system',
+    ...CRM_PAGES, ...P13_PAGES
+  ])];
+  allPages.forEach(p=>{
     const btn = document.getElementById('nav-'+p);
     if(btn) btn.style.display = allowed.includes(p) ? '' : 'none';
   });
@@ -1234,7 +1243,6 @@ function enterApp(){
   setTimeout(()=>{ initNotifRealtime(); _silentRefreshNotifs(); }, 1200);
   setTimeout(()=>{ runScheduledNotifications(); }, 3000);
   setTimeout(()=>{ initFAB(); }, 1500);
-  // P13: KPI Alerts Engine — runs silently on login
   setTimeout(()=>{ runKPIAlerts(false); }, 4000);
   loadWfBadge();
   initRealtime();
@@ -1467,8 +1475,6 @@ async function loadDashboard(){
   const el=document.getElementById('page-dashboard');
   try{
   el.innerHTML=`<div class="loading">Loading dashboard…</div>`;
-
-  // ── Core queries (must succeed) ───────────────────────────
   const [projR,invR,wfR,ncrR,snapR]=await Promise.all([
     sb.from('projects').select('id,project_no,name,contract_value,bac,ac,ev,pv,pct,cpi,spi,status,department'),
     sb.from('invoices').select('invoice_type,net_amount,status'),
@@ -1478,32 +1484,20 @@ async function loadDashboard(){
   ]);
   const projs=projR.data||[], invs=invR.data||[], wfs=wfR.data||[];
   const ncrs=ncrR.data||[], snaps=snapR.data||[];
-
-  // ── Optional queries (fail silently) ─────────────────────
-  const safeQuery = async (fn) => { try { const r=await fn(); return r.data||[]; } catch(e){ return []; }};
-  const [crmOpps,crmQuots,crmLeads,crmCusts,tsData,msData] = await Promise.all([
-    safeQuery(()=>sb.from('crm_opportunities').select('id,stage,estimated_value,probability,expected_close_date')),
-    safeQuery(()=>sb.from('crm_quotations').select('id,status,value')),
-    safeQuery(()=>sb.from('crm_leads').select('id,status')),
-    safeQuery(()=>sb.from('crm_customers').select('id,status')),
-    safeQuery(()=>sb.from('timesheets').select('id,project_id,hours_regular,hours_overtime,period,status').order('period',{ascending:false}).limit(300)),
-    safeQuery(()=>sb.from('project_milestones').select('id,project_id,name,planned_date,status'))
+  const safeQ=async(fn)=>{try{const r=await fn();return r.data||[];}catch(e){return [];}};
+  const [crmOpps,crmQuots,crmLeads,crmCusts]=await Promise.all([
+    safeQ(()=>sb.from('crm_opportunities').select('id,stage,estimated_value,probability')),
+    safeQ(()=>sb.from('crm_quotations').select('id,status,value')),
+    safeQ(()=>sb.from('crm_leads').select('id,status')),
+    safeQ(()=>sb.from('crm_customers').select('id,status'))
   ]);
-
-  // CRM calcs
   const crmActiveOpps=crmOpps.filter(o=>!['won','lost'].includes(o.stage));
   const crmPipeline=crmActiveOpps.reduce((s,o)=>s+Number(o.estimated_value),0);
   const crmWeighted=crmActiveOpps.reduce((s,o)=>s+(Number(o.estimated_value)*(Number(o.probability)/100)),0);
   const crmWonVal=crmQuots.filter(q=>q.status==='won').reduce((s,q)=>s+Number(q.value),0);
   const crmWinRate=crmQuots.length>0?Math.round(crmQuots.filter(q=>q.status==='won').length/crmQuots.length*100):0;
   const crmNewLeads=crmLeads.filter(l=>l.status==='new').length;
-  // Time & Milestones
-  const today=new Date();
-  const curPeriod=today.toISOString().slice(0,7);
-  const tsThisMonth=tsData.filter(t=>t.period===curPeriod);
-  const totalHoursMonth=tsThisMonth.reduce((s,t)=>s+Number(t.hours_regular||0)+Number(t.hours_overtime||0),0);
-  const overdueMs=msData.filter(m=>m.status==='pending'&&m.planned_date&&new Date(m.planned_date)<today);
-  const upcomingMs=msData.filter(m=>m.status==='pending'&&m.planned_date&&new Date(m.planned_date)>=today&&(new Date(m.planned_date)-today)/86400000<=14);
+
   const activeP=projs.filter(p=>isActiveProject(p));
   const totalEV=activeP.reduce((s,p)=>s+Number(p.ev),0);
   const totalAC=activeP.reduce((s,p)=>s+Number(p.ac),0);
@@ -1590,6 +1584,7 @@ async function loadDashboard(){
     ${kpi('BAC',fmtKWD(totalBAC),'#1E3A5F','Total budget at completion')}
   </div>
 
+
   <!-- CRM KPI Row -->
   <div style="background:var(--card2);border:1px solid var(--bdr);border-radius:11px;padding:14px 18px;margin-bottom:12px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -1619,97 +1614,6 @@ async function loadDashboard(){
         <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Win Rate</div>
         <div style="font-size:20px;font-weight:800;color:${crmWinRate>=50?'#10B981':'#F97316'}">${crmWinRate}%</div>
         <div style="font-size:9px;color:var(--faint)">Won: ${fmtKWD(crmWonVal)}</div>
-      </div>
-    </div>
-    <!-- Mini Pipeline Bar -->
-    ${crmOpps.length>0?`
-    <div style="margin-top:12px">
-      <div style="font-size:10px;color:var(--faint);margin-bottom:6px">Pipeline by Stage</div>
-      <div style="display:flex;gap:6px;align-items:center">
-        ${['prospect','proposal','negotiation'].map(stage=>{
-          const stageOpps=crmOpps.filter(o=>o.stage===stage);
-          const stageVal=stageOpps.reduce((s,o)=>s+Number(o.estimated_value),0);
-          const pct=crmPipeline>0?Math.round(stageVal/crmPipeline*100):0;
-          const colors={prospect:'#3B82F6',proposal:'#F97316',negotiation:'#8B5CF6'};
-          return `<div style="flex:${pct||1};min-width:0">
-            <div style="height:8px;background:${colors[stage]};border-radius:4px;opacity:${pct>0?1:0.2}"></div>
-            <div style="font-size:9px;color:var(--muted);margin-top:3px;white-space:nowrap">${stage} (${stageOpps.length})</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`:''}
-  </div>
-
-  <!-- Time Tracking + Milestones Row -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-    <!-- Hours by Project Widget -->
-    <div style="background:var(--card2);border:1px solid var(--bdr);border-radius:11px;padding:14px 18px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px">⏱ Time Tracking — ${curPeriod}</div>
-        <button onclick="navTo('timetracking',document.getElementById('nav-timetracking'))" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;color:var(--muted);font-size:10px;cursor:pointer;font-family:inherit">View All →</button>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
-        <div style="text-align:center;padding:8px;background:var(--card);border-radius:7px;border:1px solid var(--bdr)">
-          <div style="font-size:9px;color:var(--muted)">This Month</div>
-          <div style="font-size:18px;font-weight:800;color:var(--blue)">${totalHoursMonth.toFixed(0)}<span style="font-size:11px;color:var(--muted)">h</span></div>
-        </div>
-        <div style="text-align:center;padding:8px;background:var(--card);border-radius:7px;border:1px solid var(--bdr)">
-          <div style="font-size:9px;color:var(--muted)">Pending Approval</div>
-          <div style="font-size:18px;font-weight:800;color:${tsData.filter(t=>t.status==='submitted').length>0?'#F97316':'#10B981'}">${tsData.filter(t=>t.status==='submitted').length}</div>
-        </div>
-        <div style="text-align:center;padding:8px;background:var(--card);border-radius:7px;border:1px solid var(--bdr)">
-          <div style="font-size:9px;color:var(--muted)">Total Records</div>
-          <div style="font-size:18px;font-weight:800;color:var(--text)">${tsData.length}</div>
-        </div>
-      </div>
-      ${projs.filter(p=>tsData.some(t=>t.project_id===p.id)).slice(0,5).map(p=>{
-        const ph=tsData.filter(t=>t.project_id===p.id).reduce((s,t)=>s+Number(t.hours_regular||0)+Number(t.hours_overtime||0),0);
-        const totalH=tsData.reduce((s,t)=>s+Number(t.hours_regular||0)+Number(t.hours_overtime||0),0);
-        const pct=totalH>0?Math.round(ph/totalH*100):0;
-        return `<div style="margin-bottom:7px">
-          <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px">
-            <span style="color:var(--muted)">${p.project_no}</span>
-            <span style="color:var(--gold);font-weight:700">${ph.toFixed(1)}h</span>
-          </div>
-          <div style="height:5px;background:var(--n3);border-radius:3px">
-            <div style="width:${pct}%;height:100%;background:var(--gold);border-radius:3px"></div>
-          </div>
-        </div>`;
-      }).join('')||'<div style="color:var(--faint);font-size:11px;text-align:center;padding:12px">No hours logged this month</div>'}
-    </div>
-    <!-- Milestones Widget -->
-    <div style="background:var(--card2);border:1px solid var(--bdr);border-radius:11px;padding:14px 18px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px">🏁 Milestones</div>
-        <button onclick="navTo('projects',document.getElementById('nav-projects'));setTimeout(()=>loadProjects('milestones'),300)" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;color:var(--muted);font-size:10px;cursor:pointer;font-family:inherit">View All →</button>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
-        <div style="text-align:center;padding:8px;background:#EF444411;border:1px solid #EF444433;border-radius:7px">
-          <div style="font-size:9px;color:#EF4444">Overdue</div>
-          <div style="font-size:18px;font-weight:800;color:#EF4444">${overdueMs.length}</div>
-        </div>
-        <div style="text-align:center;padding:8px;background:#F9731611;border:1px solid #F9731633;border-radius:7px">
-          <div style="font-size:9px;color:#F97316">Due ≤14d</div>
-          <div style="font-size:18px;font-weight:800;color:#F97316">${upcomingMs.length}</div>
-        </div>
-        <div style="text-align:center;padding:8px;background:#10B98111;border:1px solid #10B98133;border-radius:7px">
-          <div style="font-size:9px;color:#10B981">Achieved</div>
-          <div style="font-size:18px;font-weight:800;color:#10B981">${msData.filter(m=>m.status==='achieved').length}</div>
-        </div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:5px;max-height:120px;overflow-y:auto">
-        ${[...overdueMs,...upcomingMs].slice(0,5).map(m=>{
-          const proj=projs.find(p=>p.id===m.project_id);
-          const dDiff=Math.ceil((new Date(m.planned_date)-today)/86400000);
-          const isOv=dDiff<0;
-          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--card);border-radius:6px;border-left:3px solid ${isOv?'#EF4444':'#F97316'}">
-            <div>
-              <div style="font-size:11px;font-weight:600">${m.name}</div>
-              <div style="font-size:10px;color:var(--muted)">${proj?.project_no||'—'}</div>
-            </div>
-            <div style="font-size:10px;font-weight:700;color:${isOv?'#EF4444':'#F97316'}">${isOv?Math.abs(dDiff)+'d late':dDiff+'d left'}</div>
-          </div>`;
-        }).join('')||'<div style="color:var(--faint);font-size:11px;text-align:center;padding:12px">No overdue or upcoming milestones</div>'}
       </div>
     </div>
   </div>
@@ -2260,64 +2164,6 @@ async function loadProjects(tab){
       <button class="btn btn-primary btn-sm" onclick="openCreateBaselineModal()">+ Create / Revise Baseline</button>
     </div>`:''}
     `;
-  }
-
-  // ── Milestones tab ────────────────────────────────────────
-  if(tab==='milestones'){
-    const {data:ms, error:msErr} = await sb.from('project_milestones')
-      .select('*,project:projects(project_no,name,status)')
-      .order('planned_date',{ascending:true});
-    const milestones = ms||[];
-    const today = new Date();
-    const upcoming = milestones.filter(m=>m.status==='pending'&&m.planned_date&&new Date(m.planned_date)>today);
-    const overdue  = milestones.filter(m=>m.status==='pending'&&m.planned_date&&new Date(m.planned_date)<today);
-    const achieved = milestones.filter(m=>m.status==='achieved');
-    const delayed  = milestones.filter(m=>m.status==='delayed');
-
-    body=`
-    <div class="grid4" style="margin-bottom:14px">
-      ${kpi('Total Milestones', milestones.length, '#E2E8F0', 'Across all projects')}
-      ${kpi('Achieved', achieved.length, '#10B981', 'On time completions')}
-      ${kpi('Overdue', overdue.length, overdue.length>0?'#EF4444':'#10B981', 'Past planned date')}
-      ${kpi('Upcoming (30d)', upcoming.filter(m=>{ const d=new Date(m.planned_date); return (d-today)/86400000<=30; }).length, '#F97316', 'Due within 30 days')}
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:11px;color:var(--muted)">${milestones.length} milestones across ${[...new Set(milestones.map(m=>m.project_id))].length} projects</div>
-      ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openAddMilestoneModal()">+ Add Milestone</button>`:''}
-    </div>
-    ${milestones.length===0?`
-      <div class="empty">No milestones yet — add milestones to track key project events
-        ${can('create')?`<br><br><button class="btn btn-primary" onclick="openAddMilestoneModal()">+ Add First Milestone</button>`:''}
-      </div>`:`
-    <table><thead><tr>
-      <th>Project</th><th>Milestone</th><th>Planned Date</th><th>Actual Date</th>
-      <th style="text-align:center">Weight %</th><th style="text-align:center">Status</th><th>Notes</th>
-      ${can('edit')?'<th></th>':''}
-    </tr></thead><tbody>
-    ${milestones.map(m=>{
-      const isOverdue = m.status==='pending'&&m.planned_date&&new Date(m.planned_date)<today;
-      const daysLeft = m.planned_date?Math.ceil((new Date(m.planned_date)-today)/86400000):null;
-      const statusColor = {achieved:'#10B981',delayed:'#EF4444',pending: isOverdue?'#EF4444':'#3B82F6',waived:'#94A3B8'}[m.status]||'#94A3B8';
-      const rowBg = isOverdue?'background:#EF444408;':m.status==='achieved'?'background:#10B98108;':'';
-      return `<tr style="${rowBg}">
-        <td style="font-size:10px;color:var(--gold);font-weight:700">${m.project?.project_no||'—'}<br><span style="color:var(--muted);font-weight:400">${m.project?.name||''}</span></td>
-        <td style="font-weight:600">${esc(m.name)}</td>
-        <td style="color:${isOverdue?'#EF4444':'var(--muted)'}">
-          ${m.planned_date?new Date(m.planned_date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'—'}
-          ${daysLeft!==null&&m.status==='pending'?`<br><span style="font-size:9px;color:${daysLeft<0?'#EF4444':daysLeft<=7?'#F97316':'#10B981'}">${daysLeft<0?Math.abs(daysLeft)+'d overdue':daysLeft+'d left'}</span>`:''}
-        </td>
-        <td style="color:var(--muted)">${m.actual_date?new Date(m.actual_date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'—'}</td>
-        <td style="text-align:center;color:var(--muted)">${m.weight||0}%</td>
-        <td style="text-align:center">${pill(m.status,statusColor)}</td>
-        <td style="color:var(--muted);font-size:10px;max-width:140px">${esc(m.notes||'—')}</td>
-        ${can('edit')?`<td>
-          ${m.status==='pending'?`<button class="btn-icon" title="Mark Achieved" onclick="achieveMilestone('${m.id}')">✅</button>
-          <button class="btn-icon" title="Mark Delayed" onclick="delayMilestone('${m.id}')">⚠️</button>`:''}
-          <button class="btn-icon" title="Edit" onclick="editMilestone('${m.id}')">✏️</button>
-        </td>`:''}
-      </tr>`;
-    }).join('')}
-    </tbody></table>`}`;
   }
 
   // ── Change Orders tab
@@ -5615,7 +5461,7 @@ async function loadCEO(){
   const today=new Date();
   const monthStr=today.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
 
-  const [projR,invR,wfR,ncrR,oppR,hrR,snapR,vendR,crmOppR,crmQuotR,crmCustR,crmLeadR]=await Promise.all([
+  const [projR,invR,wfR,ncrR,oppR,hrR,snapR,vendR]=await Promise.all([
     sb.from('projects').select('*'),
     sb.from('invoices').select('*'),
     sb.from('workflow_items').select('id,status,entity_type'),
@@ -5623,25 +5469,12 @@ async function loadCEO(){
     sb.from('opportunities').select('id,status,est_value,probability'),
     sb.from('employees').select('id,status,department'),
     sb.from('project_evm_snapshots').select('project_id,snapshot_date,period_label,pv,ev,ac,spi,cpi').order('snapshot_date',{ascending:true}),
-    sb.from('vendors').select('id,is_approved,status'),
-    sb.from('crm_opportunities').select('id,stage,estimated_value,probability,title,expected_close_date,customer_id').catch(()=>({data:[]})),
-    sb.from('crm_quotations').select('id,status,value,title').catch(()=>({data:[]})),
-    sb.from('crm_customers').select('id,name,status,type').catch(()=>({data:[]})),
-    sb.from('crm_leads').select('id,status').catch(()=>({data:[]}))
+    sb.from('vendors').select('id,is_approved,status')
   ]);
 
   const projs=projR.data||[], invs=invR.data||[], wfs=wfR.data||[];
   const ncrs=ncrR.data||[], opps=oppR.data||[], emps=hrR.data||[];
   const snaps=snapR.data||[], vendors=vendR.data||[];
-  // CRM
-  const crmOpps=crmOppR.data||[], crmQuots=crmQuotR.data||[];
-  const crmCusts=crmCustR.data||[], crmLeads=crmLeadR.data||[];
-  const crmActiveOpps=crmOpps.filter(o=>!['won','lost'].includes(o.stage));
-  const crmPipelineTotal=crmActiveOpps.reduce((s,o)=>s+Number(o.estimated_value),0);
-  const crmWeightedTotal=crmActiveOpps.reduce((s,o)=>s+(Number(o.estimated_value)*(Number(o.probability)/100)),0);
-  const crmWonVal=crmQuots.filter(q=>q.status==='won').reduce((s,q)=>s+Number(q.value),0);
-  const crmWinRate=crmQuots.length>0?Math.round(crmQuots.filter(q=>q.status==='won').length/crmQuots.length*100):0;
-  const crmTopOpps=crmActiveOpps.sort((a,b)=>Number(b.estimated_value)-Number(a.estimated_value)).slice(0,3);
 
   // Portfolio EVM
   const activeProjs=projs.filter(p=>ACTIVE_STATUSES.includes(p.status));
@@ -5718,7 +5551,7 @@ async function loadCEO(){
   <div class="print-header" style="display:none">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div>
-        <div style="font-size:18pt;font-weight:900;color:#1E3A5F">SP360 v4.0 — CEO Flash Report</div>
+        <div style="font-size:18pt;font-weight:900;color:#1E3A5F">SP360 ERP v3.3 — CEO Flash Report</div>
         <div style="font-size:9pt;color:#475569">${monthStr} · Smart Projects 360 · Kuwait · Confidential</div>
       </div>
       <div style="font-size:8pt;color:#94A3B8">Generated: ${new Date().toLocaleDateString('en-GB')}</div>
@@ -5912,70 +5745,6 @@ async function loadCEO(){
         </div>`).join('')}
       </div>
     </div>
-  </div>
-
-  <!-- CRM PIPELINE SUMMARY — CEO Report -->
-  <div class="card" style="margin-bottom:12px">
-    <div class="sec-head">
-      <div class="sec-title"><span>🎯</span>CRM — Business Development & Sales Pipeline</div>
-      <button onclick="navTo('crm-pipeline',document.getElementById('nav-crm-pipeline'))" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;color:var(--muted);font-size:10px;cursor:pointer;font-family:inherit">Full Pipeline →</button>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px">
-      <div style="text-align:center;padding:12px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Active Customers</div>
-        <div style="font-size:22px;font-weight:800">${crmCusts.filter(c=>c.status==='active').length}</div>
-      </div>
-      <div style="text-align:center;padding:12px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Total Pipeline</div>
-        <div style="font-size:16px;font-weight:800;color:var(--gold)">${fmtKWD(crmPipelineTotal)}</div>
-        <div style="font-size:9px;color:var(--faint)">${crmActiveOpps.length} opportunities</div>
-      </div>
-      <div style="text-align:center;padding:12px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Weighted Pipeline</div>
-        <div style="font-size:16px;font-weight:800;color:var(--violet)">${fmtKWD(crmWeightedTotal)}</div>
-        <div style="font-size:9px;color:var(--faint)">probability-adjusted</div>
-      </div>
-      <div style="text-align:center;padding:12px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Won Value</div>
-        <div style="font-size:16px;font-weight:800;color:var(--green)">${fmtKWD(crmWonVal)}</div>
-      </div>
-      <div style="text-align:center;padding:12px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Win Rate</div>
-        <div style="font-size:22px;font-weight:800;color:${crmWinRate>=50?'#10B981':'#F97316'}">${crmWinRate}%</div>
-      </div>
-    </div>
-    <!-- Stage breakdown -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
-      ${['prospect','proposal','negotiation'].map(stage=>{
-        const stageOpps=crmActiveOpps.filter(o=>o.stage===stage);
-        const stageVal=stageOpps.reduce((s,o)=>s+Number(o.estimated_value),0);
-        const colors={prospect:'#3B82F6',proposal:'#F97316',negotiation:'#8B5CF6'};
-        return `<div style="padding:10px 12px;background:${colors[stage]}11;border:1px solid ${colors[stage]}33;border-radius:8px">
-          <div style="font-size:10px;color:${colors[stage]};font-weight:700;text-transform:uppercase;margin-bottom:6px">${stage}</div>
-          <div style="font-size:18px;font-weight:800;color:var(--text)">${stageOpps.length} <span style="font-size:11px;color:var(--muted)">opps</span></div>
-          <div style="font-size:12px;color:${colors[stage]};font-weight:700">${fmtKWD(stageVal)}</div>
-        </div>`;
-      }).join('')}
-    </div>
-    <!-- Top opportunities -->
-    ${crmTopOpps.length>0?`
-    <div>
-      <div style="font-size:10px;font-weight:700;color:var(--faint);text-transform:uppercase;margin-bottom:8px">Top Opportunities by Value</div>
-      ${crmTopOpps.map((o,i)=>{
-        const cust=crmCusts.find(c=>c.id===o.customer_id);
-        const colors=['#C9A84C','#94A3B8','#8B5CF6'];
-        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--card);border-radius:7px;margin-bottom:5px;border-left:3px solid ${colors[i]||'#475569'}">
-          <div>
-            <div style="font-size:12px;font-weight:600">${o.title}</div>
-            <div style="font-size:10px;color:var(--muted)">${cust?.name||'—'} · Close: ${o.expected_close_date?new Date(o.expected_close_date).toLocaleDateString('en-GB',{month:'short',year:'numeric'}):'TBD'}</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:13px;font-weight:800;color:var(--gold)">${fmtKWD(o.estimated_value)}</div>
-            <div style="font-size:10px;color:var(--muted)">${o.probability}% probability</div>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`:''}
   </div>
 
   <!-- QHSE + HR -->
@@ -18108,74 +17877,36 @@ async function bulkUpdateEmployees(){
 
 // ── FINANCIAL RATIOS PDF EXPORT ───────────────────────────────
 async function exportRatiosPDF(){
-  showToast('Generating PDF…','info');
+  showToast('Opening print view...','info');
   try {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-    const navy='#0F1E38', gold='#C9A84C', w=210, m=15;
-    let y=m;
-
-    // Header
-    doc.setFillColor(navy);
-    doc.rect(0,0,w,28,\'F\');
-    doc.setTextColor(gold);
-    doc.setFontSize(14); doc.setFont(\'helvetica\',\'bold\');
-    doc.text(\'SP360 v4.0 — Financial Ratios Report\',m,12);
-    doc.setTextColor(\'#94A3B8\');
-    doc.setFontSize(8); doc.setFont(\'helvetica\',\'normal\');
-    doc.text(`Smart Projects 360 · Kuwait · ${new Date().toLocaleDateString(\'en-GB\',{day:\'2-digit\',month:\'long\',year:\'numeric\'})}`,m,20);
-    y=36;
-
-    // Collect ratios from page
-    const rows=document.querySelectorAll(\'#page-ratios [style*="border-radius:9px"]\');
-    let section=\'\';
-    const sections=[
-      {label:\'💰 Profitability\',color:[16,185,129]},
-      {label:\'⚡ Portfolio EVM\',color:[59,130,246]},
-      {label:\'🔄 Liquidity\',color:[139,92,246]}
-    ];
-
-    sections.forEach((sec,si)=>{
-      doc.setFillColor(...sec.color);
-      doc.rect(m,y,w-m*2,6,\'F\');
-      doc.setTextColor(\'#FFFFFF\');
-      doc.setFontSize(8); doc.setFont(\'helvetica\',\'bold\');
-      doc.text(sec.label.replace(/[^\x00-\x7F]/g,\'\').trim(),m+2,y+4);
-      y+=9;
-    });
-
-    // Table from DOM
-    const tbl=document.querySelector(\'#page-ratios table\');
-    if(tbl&&window.jspdf?.jsPDF){
-      doc.autoTable({
-        html:tbl,
-        startY:y,
-        margin:{left:m,right:m},
-        styles:{fontSize:7,cellPadding:2,textColor:\'#1E293B\'},
-        headStyles:{fillColor:navy,textColor:gold,fontStyle:\'bold\'},
-        alternateRowStyles:{fillColor:\'#F8FAFC\'}
-      });
-      y=doc.lastAutoTable.finalY+8;
-    }
-
-    // Footer
-    doc.setFontSize(7); doc.setTextColor(\'#94A3B8\');
-    doc.text(`Generated by SP360 v4.0 — ${new Date().toISOString().slice(0,16).replace(\'T\',\' \')}`,m,287);
-    doc.text(`Page 1 of 1`,w-m-15,287);
-
-    doc.save(`SP360_Financial_Ratios_${new Date().toISOString().slice(0,10)}.pdf`);
-    showToast(\'✅ PDF exported\',\'success\');
+    const el = document.getElementById('page-ratios');
+    const now = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+    const printWin = window.open('','_blank');
+    const html = [
+      '<html><head><title>SP360 Financial Ratios</title>',
+      '<style>',
+      'body{font-family:Arial,sans-serif;font-size:11px;padding:20px;color:#1E293B}',
+      'h1{color:#0F1E38;border-bottom:3px solid #C9A84C;padding-bottom:8px}',
+      'table{width:100%;border-collapse:collapse;margin:12px 0}',
+      'th{background:#0F1E38;color:#C9A84C;padding:6px 8px;text-align:left}',
+      'td{border:1px solid #E2E8F0;padding:5px 8px}',
+      'tr:nth-child(even){background:#F8FAFC}',
+      '[style*="border-radius:9px"]{border:1px solid #E2E8F0;padding:10px;margin:4px;display:inline-block;min-width:120px}',
+      '</style></head>',
+      '<body>',
+      '<h1>SP360 v4.0 — Financial Ratios Report</h1>',
+      '<p style="color:#94A3B8;font-size:10px">Smart Projects 360 · Kuwait · ' + now + '</p>',
+      el.innerHTML,
+      '</body></html>'
+    ].join('');
+    printWin.document.write(html);
+    printWin.document.close();
+    setTimeout(function(){ printWin.print(); }, 800);
+    showToast('✅ Print dialog opened — save as PDF','success');
   } catch(e){
-    // Fallback: print
-    const el=document.getElementById(\'page-ratios\');
-    const w2=window.open(\'\',\'_blank\');
-    w2.document.write(`<html><head><title>SP360 Financial Ratios</title>
-    <style>body{font-family:Arial,sans-serif;font-size:11px;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:6px}th{background:#0F1E38;color:#C9A84C}</style></head>
-    <body><h2>SP360 v4.0 — Financial Ratios</h2>${el.innerHTML}</body></html>`);
-    w2.document.close(); w2.print();
+    showToast('Error: '+e.message,'error');
   }
 }
-
 </script>
 </body>
 </html>
