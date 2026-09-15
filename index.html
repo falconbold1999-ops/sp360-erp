@@ -1192,19 +1192,17 @@ function enterApp(){
   document.getElementById('app').style.display='flex';
 
   // ── Apply role-based nav visibility ──────────────────────
-  const allowed = ROLE_PAGES[currentProfile?.role] || ['dashboard'];
-  // Build full list from all ROLE_PAGES values + CRM + P13
-  const allPages = [...new Set([
-    'bizdev','projects','gantt','resources','scorecard','contracts','lessons','forecast','reports',
-    'training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget',
-    'correspondence','benchmark','import','sitediary','punchlist','expenses','ai','retention',
-    'sla','templates','procurement','finance','hr','qhse','inventory','documents','workflow',
-    'audit','users','ceo','system',
-    ...CRM_PAGES, ...P13_PAGES
-  ])];
-  allPages.forEach(p=>{
-    const btn = document.getElementById('nav-'+p);
-    if(btn) btn.style.display = allowed.includes(p) ? '' : 'none';
+  const allowed = ROLE_PAGES[currentProfile?.role] || Object.values(ROLE_PAGES).flat();
+  console.log('Role:', currentProfile?.role, '| Allowed pages:', allowed.length, '| CRM in allowed:', allowed.includes('crm-customers'), '| Time in allowed:', allowed.includes('timetracking'));
+  // Show ALL buttons then hide what's not allowed
+  document.querySelectorAll('.nav-btn[id^="nav-"]').forEach(btn=>{
+    const pageId = btn.id.replace('nav-','');
+    if(pageId==='dashboard') return;
+    const show = allowed.includes(pageId);
+    btn.style.display = show ? '' : 'none';
+    if(['crm-customers','timetracking','ratios','bulk'].includes(pageId)){
+      console.log('Nav btn:', pageId, '| show:', show, '| btn:', btn.id);
+    }
   });
 
   // ── Apply role badge color in sidebar ─────────────────────
