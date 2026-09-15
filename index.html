@@ -576,7 +576,9 @@ img,canvas,svg{max-width:100%;height:auto}
         <button class="nav-btn" id="nav-scorecard" onclick="navTo('scorecard',this)"><span class="nav-icon">🎯</span>Scorecard</button>
         <div class="nav-section">Operations</div>
         <button class="nav-btn" id="nav-procurement" onclick="navTo('procurement',this)"><span class="nav-icon">📦</span>Procurement</button>
+        <button class="nav-btn" id="nav-timetracking" onclick="navTo('timetracking',this)"><span class="nav-icon">⏱</span>Time Tracking</button>
         <button class="nav-btn" id="nav-finance" onclick="navTo('finance',this)"><span class="nav-icon">💰</span>Finance</button>
+        <button class="nav-btn" id="nav-ratios" onclick="navTo('ratios',this)"><span class="nav-icon">📐</span>Financial Ratios</button>
         <button class="nav-btn" id="nav-hr" onclick="navTo('hr',this)"><span class="nav-icon">👥</span>HR</button>
         <div class="nav-section">Quality</div>
         <button class="nav-btn" id="nav-qhse" onclick="navTo('qhse',this)"><span class="nav-icon">🛡</span>QHSE</button>
@@ -603,6 +605,7 @@ img,canvas,svg{max-width:100%;height:auto}
         <button class="nav-btn" id="nav-correspondence" onclick="navTo('correspondence',this)"><span class="nav-icon">✉️</span>Correspondence</button>
         <button class="nav-btn" id="nav-benchmark" onclick="navTo('benchmark',this)"><span class="nav-icon">📐</span>Benchmark</button>
         <button class="nav-btn" id="nav-import" onclick="navTo('import',this)"><span class="nav-icon">📥</span>Import/Export</button>
+        <button class="nav-btn" id="nav-bulk" onclick="navTo('bulk',this)"><span class="nav-icon">⚡</span>Bulk Operations</button>
         <button class="nav-btn" id="nav-sitediary" onclick="navTo('sitediary',this)"><span class="nav-icon">📔</span>Site Diary</button>
         <button class="nav-btn" id="nav-punchlist" onclick="navTo('punchlist',this)"><span class="nav-icon">📌</span>Punch List</button>
         <button class="nav-btn" id="nav-expenses" onclick="navTo('expenses',this)"><span class="nav-icon">🧾</span>Expenses</button>
@@ -662,6 +665,9 @@ img,canvas,svg{max-width:100%;height:auto}
       <div class="page" id="page-crm-pipeline"></div>
       <div class="page" id="page-crm-quotations"></div>
       <div class="page" id="page-crm-activities"></div>
+      <div class="page" id="page-timetracking"></div>
+      <div class="page" id="page-ratios"></div>
+      <div class="page" id="page-bulk"></div>
     </main>
   </div>
 </div>
@@ -799,16 +805,17 @@ var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 // Page visibility per role
 const CRM_PAGES = ['crm-customers','crm-leads','crm-opportunities','crm-pipeline','crm-quotations','crm-activities'];
+const P13_PAGES = ['timetracking','ratios','bulk'];
 const ROLE_PAGES = {
-  'Admin':             ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','correspondence','benchmark','import','sitediary','punchlist','expenses','ai','retention','sla','templates',...CRM_PAGES],
-  'PMO Manager':       ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','correspondence','benchmark','import','sitediary','punchlist','expenses','ai','retention','sla','templates',...CRM_PAGES],
-  'CEO':               ['dashboard','ceo','projects','gantt','resources','scorecard','bizdev','finance','contracts','lessons','forecast','reports','subcon','meetings','analytics','tender','insurance','budget','correspondence','benchmark','ai','retention','sla',...CRM_PAGES],
-  'Finance Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','finance','inventory','workflow','audit','contracts','lessons','forecast','reports','assets','subcon','meetings','analytics','insurance','budget','correspondence','benchmark','expenses','ai','retention','sla','crm-customers','crm-quotations'],
-  'Project Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','inventory','qhse','documents','workflow','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','budget','correspondence','benchmark','sitediary','punchlist','expenses','ai','retention','sla','templates','crm-customers'],
+  'Admin':             ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','correspondence','benchmark','import','sitediary','punchlist','expenses','ai','retention','sla','templates',...CRM_PAGES,...P13_PAGES],
+  'PMO Manager':       ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','correspondence','benchmark','import','sitediary','punchlist','expenses','ai','retention','sla','templates',...CRM_PAGES,...P13_PAGES],
+  'CEO':               ['dashboard','ceo','projects','gantt','resources','scorecard','bizdev','finance','contracts','lessons','forecast','reports','subcon','meetings','analytics','tender','insurance','budget','correspondence','benchmark','ai','retention','sla','ratios',...CRM_PAGES],
+  'Finance Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','finance','inventory','workflow','audit','contracts','lessons','forecast','reports','assets','subcon','meetings','analytics','insurance','budget','correspondence','benchmark','expenses','ai','retention','sla','ratios','crm-customers','crm-quotations'],
+  'Project Manager':   ['dashboard','projects','gantt','resources','scorecard','procurement','inventory','qhse','documents','workflow','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','budget','correspondence','benchmark','sitediary','punchlist','expenses','ai','retention','sla','templates','timetracking','crm-customers'],
   'Procurement Lead':  ['dashboard','projects','gantt','procurement','inventory','workflow','contracts','lessons','assets','subcon','meetings','correspondence','retention','sla','templates','crm-customers'],
   'BD Manager':        ['dashboard','bizdev','projects','gantt','contracts','lessons','tender','correspondence',...CRM_PAGES],
   'QHSE Engineer':     ['dashboard','projects','gantt','qhse','documents','contracts','lessons','sitediary','punchlist'],
-  'HR Manager':        ['dashboard','hr','documents','contracts','lessons','training','appraisal','expenses'],
+  'HR Manager':        ['dashboard','hr','documents','contracts','lessons','training','appraisal','expenses','timetracking'],
   'Viewer':            ['dashboard','projects','gantt']
 };
 
@@ -1227,6 +1234,8 @@ function enterApp(){
   setTimeout(()=>{ initNotifRealtime(); _silentRefreshNotifs(); }, 1200);
   setTimeout(()=>{ runScheduledNotifications(); }, 3000);
   setTimeout(()=>{ initFAB(); }, 1500);
+  // P13: KPI Alerts Engine — runs silently on login
+  setTimeout(()=>{ runKPIAlerts(false); }, 4000);
   loadWfBadge();
   initRealtime();
   initSessionGuard();
@@ -1435,7 +1444,8 @@ function navTo(id,btn){
     inventory:loadInventory,documents:()=>loadDocs(curDocTab),workflow:loadWorkflow,audit:loadAudit,
     users:loadUsers,ceo:loadCEO,system:loadSystem,resources:loadResources,scorecard:loadScorecard,contracts:loadContracts,lessons:loadLessons,forecast:loadForecast,reports:loadReports,training:loadTraining,assets:loadAssets,subcon:loadSubcon,meetings:loadMeetings,analytics:loadAnalytics,tender:loadTender,insurance:loadInsurance,appraisal:loadAppraisal,budget:loadBudget,correspondence:loadCorrespondence,benchmark:loadBenchmark,import:loadImportExport,sitediary:loadSiteDiary,punchlist:loadPunchList,expenses:loadExpenses,ai:loadAI,retention:loadRetention,sla:loadSLA,templates:loadTemplates,
     'crm-customers':loadCRMCustomers,'crm-leads':loadCRMLeads,'crm-opportunities':loadCRMOpportunities,
-    'crm-pipeline':loadCRMPipeline,'crm-quotations':loadCRMQuotations,'crm-activities':loadCRMActivities
+    'crm-pipeline':loadCRMPipeline,'crm-quotations':loadCRMQuotations,'crm-activities':loadCRMActivities,
+    timetracking:loadTimeTracking, ratios:loadFinancialRatios, bulk:loadBulkOperations
   };
   if(loaders[id])loaders[id]();
 }
@@ -2001,6 +2011,7 @@ async function loadProjects(tab){
     <button class="tab${tab==='portfolio'?' act':''}" onclick="loadProjects('portfolio')">📊 Portfolio EVM</button>
     <button class="tab${tab==='lifecycle'?' act':''}" onclick="loadProjects('lifecycle')">🔄 Life Cycle</button>
     <button class="tab${tab==='progress'?' act':''}" onclick="loadProjects('progress')">📈 Progress Update</button>
+    <button class="tab${tab==='milestones'?' act':''}" onclick="loadProjects('milestones')">🏁 Milestones</button>
     <button class="tab${tab==='changeorders'?' act':''}" onclick="loadProjects('changeorders')">📝 Change Orders</button>
     <button class="tab${tab==='baseline'?' act':''}" onclick="loadProjects('baseline')">📐 Baseline vs Actual</button>
     <button class="tab${tab==='scurve'?' act':''}" onclick="loadProjects('scurve')">📉 S-Curve</button>
@@ -2161,6 +2172,64 @@ async function loadProjects(tab){
       <button class="btn btn-primary btn-sm" onclick="openCreateBaselineModal()">+ Create / Revise Baseline</button>
     </div>`:''}
     `;
+  }
+
+  // ── Milestones tab ────────────────────────────────────────
+  if(tab==='milestones'){
+    const {data:ms, error:msErr} = await sb.from('project_milestones')
+      .select('*,project:projects(project_no,name,status)')
+      .order('planned_date',{ascending:true});
+    const milestones = ms||[];
+    const today = new Date();
+    const upcoming = milestones.filter(m=>m.status==='pending'&&m.planned_date&&new Date(m.planned_date)>today);
+    const overdue  = milestones.filter(m=>m.status==='pending'&&m.planned_date&&new Date(m.planned_date)<today);
+    const achieved = milestones.filter(m=>m.status==='achieved');
+    const delayed  = milestones.filter(m=>m.status==='delayed');
+
+    body=`
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi('Total Milestones', milestones.length, '#E2E8F0', 'Across all projects')}
+      ${kpi('Achieved', achieved.length, '#10B981', 'On time completions')}
+      ${kpi('Overdue', overdue.length, overdue.length>0?'#EF4444':'#10B981', 'Past planned date')}
+      ${kpi('Upcoming (30d)', upcoming.filter(m=>{ const d=new Date(m.planned_date); return (d-today)/86400000<=30; }).length, '#F97316', 'Due within 30 days')}
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:11px;color:var(--muted)">${milestones.length} milestones across ${[...new Set(milestones.map(m=>m.project_id))].length} projects</div>
+      ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openAddMilestoneModal()">+ Add Milestone</button>`:''}
+    </div>
+    ${milestones.length===0?`
+      <div class="empty">No milestones yet — add milestones to track key project events
+        ${can('create')?`<br><br><button class="btn btn-primary" onclick="openAddMilestoneModal()">+ Add First Milestone</button>`:''}
+      </div>`:`
+    <table><thead><tr>
+      <th>Project</th><th>Milestone</th><th>Planned Date</th><th>Actual Date</th>
+      <th style="text-align:center">Weight %</th><th style="text-align:center">Status</th><th>Notes</th>
+      ${can('edit')?'<th></th>':''}
+    </tr></thead><tbody>
+    ${milestones.map(m=>{
+      const isOverdue = m.status==='pending'&&m.planned_date&&new Date(m.planned_date)<today;
+      const daysLeft = m.planned_date?Math.ceil((new Date(m.planned_date)-today)/86400000):null;
+      const statusColor = {achieved:'#10B981',delayed:'#EF4444',pending: isOverdue?'#EF4444':'#3B82F6',waived:'#94A3B8'}[m.status]||'#94A3B8';
+      const rowBg = isOverdue?'background:#EF444408;':m.status==='achieved'?'background:#10B98108;':'';
+      return `<tr style="${rowBg}">
+        <td style="font-size:10px;color:var(--gold);font-weight:700">${m.project?.project_no||'—'}<br><span style="color:var(--muted);font-weight:400">${m.project?.name||''}</span></td>
+        <td style="font-weight:600">${esc(m.name)}</td>
+        <td style="color:${isOverdue?'#EF4444':'var(--muted)'}">
+          ${m.planned_date?new Date(m.planned_date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'—'}
+          ${daysLeft!==null&&m.status==='pending'?`<br><span style="font-size:9px;color:${daysLeft<0?'#EF4444':daysLeft<=7?'#F97316':'#10B981'}">${daysLeft<0?Math.abs(daysLeft)+'d overdue':daysLeft+'d left'}</span>`:''}
+        </td>
+        <td style="color:var(--muted)">${m.actual_date?new Date(m.actual_date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'—'}</td>
+        <td style="text-align:center;color:var(--muted)">${m.weight||0}%</td>
+        <td style="text-align:center">${pill(m.status,statusColor)}</td>
+        <td style="color:var(--muted);font-size:10px;max-width:140px">${esc(m.notes||'—')}</td>
+        ${can('edit')?`<td>
+          ${m.status==='pending'?`<button class="btn-icon" title="Mark Achieved" onclick="achieveMilestone('${m.id}')">✅</button>
+          <button class="btn-icon" title="Mark Delayed" onclick="delayMilestone('${m.id}')">⚠️</button>`:''}
+          <button class="btn-icon" title="Edit" onclick="editMilestone('${m.id}')">✏️</button>
+        </td>`:''}
+      </tr>`;
+    }).join('')}
+    </tbody></table>`}`;
   }
 
   // ── Change Orders tab
@@ -9078,6 +9147,8 @@ async function loadSystem(){
       <div style="display:flex;gap:8px">
         <button class="btn btn-ghost btn-sm" onclick="loadSystem()">🔄 Refresh</button>
         <button class="btn btn-ghost btn-sm" onclick="navTo('audit',document.getElementById('nav-audit'))">📋 Audit Trail</button>
+        <button class="btn btn-ghost btn-sm" onclick="runKPIAlerts(true)" style="background:#F9731611;border-color:#F9731633;color:#F97316">🔔 KPI Alerts</button>
+        <button class="btn btn-ghost btn-sm" onclick="openVendorPortal()" style="background:#8B5CF611;border-color:#8B5CF633;color:#8B5CF6">🏭 Vendor Portal</button>
       </div>
     </div>
 
@@ -17095,7 +17166,839 @@ async function markActivityDone(id){
 }
 
 // ══════════════════════════════════════════════════════════════
-//  END OF CRM MODULE — SP360 v4.0
+//  SP360 v4.0 — P13 FEATURES
+//  KPI Alerts Engine + Milestones + Vendor Portal
+// ══════════════════════════════════════════════════════════════
+
+// ── KPI ALERTS ENGINE ─────────────────────────────────────────
+async function runKPIAlerts(showModal=false){
+  try {
+    const [projR, invR, wfR, ncrR, crmR] = await Promise.all([
+      sb.from('projects').select('id,project_no,name,cpi,spi,pct,status,bac,ac,ev').in('status',['planning','execution','monitoring','closeout']),
+      sb.from('invoices').select('id,invoice_no,invoice_type,net_amount,status,due_date'),
+      sb.from('workflow_items').select('id,ref_no,status,entity_type,raised_date'),
+      sb.from('ncrs').select('id,ncr_no,severity,status'),
+      sb.from('crm_opportunities').select('id,opp_no,title,stage,estimated_value,expected_close_date')
+    ]);
+
+    const projs = projR.data||[], invs = invR.data||[];
+    const wfs = wfR.data||[], ncrs = ncrR.data||[];
+    const opps = crmR.data||[];
+    const today = new Date();
+    const alerts = [];
+
+    // ── Project KPIs ─────────────────────────────────────────
+    projs.forEach(p=>{
+      const cpi = Number(p.cpi||1);
+      const spi = Number(p.spi||1);
+      if(cpi < 0.85) alerts.push({
+        type:'critical', icon:'🔴', category:'Cost',
+        msg:`${p.project_no} — CPI ${cpi.toFixed(2)} CRITICAL (below 0.85)`,
+        action:`navTo('projects',document.getElementById('nav-projects'))`
+      });
+      else if(cpi < 0.90) alerts.push({
+        type:'warning', icon:'🟡', category:'Cost',
+        msg:`${p.project_no} — CPI ${cpi.toFixed(2)} at risk (below 0.90)`,
+        action:`navTo('projects',document.getElementById('nav-projects'))`
+      });
+      if(spi < 0.85) alerts.push({
+        type:'critical', icon:'🔴', category:'Schedule',
+        msg:`${p.project_no} — SPI ${spi.toFixed(2)} CRITICAL (below 0.85)`,
+        action:`navTo('projects',document.getElementById('nav-projects'))`
+      });
+      else if(spi < 0.90) alerts.push({
+        type:'warning', icon:'🟡', category:'Schedule',
+        msg:`${p.project_no} — SPI ${spi.toFixed(2)} at risk (below 0.90)`,
+        action:`navTo('projects',document.getElementById('nav-projects'))`
+      });
+    });
+
+    // ── Finance ───────────────────────────────────────────────
+    const overdueAR = invs.filter(i=>i.invoice_type==='client'&&!['paid','cancelled'].includes(i.status)&&i.due_date&&new Date(i.due_date)<today);
+    if(overdueAR.length>0){
+      const total = overdueAR.reduce((s,i)=>s+Number(i.net_amount),0);
+      alerts.push({
+        type:'warning', icon:'💰', category:'Finance',
+        msg:`${overdueAR.length} overdue AR invoices — KWD ${total.toLocaleString('en',{minimumFractionDigits:3})}`,
+        action:`navTo('finance',document.getElementById('nav-finance'))`
+      });
+    }
+
+    // ── Workflow ──────────────────────────────────────────────
+    const overdueWF = wfs.filter(w=>w.status==='overdue');
+    if(overdueWF.length>0) alerts.push({
+      type:'warning', icon:'⚡', category:'Workflow',
+      msg:`${overdueWF.length} workflow items overdue — action required`,
+      action:`navTo('workflow',document.getElementById('nav-workflow'))`
+    });
+
+    // ── NCRs ─────────────────────────────────────────────────
+    const critNCR = ncrs.filter(n=>n.severity==='critical'&&n.status==='open');
+    if(critNCR.length>0) alerts.push({
+      type:'critical', icon:'🛡', category:'QHSE',
+      msg:`${critNCR.length} CRITICAL open NCRs require immediate attention`,
+      action:`navTo('qhse',document.getElementById('nav-qhse'))`
+    });
+
+    // ── CRM Pipeline ─────────────────────────────────────────
+    const expiring = opps.filter(o=>!['won','lost'].includes(o.stage)&&o.expected_close_date&&
+      new Date(o.expected_close_date)>today&&
+      (new Date(o.expected_close_date)-today)/86400000<=7);
+    if(expiring.length>0) alerts.push({
+      type:'info', icon:'🎯', category:'CRM',
+      msg:`${expiring.length} opportunities closing within 7 days — review pipeline`,
+      action:`navTo('crm-pipeline',document.getElementById('nav-crm-pipeline'))`
+    });
+
+    // ── Store alerts globally ─────────────────────────────────
+    window._kpiAlerts = alerts;
+    const critCount = alerts.filter(a=>a.type==='critical').length;
+    const warnCount = alerts.filter(a=>a.type==='warning').length;
+
+    // Update badge on system nav button
+    const sysBtn = document.getElementById('nav-system');
+    if(sysBtn){
+      const existing = sysBtn.querySelector('.kpi-alert-badge');
+      if(existing) existing.remove();
+      if(alerts.length>0){
+        const badge = document.createElement('span');
+        badge.className = 'kpi-alert-badge nav-badge';
+        badge.style.cssText = `background:${critCount>0?'#EF4444':'#F97316'}`;
+        badge.textContent = alerts.length;
+        sysBtn.appendChild(badge);
+      }
+    }
+
+    if(showModal) openKPIAlertsModal(alerts);
+    else if(critCount>0) showToast(`🔴 ${critCount} critical KPI alerts — check System page`,'error');
+    else if(warnCount>0) showToast(`🟡 ${warnCount} KPI warnings detected`,'warning');
+
+  } catch(e){ console.warn('KPI Alerts engine error:',e?.message); }
+}
+
+function openKPIAlertsModal(alerts){
+  if(!alerts) alerts = window._kpiAlerts||[];
+  const critical = alerts.filter(a=>a.type==='critical');
+  const warnings = alerts.filter(a=>a.type==='warning');
+  const info     = alerts.filter(a=>a.type==='info');
+
+  openModal('🔔 KPI Alerts Engine',`
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      <div style="flex:1;text-align:center;padding:10px;background:#EF444411;border:1px solid #EF444433;border-radius:8px">
+        <div style="font-size:22px;font-weight:900;color:#EF4444">${critical.length}</div>
+        <div style="font-size:10px;color:#EF4444;font-weight:700">CRITICAL</div>
+      </div>
+      <div style="flex:1;text-align:center;padding:10px;background:#F9731611;border:1px solid #F9731633;border-radius:8px">
+        <div style="font-size:22px;font-weight:900;color:#F97316">${warnings.length}</div>
+        <div style="font-size:10px;color:#F97316;font-weight:700">WARNINGS</div>
+      </div>
+      <div style="flex:1;text-align:center;padding:10px;background:#3B82F611;border:1px solid #3B82F633;border-radius:8px">
+        <div style="font-size:22px;font-weight:900;color:#3B82F6">${info.length}</div>
+        <div style="font-size:10px;color:#3B82F6;font-weight:700">INFO</div>
+      </div>
+    </div>
+
+    ${alerts.length===0?`
+      <div style="text-align:center;padding:32px;color:var(--green)">
+        <div style="font-size:40px;margin-bottom:8px">✅</div>
+        <div style="font-size:14px;font-weight:700">All KPIs within acceptable thresholds</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">No alerts at this time</div>
+      </div>
+    `:`
+    <div style="display:flex;flex-direction:column;gap:6px;max-height:380px;overflow-y:auto">
+      ${[...critical,...warnings,...info].map(a=>{
+        const colors={critical:'#EF4444',warning:'#F97316',info:'#3B82F6'};
+        const bg={critical:'#EF444408',warning:'#F9731608',info:'#3B82F608'};
+        return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:${bg[a.type]};border:1px solid ${colors[a.type]}33;border-radius:8px;cursor:pointer" onclick="closeModal();${a.action}">
+          <div style="font-size:18px;flex-shrink:0">${a.icon}</div>
+          <div style="flex:1">
+            <div style="font-size:10px;font-weight:700;color:${colors[a.type]};text-transform:uppercase;margin-bottom:2px">${a.category}</div>
+            <div style="font-size:12px;color:var(--text)">${a.msg}</div>
+          </div>
+          <div style="font-size:11px;color:var(--muted);flex-shrink:0">→</div>
+        </div>`;
+      }).join('')}
+    </div>`}
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+      <button class="btn btn-primary" onclick="closeModal();runKPIAlerts(true)">🔄 Re-run Alerts</button>
+    </div>
+  `);
+}
+
+// ── MILESTONE FUNCTIONS ───────────────────────────────────────
+async function openAddMilestoneModal(presetProjectId){
+  const {data:projs} = await sb.from('projects')
+    .select('id,project_no,name')
+    .in('status',['planning','execution','monitoring','closeout'])
+    .order('project_no');
+  openModal('+ Add Milestone',`
+    <div class="form-grid">
+      <div class="form-field"><label>Project *</label>
+        <select id="nm-proj">
+          <option value="">— Select Project —</option>
+          ${(projs||[]).map(p=>`<option value="${p.id}"${p.id===presetProjectId?' selected':''}>${p.project_no} — ${p.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Milestone Name *</label>
+        <input id="nm-name" placeholder="e.g. Design Approval, Factory Acceptance Test"/>
+      </div>
+      <div class="form-field"><label>Planned Date *</label>
+        <input id="nm-date" type="date"/>
+      </div>
+      <div class="form-field"><label>Weight % (for EVM)</label>
+        <input id="nm-weight" type="number" min="0" max="100" value="0" placeholder="0–100"/>
+      </div>
+      <div class="form-field" style="grid-column:1/-1"><label>Notes</label>
+        <textarea id="nm-notes" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:8px;color:var(--text);font-family:inherit;resize:vertical"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNewMilestone()">Save Milestone</button>
+    </div>
+  `);
+}
+
+async function saveNewMilestone(){
+  const projId = document.getElementById('nm-proj')?.value;
+  const name   = document.getElementById('nm-name')?.value?.trim();
+  const date   = document.getElementById('nm-date')?.value;
+  if(!projId){ showToast('Please select a project','error'); return; }
+  if(!name)  { showToast('Milestone name is required','error'); return; }
+  if(!date)  { showToast('Planned date is required','error'); return; }
+  try {
+    const {error} = await sb.from('project_milestones').insert({
+      project_id:   projId,
+      name,
+      planned_date: date,
+      weight:       parseFloat(document.getElementById('nm-weight')?.value||0),
+      notes:        document.getElementById('nm-notes')?.value||null,
+      status:       'pending'
+    });
+    if(error) throw error;
+    closeModal();
+    showToast('✅ Milestone added','success');
+    loadProjects('milestones');
+  } catch(e){ showToast('Error: '+e.message,'error'); }
+}
+
+async function achieveMilestone(id){
+  const today = new Date().toISOString().split('T')[0];
+  const {error} = await sb.from('project_milestones')
+    .update({status:'achieved', actual_date:today})
+    .eq('id',id);
+  if(error){ showToast('Error: '+error.message,'error'); return; }
+  showToast('✅ Milestone achieved!','success');
+  loadProjects('milestones');
+}
+
+async function delayMilestone(id){
+  const {error} = await sb.from('project_milestones')
+    .update({status:'delayed'})
+    .eq('id',id);
+  if(error){ showToast('Error: '+error.message,'error'); return; }
+  showToast('⚠️ Milestone marked as delayed','warning');
+  loadProjects('milestones');
+}
+
+async function editMilestone(id){
+  const {data:m} = await sb.from('project_milestones').select('*').eq('id',id).single();
+  openModal('Edit Milestone',`
+    <div class="form-grid">
+      <div class="form-field" style="grid-column:1/-1"><label>Name *</label>
+        <input id="em-name" value="${esc(m.name||'')}"/>
+      </div>
+      <div class="form-field"><label>Planned Date</label>
+        <input id="em-date" type="date" value="${m.planned_date||''}"/>
+      </div>
+      <div class="form-field"><label>Actual Date</label>
+        <input id="em-actual" type="date" value="${m.actual_date||''}"/>
+      </div>
+      <div class="form-field"><label>Status</label>
+        <select id="em-status">
+          ${['pending','achieved','delayed','waived'].map(s=>`<option value="${s}"${m.status===s?' selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Weight %</label>
+        <input id="em-weight" type="number" min="0" max="100" value="${m.weight||0}"/>
+      </div>
+      <div class="form-field" style="grid-column:1/-1"><label>Notes</label>
+        <textarea id="em-notes" rows="2" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:8px;color:var(--text);font-family:inherit;resize:vertical">${m.notes||''}</textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="updateMilestone('${id}')">Save</button>
+    </div>
+  `);
+}
+
+async function updateMilestone(id){
+  try {
+    const {error} = await sb.from('project_milestones').update({
+      name:         document.getElementById('em-name')?.value?.trim(),
+      planned_date: document.getElementById('em-date')?.value||null,
+      actual_date:  document.getElementById('em-actual')?.value||null,
+      status:       document.getElementById('em-status')?.value,
+      weight:       parseFloat(document.getElementById('em-weight')?.value||0),
+      notes:        document.getElementById('em-notes')?.value||null
+    }).eq('id',id);
+    if(error) throw error;
+    closeModal();
+    showToast('✅ Milestone updated','success');
+    loadProjects('milestones');
+  } catch(e){ showToast('Error: '+e.message,'error'); }
+}
+
+// ── VENDOR PORTAL SUMMARY ────────────────────────────────────
+async function openVendorPortal(){
+  try {
+    const [vendR, poR, invR] = await Promise.all([
+      sb.from('vendors').select('*').order('vendor_code'),
+      sb.from('purchase_orders').select('*,vendor:vendors(vendor_code,name)').order('created_at',{ascending:false}).limit(100),
+      sb.from('invoices').select('id,vendor_id,net_amount,status,invoice_type').eq('invoice_type','supplier').limit(200)
+    ]);
+    const vendors = vendR.data||[], pos = poR.data||[], invs = invR.data||[];
+    const approved    = vendors.filter(v=>v.is_approved);
+    const totalPO     = pos.reduce((s,p)=>s+Number(p.po_value||0),0);
+    const totalPaid   = invs.filter(i=>i.status==='paid').reduce((s,i)=>s+Number(i.net_amount||0),0);
+    const outstanding = invs.filter(i=>!['paid','cancelled'].includes(i.status)).reduce((s,i)=>s+Number(i.net_amount||0),0);
+
+    openModal('🏭 Vendor Portal Summary',`
+      <div class="grid4" style="margin-bottom:14px">
+        <div class="kpi" style="padding:12px"><div class="kpi-label">Total Vendors</div><div class="kpi-val">${vendors.length}</div></div>
+        <div class="kpi" style="padding:12px"><div class="kpi-label">Approved</div><div class="kpi-val" style="color:var(--green)">${approved.length}</div></div>
+        <div class="kpi" style="padding:12px"><div class="kpi-label">Total PO Value</div><div class="kpi-val" style="font-size:13px;color:var(--gold)">${fmtKWD(totalPO)}</div></div>
+        <div class="kpi" style="padding:12px"><div class="kpi-label">Outstanding AP</div><div class="kpi-val" style="font-size:13px;color:var(--orange)">${fmtKWD(outstanding)}</div></div>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;margin-bottom:8px">Vendor Performance Summary</div>
+      <div style="max-height:360px;overflow-y:auto">
+        ${vendors.length===0?`<div style="text-align:center;padding:24px;color:var(--muted)">No vendors registered yet — add vendors in Procurement</div>`:`
+        <table class="tbl"><thead><tr>
+          <th>Code</th><th>Vendor</th><th>Category</th><th>Status</th>
+          <th style="text-align:right">Open POs</th>
+          <th style="text-align:right">PO Value</th>
+          <th style="text-align:right">Outstanding</th>
+          <th style="text-align:center">Rating</th>
+        </tr></thead><tbody>
+        ${vendors.map(v=>{
+          const vPOs = pos.filter(p=>p.vendor_id===v.id);
+          const vInvs = invs.filter(i=>i.vendor_id===v.id&&!['paid','cancelled'].includes(i.status));
+          const vPOVal = vPOs.reduce((s,p)=>s+Number(p.po_value||0),0);
+          const vOutstanding = vInvs.reduce((s,i)=>s+Number(i.net_amount||0),0);
+          const openPOs = vPOs.filter(p=>!['received','cancelled'].includes(p.status)).length;
+          return `<tr>
+            <td style="font-family:monospace;color:var(--gold);font-size:10px">${esc(v.vendor_code||'—')}</td>
+            <td style="font-weight:600">${esc(v.name||v.vendor_name||'—')}</td>
+            <td style="color:var(--muted);font-size:10px">${esc(v.category||v.vendor_type||'—')}</td>
+            <td>${pill(v.is_approved?'approved':v.status||'pending',v.is_approved?'#10B981':v.status==='blacklisted'?'#EF4444':'#F97316')}</td>
+            <td style="text-align:right;color:${openPOs>0?'var(--orange)':'var(--muted)'}">${openPOs}</td>
+            <td style="text-align:right;color:var(--gold)">${fmtKWD(vPOVal)}</td>
+            <td style="text-align:right;color:${vOutstanding>0?'var(--orange)':'var(--muted)'}">${fmtKWD(vOutstanding)}</td>
+            <td style="text-align:center">${v.rating?'⭐'.repeat(v.rating):'—'}</td>
+          </tr>`;
+        }).join('')}
+        </tbody></table>`}
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+        <button class="btn btn-primary" onclick="closeModal();navTo('procurement',document.getElementById('nav-procurement'))">Open Procurement →</button>
+      </div>
+    `);
+  } catch(e){ showToast('Error loading vendor data: '+e.message,'error'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P13 — TIME TRACKING MODULE
+// ══════════════════════════════════════════════════════════════
+async function loadTimeTracking(){
+  const el = document.getElementById('page-timetracking');
+  el.innerHTML = `<div class="loading">Loading timesheets…</div>`;
+  try {
+    const [tsR, projR, empR] = await Promise.all([
+      sb.from('timesheets').select('*,employee:employees(emp_no,full_name,department),project:projects(project_no,name)').order('created_at',{ascending:false}).limit(200),
+      sb.from('projects').select('id,project_no,name').in('status',['planning','execution','monitoring','closeout']).order('project_no'),
+      sb.from('employees').select('id,emp_no,full_name,department').eq('status','active').order('full_name')
+    ]);
+    const ts = tsR.data||[], projs = projR.data||[], emps = empR.data||[];
+    const totalHours = ts.reduce((s,t)=>s+Number(t.hours_regular||0)+Number(t.hours_overtime||0),0);
+    const thisMonth  = ts.filter(t=>t.period===new Date().toISOString().slice(0,7));
+    const monthHours = thisMonth.reduce((s,t)=>s+Number(t.hours_regular||0)+Number(t.hours_overtime||0),0);
+    const pending    = ts.filter(t=>t.status==='submitted').length;
+
+    el.innerHTML = `
+    <div class="page-head">
+      <div class="page-head-left"><div>
+        <h1>⏱ Time Tracking</h1>
+        <div class="sub">Timesheets per project — ${ts.length} records</div>
+      </div></div>
+      <div style="display:flex;gap:8px">
+        ${can('create')?`<button class="btn btn-primary" onclick="openLogTimeModal()">+ Log Hours</button>`:''}
+        <button class="btn btn-ghost" onclick="loadTimeTracking()">↻ Refresh</button>
+      </div>
+    </div>
+    <div class="grid4" style="margin-bottom:18px">
+      ${kpi('Total Hours Logged', totalHours.toFixed(1)+'h', '#3B82F6')}
+      ${kpi('This Month', monthHours.toFixed(1)+'h', '#8B5CF6')}
+      ${kpi('Pending Approval', pending, pending>0?'#F97316':'#10B981')}
+      ${kpi('Active Employees', emps.length, '#10B981')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <!-- Hours by Project -->
+      <div class="card">
+        <div class="sec-head"><div class="sec-title"><span>🏗</span>Hours by Project</div></div>
+        ${projs.map(p=>{
+          const pHours = ts.filter(t=>t.project_id===p.id).reduce((s,t)=>s+Number(t.hours_regular||0)+Number(t.hours_overtime||0),0);
+          const pct = totalHours>0?Math.round(pHours/totalHours*100):0;
+          return pHours>0?`
+          <div style="margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+              <span style="color:var(--muted)">${p.project_no}</span>
+              <span style="color:var(--gold);font-weight:700">${pHours.toFixed(1)}h</span>
+            </div>
+            <div style="height:6px;background:var(--n3);border-radius:3px">
+              <div style="width:${pct}%;height:100%;background:var(--gold);border-radius:3px"></div>
+            </div>
+          </div>`:''}).join('')||'<div style="color:var(--muted);font-size:11px">No hours logged yet</div>'}
+      </div>
+      <!-- Hours by Employee -->
+      <div class="card">
+        <div class="sec-head"><div class="sec-title"><span>👤</span>Top Contributors</div></div>
+        ${emps.map(e=>{
+          const eHours = ts.filter(t=>t.employee_id===e.id).reduce((s,t)=>s+Number(t.hours_regular||0)+Number(t.hours_overtime||0),0);
+          return {e,h:eHours};
+        }).filter(x=>x.h>0).sort((a,b)=>b.h-a.h).slice(0,6).map(({e,h})=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bdr)">
+            <div>
+              <div style="font-size:11px;font-weight:600">${e.full_name}</div>
+              <div style="font-size:10px;color:var(--muted)">${e.department||'—'}</div>
+            </div>
+            <div style="font-size:12px;font-weight:700;color:var(--blue)">${h.toFixed(1)}h</div>
+          </div>`).join('')||'<div style="color:var(--muted);font-size:11px">No hours logged yet</div>'}
+      </div>
+    </div>
+
+    <div style="background:var(--card2);border:1px solid var(--bdr);border-radius:11px;overflow:hidden">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--bdr);display:flex;gap:8px;align-items:center">
+        <span style="font-size:11px;font-weight:700;color:var(--gold)">All Timesheet Entries</span>
+        <input placeholder="🔍 Search…" oninput="filterTable('ts-tbody',this.value,[1,2,3])" style="background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:6px 10px;color:var(--text);font-size:11px;width:200px;font-family:inherit;margin-left:auto"/>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="tbl"><thead><tr>
+          <th>Period</th><th>Employee</th><th>Project</th><th>Activity</th>
+          <th style="text-align:right">Regular</th><th style="text-align:right">Overtime</th>
+          <th style="text-align:right">Total</th><th>Status</th>
+          ${can('edit')?'<th></th>':''}
+        </tr></thead>
+        <tbody id="ts-tbody">
+          ${ts.length===0?`<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">No timesheets yet</td></tr>`:''}
+          ${ts.map(t=>`
+          <tr>
+            <td style="color:var(--muted);font-family:monospace;font-size:10px">${t.period||'—'}</td>
+            <td><div style="font-size:11px;font-weight:600">${t.employee?.full_name||'—'}</div><div style="font-size:10px;color:var(--muted)">${t.employee?.emp_no||''}</div></td>
+            <td style="color:var(--gold);font-size:10px">${t.project?.project_no||'—'}<br><span style="color:var(--muted)">${t.project?.name||''}</span></td>
+            <td style="color:var(--muted);font-size:10px">${t.activity||'—'}</td>
+            <td style="text-align:right;color:var(--text)">${Number(t.hours_regular||0).toFixed(1)}h</td>
+            <td style="text-align:right;color:${Number(t.hours_overtime)>0?'#F97316':'var(--muted)'}">${Number(t.hours_overtime||0).toFixed(1)}h</td>
+            <td style="text-align:right;font-weight:700;color:var(--blue)">${(Number(t.hours_regular||0)+Number(t.hours_overtime||0)).toFixed(1)}h</td>
+            <td>${pill(t.status,t.status==='approved'?'#10B981':t.status==='submitted'?'#3B82F6':t.status==='rejected'?'#EF4444':'#94A3B8')}</td>
+            ${can('edit')?`<td>
+              ${t.status==='submitted'?`<button class="btn-icon" title="Approve" onclick="approveTimesheet('${t.id}')">✅</button>`:''}
+              ${t.status==='draft'?`<button class="btn-icon" title="Submit" onclick="submitTimesheet('${t.id}')">📤</button>`:''}
+            </td>`:''}
+          </tr>`).join('')}
+        </tbody></table>
+      </div>
+    </div>`;
+  } catch(e){ pageError('page-timetracking',e); }
+}
+
+async function openLogTimeModal(){
+  const [projR, empR] = await Promise.all([
+    sb.from('projects').select('id,project_no,name').in('status',['planning','execution','monitoring','closeout']).order('project_no'),
+    sb.from('employees').select('id,emp_no,full_name').eq('status','active').order('full_name')
+  ]);
+  const period = new Date().toISOString().slice(0,7);
+  openModal('⏱ Log Hours',`
+    <div class="form-grid">
+      <div class="form-field"><label>Employee *</label>
+        <select id="lt-emp">
+          <option value="">— Select Employee —</option>
+          ${(empR.data||[]).map(e=>`<option value="${e.id}">${e.full_name} (${e.emp_no})</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Project *</label>
+        <select id="lt-proj">
+          <option value="">— Select Project —</option>
+          ${(projR.data||[]).map(p=>`<option value="${p.id}">${p.project_no} — ${p.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label>Period (YYYY-MM)</label>
+        <input id="lt-period" value="${period}" placeholder="2026-09"/>
+      </div>
+      <div class="form-field"><label>Activity</label>
+        <input id="lt-activity" placeholder="e.g. Installation, Testing, Design"/>
+      </div>
+      <div class="form-field"><label>Regular Hours</label>
+        <input id="lt-reg" type="number" min="0" max="200" step="0.5" value="0"/>
+      </div>
+      <div class="form-field"><label>Overtime Hours</label>
+        <input id="lt-ot" type="number" min="0" max="100" step="0.5" value="0"/>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTimesheet()">Log Hours</button>
+    </div>
+  `);
+}
+
+async function saveTimesheet(){
+  const empId  = document.getElementById('lt-emp')?.value;
+  const projId = document.getElementById('lt-proj')?.value;
+  const period = document.getElementById('lt-period')?.value?.trim();
+  if(!empId)  { showToast('Select an employee','error'); return; }
+  if(!projId) { showToast('Select a project','error'); return; }
+  if(!period) { showToast('Period is required','error'); return; }
+  try {
+    const {error} = await sb.from('timesheets').insert({
+      employee_id:     empId,
+      project_id:      projId,
+      period,
+      activity:        document.getElementById('lt-activity')?.value||null,
+      hours_regular:   parseFloat(document.getElementById('lt-reg')?.value||0),
+      hours_overtime:  parseFloat(document.getElementById('lt-ot')?.value||0),
+      status:          'draft',
+      approved_by:     null
+    });
+    if(error) throw error;
+    closeModal(); showToast('✅ Hours logged','success'); loadTimeTracking();
+  } catch(e){ showToast('Error: '+e.message,'error'); }
+}
+
+async function submitTimesheet(id){
+  await sb.from('timesheets').update({status:'submitted'}).eq('id',id);
+  showToast('📤 Timesheet submitted for approval','info'); loadTimeTracking();
+}
+async function approveTimesheet(id){
+  await sb.from('timesheets').update({status:'approved',approved_by:currentProfile?.id}).eq('id',id);
+  showToast('✅ Timesheet approved','success'); loadTimeTracking();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P13 — FINANCIAL RATIOS MODULE
+// ══════════════════════════════════════════════════════════════
+async function loadFinancialRatios(){
+  const el = document.getElementById('page-ratios');
+  el.innerHTML = `<div class="loading">Calculating financial ratios…</div>`;
+  try {
+    const [invR, projR, poR] = await Promise.all([
+      sb.from('invoices').select('*'),
+      sb.from('projects').select('id,project_no,name,bac,ac,ev,pv,contract_value,status'),
+      sb.from('purchase_orders').select('*')
+    ]);
+    const invs = invR.data||[], projs = projR.data||[], pos = poR.data||[];
+
+    // ── Revenue & Cost ────────────────────────────────────────
+    const clientInvs = invs.filter(i=>i.invoice_type==='client');
+    const supplierInvs = invs.filter(i=>i.invoice_type==='supplier');
+    const totalRevenue = clientInvs.filter(i=>['paid','partially_paid'].includes(i.status)).reduce((s,i)=>s+Number(i.net_amount||0),0);
+    const totalAR      = clientInvs.filter(i=>!['paid','cancelled'].includes(i.status)).reduce((s,i)=>s+Number(i.net_amount||0),0);
+    const totalAP      = supplierInvs.filter(i=>!['paid','cancelled'].includes(i.status)).reduce((s,i)=>s+Number(i.net_amount||0),0);
+    const totalCost    = supplierInvs.filter(i=>['paid','partially_paid'].includes(i.status)).reduce((s,i)=>s+Number(i.net_amount||0),0);
+    const grossProfit  = totalRevenue - totalCost;
+    const gpMargin     = totalRevenue>0 ? (grossProfit/totalRevenue*100) : 0;
+
+    // ── EVM Portfolio ─────────────────────────────────────────
+    const activeProjs = projs.filter(p=>['planning','execution','monitoring','closeout'].includes(p.status));
+    const totalBAC = activeProjs.reduce((s,p)=>s+Number(p.bac||0),0);
+    const totalAC  = activeProjs.reduce((s,p)=>s+Number(p.ac||0),0);
+    const totalEV  = activeProjs.reduce((s,p)=>s+Number(p.ev||0),0);
+    const totalPV  = activeProjs.reduce((s,p)=>s+Number(p.pv||0),0);
+    const portCPI  = totalAC>0 ? totalEV/totalAC : 1;
+    const portSPI  = totalPV>0 ? totalEV/totalPV : 1;
+    const portEAC  = portCPI>0 ? totalBAC/portCPI : totalBAC;
+    const portVAC  = totalBAC - portEAC;
+    const portCV   = totalEV - totalAC;
+    const portSV   = totalEV - totalPV;
+
+    // ── Liquidity ─────────────────────────────────────────────
+    const arTurnover  = totalRevenue>0&&totalAR>0 ? totalRevenue/totalAR : 0;
+    const apTurnover  = totalCost>0&&totalAP>0   ? totalCost/totalAP    : 0;
+    const dso         = arTurnover>0 ? 365/arTurnover : 0;
+    const dpo         = apTurnover>0 ? 365/apTurnover : 0;
+    const cashCycle   = dso - dpo;
+    const totalContractVal = projs.reduce((s,p)=>s+Number(p.contract_value||0),0);
+    const backlog     = totalContractVal - totalRevenue;
+
+    const ratioCard = (label,value,benchmark,color,desc,fmt='num')=>`
+      <div style="background:var(--card);border:1px solid var(--bdr);border-radius:9px;padding:14px">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px">${label}</div>
+        <div style="font-size:22px;font-weight:900;color:${color};margin-bottom:4px">${fmt==='pct'?value.toFixed(1)+'%':fmt==='kwd'?fmtKWD(value):fmt==='days'?value.toFixed(0)+'d':value.toFixed(3)}</div>
+        <div style="font-size:10px;color:var(--faint);margin-bottom:6px">${desc}</div>
+        <div style="font-size:9px;padding:2px 7px;background:${color}22;color:${color};border-radius:4px;display:inline-block;font-weight:700">${benchmark}</div>
+      </div>`;
+
+    el.innerHTML = `
+    <div class="page-head">
+      <div class="page-head-left"><div>
+        <h1>📐 Financial Ratios</h1>
+        <div class="sub">Analytical KPIs — ${new Date().toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</div>
+      </div></div>
+      <button class="btn btn-ghost" onclick="loadFinancialRatios()">↻ Refresh</button>
+    </div>
+
+    <!-- Profitability -->
+    <div style="margin-bottom:6px;font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px">💰 Profitability</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">
+      ${ratioCard('Gross Profit Margin', gpMargin, gpMargin>=20?'✅ Healthy':gpMargin>=10?'⚠️ Moderate':'🔴 Low', gpMargin>=20?'#10B981':gpMargin>=10?'#F97316':'#EF4444','(Revenue − Cost) / Revenue','pct')}
+      ${ratioCard('Gross Profit', grossProfit, grossProfit>=0?'✅ Positive':'🔴 Negative', grossProfit>=0?'#10B981':'#EF4444','Collected Revenue − Paid Cost','kwd')}
+      ${ratioCard('Total Revenue', totalRevenue,'Collected invoices',totalRevenue>0?'#3B82F6':'#94A3B8','Paid client invoices to date','kwd')}
+      ${ratioCard('Backlog', backlog,'Work yet to invoice',backlog>0?'#8B5CF6':'#94A3B8','Contract Value − Collected','kwd')}
+    </div>
+
+    <!-- EVM Portfolio -->
+    <div style="margin-bottom:6px;font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px">⚡ Portfolio EVM Ratios</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">
+      ${ratioCard('Portfolio CPI', portCPI, portCPI>=1?'✅ On Budget':portCPI>=0.9?'⚠️ At Risk':'🔴 Over Budget', portCPI>=1?'#10B981':portCPI>=0.9?'#F97316':'#EF4444','EV / AC — Cost efficiency')}
+      ${ratioCard('Portfolio SPI', portSPI, portSPI>=1?'✅ On Schedule':portSPI>=0.9?'⚠️ At Risk':'🔴 Behind', portSPI>=1?'#10B981':portSPI>=0.9?'#F97316':'#EF4444','EV / PV — Schedule efficiency')}
+      ${ratioCard('Cost Variance', portCV, portCV>=0?'✅ Under Budget':'🔴 Over Budget', portCV>=0?'#10B981':'#EF4444','EV − AC (portfolio)','kwd')}
+      ${ratioCard('VAC', portVAC, portVAC>=0?'✅ Saving expected':'🔴 Overrun expected', portVAC>=0?'#10B981':'#EF4444','BAC − EAC forecast','kwd')}
+    </div>
+
+    <!-- Liquidity -->
+    <div style="margin-bottom:6px;font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px">🔄 Liquidity & Cash Cycle</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">
+      ${ratioCard('DSO', dso, dso<=60?'✅ Good':dso<=90?'⚠️ Moderate':'🔴 Slow collection', dso<=60?'#10B981':dso<=90?'#F97316':'#EF4444','Days Sales Outstanding','days')}
+      ${ratioCard('DPO', dpo, dpo<=60?'✅ Good':'⚠️ Review', dpo<=60?'#10B981':'#F97316','Days Payable Outstanding','days')}
+      ${ratioCard('Cash Cycle', cashCycle, cashCycle<=30?'✅ Efficient':cashCycle<=60?'⚠️ Moderate':'🔴 Review','#8B5CF6','DSO − DPO (days to convert)','days')}
+      ${ratioCard('AR/AP Ratio', totalAP>0?totalAR/totalAP:0, totalAR/Math.max(totalAP,1)>=1?'✅ AR > AP':'⚠️ AP > AR', totalAR>=totalAP?'#10B981':'#F97316','Outstanding AR vs AP balance')}
+    </div>
+
+    <!-- Project-by-project -->
+    <div style="background:var(--card2);border:1px solid var(--bdr);border-radius:11px;overflow:hidden">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--bdr)">
+        <span style="font-size:11px;font-weight:700;color:var(--gold)">Project-Level Financial Ratios</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="tbl"><thead><tr>
+          <th>Project</th><th style="text-align:right">BAC</th><th style="text-align:right">AC</th>
+          <th style="text-align:right">EV</th><th style="text-align:center">CPI</th>
+          <th style="text-align:center">SPI</th><th style="text-align:right">EAC</th>
+          <th style="text-align:right">VAC</th>
+        </tr></thead><tbody>
+        ${activeProjs.map(p=>{
+          const cpi = Number(p.ac)>0 ? Number(p.ev)/Number(p.ac) : 1;
+          const spi = Number(p.pv)>0 ? Number(p.ev)/Number(p.pv) : 1;
+          const eac = cpi>0 ? Number(p.bac)/cpi : Number(p.bac);
+          const vac = Number(p.bac) - eac;
+          return `<tr>
+            <td><div style="font-size:11px;font-weight:600">${p.project_no}</div><div style="font-size:10px;color:var(--muted)">${p.name}</div></td>
+            <td style="text-align:right;color:var(--muted)">${fmtKWD(p.bac)}</td>
+            <td style="text-align:right;color:var(--muted)">${fmtKWD(p.ac)}</td>
+            <td style="text-align:right;color:var(--blue)">${fmtKWD(p.ev)}</td>
+            <td style="text-align:center"><span style="font-weight:700;color:${cpi>=1?'#10B981':cpi>=0.9?'#F97316':'#EF4444'}">${cpi.toFixed(3)}</span></td>
+            <td style="text-align:center"><span style="font-weight:700;color:${spi>=1?'#10B981':spi>=0.9?'#F97316':'#EF4444'}">${spi.toFixed(3)}</span></td>
+            <td style="text-align:right;color:var(--orange)">${fmtKWD(eac)}</td>
+            <td style="text-align:right;color:${vac>=0?'#10B981':'#EF4444'};font-weight:700">${fmtKWD(vac)}</td>
+          </tr>`;
+        }).join('')}
+        </tbody></table>
+      </div>
+    </div>`;
+  } catch(e){ pageError('page-ratios',e); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  P13 — BULK OPERATIONS MODULE
+// ══════════════════════════════════════════════════════════════
+async function loadBulkOperations(){
+  const el = document.getElementById('page-bulk');
+  el.innerHTML = `<div class="loading">Loading bulk operations…</div>`;
+  try {
+    const [projR, empR, vendR, custR] = await Promise.all([
+      sb.from('projects').select('id,project_no,name,status,priority,pm_id').order('project_no'),
+      sb.from('employees').select('id,emp_no,full_name,status,department').order('full_name'),
+      sb.from('vendors').select('id,vendor_code,name,is_approved,status').order('vendor_code'),
+      sb.from('crm_customers').select('id,customer_no,name,status,rating').order('customer_no')
+    ]);
+
+    el.innerHTML = `
+    <div class="page-head">
+      <div class="page-head-left"><div>
+        <h1>⚡ Bulk Operations</h1>
+        <div class="sub">Mass updates across Projects, Employees, Vendors, Customers</div>
+      </div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+
+      <!-- Bulk: Projects -->
+      <div class="card">
+        <div class="sec-head"><div class="sec-title"><span>🏗</span>Projects — Bulk Status Update</div></div>
+        <div style="margin-bottom:10px;font-size:11px;color:var(--muted)">Select projects and update status or priority in one action.</div>
+        <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center">
+          <select id="bulk-proj-status" style="background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:6px 10px;color:var(--text);font-size:11px;font-family:inherit">
+            <option value="">— Set Status —</option>
+            ${['planning','execution','monitoring','closeout','on_hold','completed'].map(s=>`<option value="${s}">${s}</option>`).join('')}
+          </select>
+          <select id="bulk-proj-priority" style="background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:6px 10px;color:var(--text);font-size:11px;font-family:inherit">
+            <option value="">— Set Priority —</option>
+            ${['critical','high','medium','low'].map(s=>`<option value="${s}">${s}</option>`).join('')}
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="bulkUpdateProjects()">Apply</button>
+        </div>
+        <div style="max-height:280px;overflow-y:auto">
+          ${(projR.data||[]).map(p=>`
+          <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--card);border-radius:6px;margin-bottom:4px;cursor:pointer">
+            <input type="checkbox" class="bulk-proj-cb" value="${p.id}" style="accent-color:var(--gold)"/>
+            <div style="flex:1">
+              <div style="font-size:11px;font-weight:600">${p.project_no} — ${p.name}</div>
+              <div style="font-size:10px;color:var(--muted)">${p.status} · ${p.priority}</div>
+            </div>
+          </label>`).join('')}
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="document.querySelectorAll('.bulk-proj-cb').forEach(c=>c.checked=true)">Select All</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.querySelectorAll('.bulk-proj-cb').forEach(c=>c.checked=false)">Clear</button>
+        </div>
+      </div>
+
+      <!-- Bulk: Customers -->
+      <div class="card">
+        <div class="sec-head"><div class="sec-title"><span>🏢</span>Customers — Bulk Status Update</div></div>
+        <div style="margin-bottom:10px;font-size:11px;color:var(--muted)">Update customer status or rating in bulk.</div>
+        <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center">
+          <select id="bulk-cust-status" style="background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:6px 10px;color:var(--text);font-size:11px;font-family:inherit">
+            <option value="">— Set Status —</option>
+            ${['active','inactive','blacklisted'].map(s=>`<option value="${s}">${s}</option>`).join('')}
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="bulkUpdateCustomers()">Apply</button>
+        </div>
+        <div style="max-height:280px;overflow-y:auto">
+          ${(custR.data||[]).map(c=>`
+          <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--card);border-radius:6px;margin-bottom:4px;cursor:pointer">
+            <input type="checkbox" class="bulk-cust-cb" value="${c.id}" style="accent-color:var(--gold)"/>
+            <div style="flex:1">
+              <div style="font-size:11px;font-weight:600">${c.customer_no} — ${c.name}</div>
+              <div style="font-size:10px;color:var(--muted)">${c.status} · ${c.rating?'⭐'.repeat(c.rating):'Unrated'}</div>
+            </div>
+          </label>`).join('')}
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="document.querySelectorAll('.bulk-cust-cb').forEach(c=>c.checked=true)">Select All</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.querySelectorAll('.bulk-cust-cb').forEach(c=>c.checked=false)">Clear</button>
+        </div>
+      </div>
+
+      <!-- Bulk: Vendors -->
+      <div class="card">
+        <div class="sec-head"><div class="sec-title"><span>🏭</span>Vendors — Bulk Approval</div></div>
+        <div style="margin-bottom:10px;font-size:11px;color:var(--muted)">Approve or blacklist multiple vendors at once.</div>
+        <div style="margin-bottom:10px;display:flex;gap:8px">
+          <button class="btn btn-primary btn-sm" onclick="bulkApproveVendors(true)">✅ Approve Selected</button>
+          <button class="btn btn-ghost btn-sm" style="color:#EF4444;border-color:#EF444433" onclick="bulkApproveVendors(false)">🚫 Blacklist Selected</button>
+        </div>
+        <div style="max-height:280px;overflow-y:auto">
+          ${(vendR.data||[]).map(v=>`
+          <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--card);border-radius:6px;margin-bottom:4px;cursor:pointer">
+            <input type="checkbox" class="bulk-vend-cb" value="${v.id}" style="accent-color:var(--gold)"/>
+            <div style="flex:1">
+              <div style="font-size:11px;font-weight:600">${v.vendor_code||'—'} — ${v.name||v.vendor_name||'—'}</div>
+              <div style="font-size:10px;color:var(--muted)">${v.is_approved?'✅ Approved':'⏳ Pending'}</div>
+            </div>
+          </label>`).join('')||'<div style="color:var(--muted);font-size:11px">No vendors registered</div>'}
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="document.querySelectorAll('.bulk-vend-cb').forEach(c=>c.checked=true)">Select All</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.querySelectorAll('.bulk-vend-cb').forEach(c=>c.checked=false)">Clear</button>
+        </div>
+      </div>
+
+      <!-- Bulk: Employees -->
+      <div class="card">
+        <div class="sec-head"><div class="sec-title"><span>👥</span>Employees — Bulk Status Update</div></div>
+        <div style="margin-bottom:10px;font-size:11px;color:var(--muted)">Update employee status across departments.</div>
+        <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center">
+          <select id="bulk-emp-status" style="background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:6px 10px;color:var(--text);font-size:11px;font-family:inherit">
+            <option value="">— Set Status —</option>
+            ${['active','on_leave','resigned','terminated'].map(s=>`<option value="${s}">${s}</option>`).join('')}
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="bulkUpdateEmployees()">Apply</button>
+        </div>
+        <div style="max-height:280px;overflow-y:auto">
+          ${(empR.data||[]).map(e=>`
+          <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--card);border-radius:6px;margin-bottom:4px;cursor:pointer">
+            <input type="checkbox" class="bulk-emp-cb" value="${e.id}" style="accent-color:var(--gold)"/>
+            <div style="flex:1">
+              <div style="font-size:11px;font-weight:600">${e.emp_no} — ${e.full_name}</div>
+              <div style="font-size:10px;color:var(--muted)">${e.department||'—'} · ${e.status}</div>
+            </div>
+          </label>`).join('')||'<div style="color:var(--muted);font-size:11px">No employees registered</div>'}
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="document.querySelectorAll('.bulk-emp-cb').forEach(c=>c.checked=true)">Select All</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.querySelectorAll('.bulk-emp-cb').forEach(c=>c.checked=false)">Clear</button>
+        </div>
+      </div>
+    </div>`;
+  } catch(e){ pageError('page-bulk',e); }
+}
+
+async function bulkUpdateProjects(){
+  const ids=[...document.querySelectorAll('.bulk-proj-cb:checked')].map(c=>c.value);
+  if(!ids.length){ showToast('Select at least one project','warning'); return; }
+  const status   = document.getElementById('bulk-proj-status')?.value;
+  const priority = document.getElementById('bulk-proj-priority')?.value;
+  if(!status&&!priority){ showToast('Select a status or priority to apply','warning'); return; }
+  if(!confirm(`Update ${ids.length} project(s)?`)) return;
+  const update={updated_at:new Date().toISOString()};
+  if(status)   update.status=status;
+  if(priority) update.priority=priority;
+  const {error}=await sb.from('projects').update(update).in('id',ids);
+  if(error){ showToast('Error: '+error.message,'error'); return; }
+  showToast(`✅ ${ids.length} project(s) updated`,'success'); loadBulkOperations();
+}
+
+async function bulkUpdateCustomers(){
+  const ids=[...document.querySelectorAll('.bulk-cust-cb:checked')].map(c=>c.value);
+  if(!ids.length){ showToast('Select at least one customer','warning'); return; }
+  const status=document.getElementById('bulk-cust-status')?.value;
+  if(!status){ showToast('Select a status to apply','warning'); return; }
+  if(!confirm(`Update ${ids.length} customer(s) to "${status}"?`)) return;
+  const {error}=await sb.from('crm_customers').update({status,updated_at:new Date().toISOString()}).in('id',ids);
+  if(error){ showToast('Error: '+error.message,'error'); return; }
+  showToast(`✅ ${ids.length} customer(s) updated`,'success'); loadBulkOperations();
+}
+
+async function bulkApproveVendors(approve){
+  const ids=[...document.querySelectorAll('.bulk-vend-cb:checked')].map(c=>c.value);
+  if(!ids.length){ showToast('Select at least one vendor','warning'); return; }
+  const action=approve?'approve':'blacklist';
+  if(!confirm(`${action} ${ids.length} vendor(s)?`)) return;
+  const update=approve?{is_approved:true,status:'active'}:{is_approved:false,status:'blacklisted'};
+  const {error}=await sb.from('vendors').update(update).in('id',ids);
+  if(error){ showToast('Error: '+error.message,'error'); return; }
+  showToast(`✅ ${ids.length} vendor(s) ${action}d`,'success'); loadBulkOperations();
+}
+
+async function bulkUpdateEmployees(){
+  const ids=[...document.querySelectorAll('.bulk-emp-cb:checked')].map(c=>c.value);
+  if(!ids.length){ showToast('Select at least one employee','warning'); return; }
+  const status=document.getElementById('bulk-emp-status')?.value;
+  if(!status){ showToast('Select a status to apply','warning'); return; }
+  if(!confirm(`Update ${ids.length} employee(s) to "${status}"?`)) return;
+  const {error}=await sb.from('employees').update({status,updated_at:new Date().toISOString()}).in('id',ids);
+  if(error){ showToast('Error: '+error.message,'error'); return; }
+  showToast(`✅ ${ids.length} employee(s) updated`,'success'); loadBulkOperations();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  END OF P13 FEATURES
 // ══════════════════════════════════════════════════════════════
 
 </script>
