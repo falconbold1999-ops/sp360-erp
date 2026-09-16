@@ -82,8 +82,8 @@ aside.collapsed{width:0}
 @media(max-width:480px){#notif-drawer{width:100vw!important}}
 nav{padding:10px 7px;flex:1;overflow-y:auto}
 .nav-section{color:var(--faint);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:12px 10px 5px}
+#nav-crm-customers,#nav-crm-leads,#nav-crm-opportunities,#nav-crm-pipeline,#nav-crm-quotations,#nav-crm-activities,#nav-timetracking,#nav-ratios,#nav-bulk,#nav-weekly{display:flex!important}
 .nav-btn{width:100%;display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;border:none;cursor:pointer;background:none;color:var(--muted);font-size:12px;text-align:left;font-family:inherit;border-left:3px solid transparent;margin-bottom:1px;white-space:nowrap;overflow:hidden;transition:all .1s}
-#nav-crm-customers,#nav-crm-leads,#nav-crm-opportunities,#nav-crm-pipeline,#nav-crm-quotations,#nav-crm-activities,#nav-timetracking,#nav-ratios,#nav-bulk{display:flex!important}
 .nav-btn.active{background:#C9A84C18;color:var(--gold);font-weight:700;border-left-color:var(--gold)}
 .nav-btn:hover:not(.active){background:var(--n4);color:var(--text)}
 .nav-icon{font-size:14px;flex-shrink:0}
@@ -589,6 +589,7 @@ img,canvas,svg{max-width:100%;height:auto}
         <button class="nav-btn" id="nav-workflow" onclick="navTo('workflow',this)"><span class="nav-icon">⚡</span>Workflow<span class="nav-badge" id="wf-badge" style="display:none">0</span></button>
         <button class="nav-btn" id="nav-audit" onclick="navTo('audit',this)"><span class="nav-icon">📋</span>Audit Trail</button>
         <button class="nav-btn" id="nav-users" onclick="navTo('users',this)"><span class="nav-icon">👤</span>Users</button>
+        <button class="nav-btn" id="nav-weekly" onclick="navTo('weekly',this)"><span class="nav-icon">📰</span>Weekly Report</button>
         <button class="nav-btn" id="nav-ceo" onclick="navTo('ceo',this)"><span class="nav-icon">👔</span>CEO Report</button>
         <button class="nav-btn" id="nav-contracts" onclick="navTo('contracts',this)"><span class="nav-icon">📜</span>Contracts</button>
         <button class="nav-btn" id="nav-lessons" onclick="navTo('lessons',this)"><span class="nav-icon">📚</span>Lessons</button>
@@ -606,7 +607,6 @@ img,canvas,svg{max-width:100%;height:auto}
         <button class="nav-btn" id="nav-correspondence" onclick="navTo('correspondence',this)"><span class="nav-icon">✉️</span>Correspondence</button>
         <button class="nav-btn" id="nav-benchmark" onclick="navTo('benchmark',this)"><span class="nav-icon">📐</span>Benchmark</button>
         <button class="nav-btn" id="nav-import" onclick="navTo('import',this)"><span class="nav-icon">📥</span>Import/Export</button>
-        <button class="nav-btn" id="nav-bulk" onclick="navTo('bulk',this)"><span class="nav-icon">⚡</span>Bulk Operations</button>
         <button class="nav-btn" id="nav-sitediary" onclick="navTo('sitediary',this)"><span class="nav-icon">📔</span>Site Diary</button>
         <button class="nav-btn" id="nav-punchlist" onclick="navTo('punchlist',this)"><span class="nav-icon">📌</span>Punch List</button>
         <button class="nav-btn" id="nav-expenses" onclick="navTo('expenses',this)"><span class="nav-icon">🧾</span>Expenses</button>
@@ -669,6 +669,7 @@ img,canvas,svg{max-width:100%;height:auto}
       <div class="page" id="page-timetracking"></div>
       <div class="page" id="page-ratios"></div>
       <div class="page" id="page-bulk"></div>
+      <div class="page" id="page-weekly"></div>
     </main>
   </div>
 </div>
@@ -806,7 +807,7 @@ var sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 // Page visibility per role
 const CRM_PAGES = ['crm-customers','crm-leads','crm-opportunities','crm-pipeline','crm-quotations','crm-activities'];
-const P13_PAGES = ['timetracking','ratios','bulk'];
+const P13_PAGES = ['timetracking','ratios','bulk','weekly'];
 const ROLE_PAGES = {
   'Admin':             ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','correspondence','benchmark','import','sitediary','punchlist','expenses','ai','retention','sla','templates',...CRM_PAGES,...P13_PAGES],
   'PMO Manager':       ['dashboard','bizdev','projects','gantt','resources','scorecard','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','correspondence','benchmark','import','sitediary','punchlist','expenses','ai','retention','sla','templates',...CRM_PAGES,...P13_PAGES],
@@ -1188,32 +1189,19 @@ async function loadProfile(){
   }
 }
 
-let _enterAppDone = false;
+let _enterAppDone=false;
 function enterApp(){
-  if(_enterAppDone) return;
-  _enterAppDone = true;
+  if(_enterAppDone)return;
+  _enterAppDone=true;
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app').style.display='flex';
-  // Force sidebar to top — multiple attempts
-  requestAnimationFrame(()=>{
-    const n=document.querySelector('aside nav');
-    if(n){ n.scrollTop=0; n.scrollTo({top:0,behavior:'instant'}); }
-  });
-  setTimeout(()=>{
-    const n=document.querySelector('aside nav');
-    if(n){ n.scrollTop=0; }
-  }, 300);
-  setTimeout(()=>{
-    const n=document.querySelector('aside nav');
-    if(n){ n.scrollTop=0; }
-  }, 1000);
+  requestAnimationFrame(()=>{const n=document.querySelector('aside nav');if(n)n.scrollTop=0;});
 
   // ── Apply role-based nav visibility ──────────────────────
-  const allowed = ROLE_PAGES[currentProfile?.role] || Object.values(ROLE_PAGES).flat();
-  document.querySelectorAll('.nav-btn[id^="nav-"]').forEach(btn=>{
-    const pageId = btn.id.replace('nav-','');
-    if(pageId==='dashboard') return;
-    btn.style.display = allowed.includes(pageId) ? '' : 'none';
+  const allowed = ROLE_PAGES[currentProfile?.role] || ['dashboard'];
+  ['bizdev','projects','gantt','resources','scorecard','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','correspondence','benchmark','import','sitediary','punchlist','expenses','ai','retention','sla','templates','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system'].forEach(p=>{
+    const btn = document.getElementById('nav-'+p);
+    if(btn) btn.style.display = allowed.includes(p) ? '' : 'none';
   });
 
   // ── Apply role badge color in sidebar ─────────────────────
@@ -1247,16 +1235,16 @@ function enterApp(){
     window._cachedProjects=_p||[];
     window._cachedItems=_i||[];
   });
-  // Scroll sidebar to top
-  const sideNav = document.querySelector('aside nav');
-  if(sideNav) sideNav.scrollTop = 0;
-
+  const sn=document.querySelector('aside nav');
+  if(sn){sn.scrollTop=0;}
+  requestAnimationFrame(()=>{const n=document.querySelector('aside nav');if(n)n.scrollTop=0;});
+  setTimeout(()=>{const n=document.querySelector('aside nav');if(n)n.scrollTop=0;},500);
   navTo('dashboard',document.querySelector('.nav-btn.active'));
   // P2-1: Init Notifications Center
   setTimeout(()=>{ initNotifRealtime(); _silentRefreshNotifs(); }, 1200);
   setTimeout(()=>{ runScheduledNotifications(); }, 3000);
   setTimeout(()=>{ initFAB(); }, 1500);
-  setTimeout(()=>{ runKPIAlerts(false); }, 4000);
+  setTimeout(()=>{runKPIAlerts(false);},4000);
   loadWfBadge();
   initRealtime();
   initSessionGuard();
@@ -1454,11 +1442,6 @@ function navTo(id,btn){
   }
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
-  // Scroll sidebar to top only for dashboard
-  if(id==='dashboard'){
-    const nav=document.querySelector('aside nav');
-    if(nav) nav.scrollTop=0;
-  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const pg=document.getElementById('page-'+id);
   if(pg)pg.classList.add('active');
@@ -1471,7 +1454,7 @@ function navTo(id,btn){
     users:loadUsers,ceo:loadCEO,system:loadSystem,resources:loadResources,scorecard:loadScorecard,contracts:loadContracts,lessons:loadLessons,forecast:loadForecast,reports:loadReports,training:loadTraining,assets:loadAssets,subcon:loadSubcon,meetings:loadMeetings,analytics:loadAnalytics,tender:loadTender,insurance:loadInsurance,appraisal:loadAppraisal,budget:loadBudget,correspondence:loadCorrespondence,benchmark:loadBenchmark,import:loadImportExport,sitediary:loadSiteDiary,punchlist:loadPunchList,expenses:loadExpenses,ai:loadAI,retention:loadRetention,sla:loadSLA,templates:loadTemplates,
     'crm-customers':loadCRMCustomers,'crm-leads':loadCRMLeads,'crm-opportunities':loadCRMOpportunities,
     'crm-pipeline':loadCRMPipeline,'crm-quotations':loadCRMQuotations,'crm-activities':loadCRMActivities,
-    timetracking:loadTimeTracking, ratios:loadFinancialRatios, bulk:loadBulkOperations
+    timetracking:loadTimeTracking, ratios:loadFinancialRatios, bulk:loadBulkOperations, weekly:loadWeeklyReport
   };
   if(loaders[id])loaders[id]();
 }
@@ -1610,29 +1593,11 @@ async function loadDashboard(){
       <button onclick="navTo('crm-pipeline',document.getElementById('nav-crm-pipeline'))" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 10px;color:var(--muted);font-size:10px;cursor:pointer;font-family:inherit">View Pipeline →</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
-      <div style="text-align:center;padding:10px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Active Customers</div>
-        <div style="font-size:20px;font-weight:800;color:var(--text)">${crmCusts.filter(c=>c.status==='active').length}</div>
-      </div>
-      <div style="text-align:center;padding:10px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">New Leads</div>
-        <div style="font-size:20px;font-weight:800;color:${crmNewLeads>0?'#3B82F6':'var(--text)'}">${crmNewLeads}</div>
-      </div>
-      <div style="text-align:center;padding:10px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Pipeline Value</div>
-        <div style="font-size:14px;font-weight:800;color:var(--gold)">${fmtKWD(crmPipeline)}</div>
-        <div style="font-size:9px;color:var(--faint)">${crmActiveOpps.length} opportunities</div>
-      </div>
-      <div style="text-align:center;padding:10px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Weighted Pipeline</div>
-        <div style="font-size:14px;font-weight:800;color:var(--violet)">${fmtKWD(crmWeighted)}</div>
-        <div style="font-size:9px;color:var(--faint)">probability-adjusted</div>
-      </div>
-      <div style="text-align:center;padding:10px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)">
-        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">Win Rate</div>
-        <div style="font-size:20px;font-weight:800;color:${crmWinRate>=50?'#10B981':'#F97316'}">${crmWinRate}%</div>
-        <div style="font-size:9px;color:var(--faint)">Won: ${fmtKWD(crmWonVal)}</div>
-      </div>
+      <div style="text-align:center;padding:10px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">Active Customers</div><div style="font-size:20px;font-weight:800">${crmCusts.filter(c=>c.status==='active').length}</div></div>
+      <div style="text-align:center;padding:10px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">New Leads</div><div style="font-size:20px;font-weight:800;color:${crmNewLeads>0?'#3B82F6':'var(--text)'}">${crmNewLeads}</div></div>
+      <div style="text-align:center;padding:10px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">Pipeline Value</div><div style="font-size:14px;font-weight:800;color:var(--gold)">${fmtKWD(crmPipeline)}</div><div style="font-size:9px;color:var(--faint)">${crmActiveOpps.length} opportunities</div></div>
+      <div style="text-align:center;padding:10px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">Weighted Pipeline</div><div style="font-size:14px;font-weight:800;color:var(--violet)">${fmtKWD(crmWeighted)}</div></div>
+      <div style="text-align:center;padding:10px;background:var(--card);border-radius:8px;border:1px solid var(--bdr)"><div style="font-size:10px;color:var(--muted);margin-bottom:4px">Win Rate</div><div style="font-size:20px;font-weight:800;color:${crmWinRate>=50?'#10B981':'#F97316'}">${crmWinRate}%</div></div>
     </div>
   </div>
 
@@ -17897,34 +17862,165 @@ async function bulkUpdateEmployees(){
 async function exportRatiosPDF(){
   showToast('Opening print view...','info');
   try {
-    const el = document.getElementById('page-ratios');
-    const now = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
-    const printWin = window.open('','_blank');
-    const html = [
-      '<html><head><title>SP360 Financial Ratios</title>',
-      '<style>',
-      'body{font-family:Arial,sans-serif;font-size:11px;padding:20px;color:#1E293B}',
-      'h1{color:#0F1E38;border-bottom:3px solid #C9A84C;padding-bottom:8px}',
-      'table{width:100%;border-collapse:collapse;margin:12px 0}',
-      'th{background:#0F1E38;color:#C9A84C;padding:6px 8px;text-align:left}',
-      'td{border:1px solid #E2E8F0;padding:5px 8px}',
-      'tr:nth-child(even){background:#F8FAFC}',
-      '[style*="border-radius:9px"]{border:1px solid #E2E8F0;padding:10px;margin:4px;display:inline-block;min-width:120px}',
-      '</style></head>',
-      '<body>',
-      '<h1>SP360 v4.0 — Financial Ratios Report</h1>',
-      '<p style="color:#94A3B8;font-size:10px">Smart Projects 360 · Kuwait · ' + now + '</p>',
-      el.innerHTML,
-      '</body></html>'
-    ].join('');
+    var el = document.getElementById('page-ratios');
+    var now = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+    var printWin = window.open('','_blank');
+    var html = '<html><head><title>SP360 Financial Ratios</title>'
+      + '<style>'
+      + 'body{font-family:Arial,sans-serif;font-size:11px;padding:20px;color:#1E293B}'
+      + 'h1{color:#0F1E38;border-bottom:3px solid #C9A84C;padding-bottom:8px}'
+      + 'table{width:100%;border-collapse:collapse;margin:12px 0}'
+      + 'th{background:#0F1E38;color:#C9A84C;padding:6px 8px;text-align:left}'
+      + 'td{border:1px solid #E2E8F0;padding:5px 8px}'
+      + 'tr:nth-child(even){background:#F8FAFC}'
+      + '@media print{body{padding:10px}}'
+      + '</style></head>'
+      + '<body>'
+      + '<h1>SP360 v4.0 — Financial Ratios Report</h1>'
+      + '<p style="color:#94A3B8;font-size:10px">Smart Projects 360 · Kuwait · ' + now + '</p>'
+      + el.innerHTML
+      + '</body></html>';
     printWin.document.write(html);
     printWin.document.close();
     setTimeout(function(){ printWin.print(); }, 800);
-    showToast('✅ Print dialog opened — save as PDF','success');
+    showToast('Print dialog opened — save as PDF','success');
   } catch(e){
     showToast('Error: '+e.message,'error');
   }
 }
+
+
+
+async function loadWeeklyReport(){
+  var el = document.getElementById('page-weekly');
+  if(!el) return;
+  el.innerHTML = '<div class="loading">Generating weekly report...</div>';
+  try {
+    var weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+    var weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
+    var fmtD = function(d){ return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); };
+    var period = fmtD(weekStart) + ' — ' + fmtD(weekEnd);
+    var safeQ = async function(fn){ try{ var r=await fn(); return r.data||[]; }catch(e){ return []; }};
+    var results = await Promise.all([
+      safeQ(function(){ return sb.from('projects').select('id,project_no,name,status,cpi,spi'); }),
+      safeQ(function(){ return sb.from('invoices').select('id,invoice_type,net_amount,status,due_date'); }),
+      safeQ(function(){ return sb.from('workflow_items').select('id,status'); }),
+      safeQ(function(){ return sb.from('ncrs').select('id,severity,status'); }),
+      safeQ(function(){ return sb.from('project_milestones').select('id,name,planned_date,status,project_id'); }),
+      safeQ(function(){ return sb.from('crm_opportunities').select('id,stage,estimated_value,probability'); }),
+      safeQ(function(){ return sb.from('crm_leads').select('id,status,created_at'); }),
+      safeQ(function(){ return sb.from('timesheets').select('id,hours_regular,hours_overtime,period,status'); }),
+      safeQ(function(){ return sb.from('purchase_orders').select('id,status,po_value'); })
+    ]);
+    var projs=results[0], invs=results[1], wfs=results[2], ncrs=results[3];
+    var msData=results[4], crmOpps=results[5], crmLeads=results[6], tsData=results[7], pos=results[8];
+    var today = new Date();
+    var curPeriod = today.toISOString().slice(0,7);
+    var activeProjs = projs.filter(function(p){ return ['planning','execution','monitoring','closeout'].includes(p.status); });
+    var portCPI = activeProjs.length ? activeProjs.reduce(function(s,p){ return s+Number(p.cpi||1); },0)/activeProjs.length : 1;
+    var portSPI = activeProjs.length ? activeProjs.reduce(function(s,p){ return s+Number(p.spi||1); },0)/activeProjs.length : 1;
+    var critProjs = activeProjs.filter(function(p){ return Number(p.cpi||1)<0.9||Number(p.spi||1)<0.9; });
+    var overdueMs = msData.filter(function(m){ return m.status==='pending'&&m.planned_date&&new Date(m.planned_date)<today; });
+    var dueMs = msData.filter(function(m){ return m.status==='pending'&&m.planned_date&&(new Date(m.planned_date)-today)/86400000<=7; });
+    var totalAR = invs.filter(function(i){ return i.invoice_type==='client'&&!['paid','cancelled'].includes(i.status); }).reduce(function(s,i){ return s+Number(i.net_amount); },0);
+    var overdueAR = invs.filter(function(i){ return i.invoice_type==='client'&&!['paid','cancelled'].includes(i.status)&&i.due_date&&new Date(i.due_date)<today; });
+    var openNCR = ncrs.filter(function(n){ return n.status==='open'; });
+    var critNCR = ncrs.filter(function(n){ return n.status==='open'&&n.severity==='critical'; });
+    var pipeline = crmOpps.filter(function(o){ return !['won','lost'].includes(o.stage); }).reduce(function(s,o){ return s+Number(o.estimated_value); },0);
+    var monthHours = tsData.filter(function(t){ return t.period===curPeriod; }).reduce(function(s,t){ return s+Number(t.hours_regular||0)+Number(t.hours_overtime||0); },0);
+    var rag = function(v,g,w){ return v>=g?'#10B981':v>=w?'#F97316':'#EF4444'; };
+    var mRow = function(l,v,s,col){
+      return '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bdr)">'
+        +'<span style="font-size:11px;color:var(--muted)">'+l+'</span>'
+        +'<div style="text-align:right"><span style="font-size:13px;font-weight:700;color:'+(col||'var(--text)')+'">'+v+'</span>'
+        +(s?'<div style="font-size:9px;color:var(--faint)">'+s+'</div>':'')+'</div></div>';
+    };
+    var msRows = '';
+    var msList = overdueMs.concat(dueMs).slice(0,8);
+    for(var mi=0;mi<msList.length;mi++){
+      var m=msList[mi];
+      var proj=null;
+      for(var pi=0;pi<projs.length;pi++){ if(projs[pi].id===m.project_id){ proj=projs[pi]; break; }}
+      var dDiff=Math.ceil((new Date(m.planned_date)-today)/86400000);
+      var isOv=dDiff<0;
+      msRows+='<tr style="background:'+(isOv?'#EF444408':'#F9731608')+'">'
+        +'<td style="color:var(--gold);font-size:10px">'+(proj?proj.project_no:'--')+'</td>'
+        +'<td style="font-weight:600;font-size:11px">'+esc(m.name)+'</td>'
+        +'<td style="font-size:10px">'+new Date(m.planned_date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+'</td>'
+        +'<td style="font-size:10px;font-weight:700;color:'+(isOv?'#EF4444':'#F97316')+'">'+(isOv?Math.abs(dDiff)+'d overdue':dDiff+'d left')+'</td>'
+        +'</tr>';
+    }
+    el.innerHTML = '<div class="page-head"><div class="page-head-left"><div>'
+      +'<h1>Executive Weekly Report</h1>'
+      +'<div class="sub">Auto-generated - '+period+'</div>'
+      +'</div></div>'
+      +'<div style="display:flex;gap:8px">'
+      +'<button class="btn btn-ghost" onclick="printWeeklyReport()">Print / PDF</button>'
+      +'<button class="btn btn-ghost" onclick="loadWeeklyReport()">Refresh</button>'
+      +'</div></div>'
+      +'<div id="weekly-report-content">'
+      +'<div style="background:var(--card2);border:1px solid var(--bdr);border-radius:11px;padding:16px 20px;margin-bottom:14px">'
+      +'<div style="font-size:10px;color:var(--gold);font-weight:700;text-transform:uppercase;margin-bottom:10px">Executive Summary</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px">'
+      +'<div style="text-align:center;padding:9px;background:var(--card);border-radius:7px;border:1px solid var(--bdr)"><div style="font-size:9px;color:var(--muted)">Active Projects</div><div style="font-size:16px;font-weight:800;color:var(--blue)">'+activeProjs.length+'</div></div>'
+      +'<div style="text-align:center;padding:9px;background:var(--card);border-radius:7px;border:1px solid var(--bdr)"><div style="font-size:9px;color:var(--muted)">Portfolio CPI</div><div style="font-size:16px;font-weight:800;color:'+rag(portCPI,1,0.9)+'">'+portCPI.toFixed(2)+'</div></div>'
+      +'<div style="text-align:center;padding:9px;background:var(--card);border-radius:7px;border:1px solid var(--bdr)"><div style="font-size:9px;color:var(--muted)">Portfolio SPI</div><div style="font-size:16px;font-weight:800;color:'+rag(portSPI,1,0.9)+'">'+portSPI.toFixed(2)+'</div></div>'
+      +'<div style="text-align:center;padding:9px;background:var(--card);border-radius:7px;border:1px solid var(--bdr)"><div style="font-size:9px;color:var(--muted)">Outstanding AR</div><div style="font-size:13px;font-weight:800;color:'+(overdueAR.length>0?'#EF4444':'var(--gold)')+'">'+fmtKWD(totalAR)+'</div></div>'
+      +'<div style="text-align:center;padding:9px;background:var(--card);border-radius:7px;border:1px solid var(--bdr)"><div style="font-size:9px;color:var(--muted)">CRM Pipeline</div><div style="font-size:13px;font-weight:800;color:var(--violet)">'+fmtKWD(pipeline)+'</div></div>'
+      +'<div style="text-align:center;padding:9px;background:var(--card);border-radius:7px;border:1px solid var(--bdr)"><div style="font-size:9px;color:var(--muted)">Open NCRs</div><div style="font-size:16px;font-weight:800;color:'+(critNCR.length>0?'#EF4444':openNCR.length>0?'#F97316':'#10B981')+'">'+openNCR.length+'</div></div>'
+      +'</div></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'
+      +'<div class="card"><div style="font-size:11px;font-weight:800;color:#3B82F6;margin-bottom:10px">Project Controls</div>'
+      +mRow('Active Projects',activeProjs.length,projs.filter(function(p){return p.status==='completed';}).length+' completed')
+      +mRow('Portfolio CPI',portCPI.toFixed(3),'',rag(portCPI,1,0.9))
+      +mRow('Portfolio SPI',portSPI.toFixed(3),'',rag(portSPI,1,0.9))
+      +mRow('At-Risk Projects',critProjs.length,'CPI or SPI < 0.90',critProjs.length>0?'#EF4444':'#10B981')
+      +mRow('Overdue Milestones',overdueMs.length,dueMs.length+' due in 7 days',overdueMs.length>0?'#EF4444':'#10B981')
+      +'</div>'
+      +'<div class="card"><div style="font-size:11px;font-weight:800;color:#10B981;margin-bottom:10px">Finance</div>'
+      +mRow('Outstanding AR',fmtKWD(totalAR),'','var(--gold)')
+      +mRow('Overdue AR',overdueAR.length+' invoices','',overdueAR.length>0?'#EF4444':'#10B981')
+      +mRow('Pending Approvals',wfs.filter(function(w){return w.status==='pending'||w.status==='overdue';}).length,'in workflow')
+      +mRow('Open POs',pos.filter(function(p){return !['received','cancelled'].includes(p.status);}).length,'')
+      +'</div>'
+      +'<div class="card"><div style="font-size:11px;font-weight:800;color:#8B5CF6;margin-bottom:10px">CRM Pipeline</div>'
+      +mRow('Active Pipeline',fmtKWD(pipeline),'','var(--violet)')
+      +mRow('Opportunities',crmOpps.filter(function(o){return !['won','lost'].includes(o.stage);}).length,'active')
+      +mRow('In Negotiation',crmOpps.filter(function(o){return o.stage==='negotiation';}).length,'','#8B5CF6')
+      +mRow('Won Total',crmOpps.filter(function(o){return o.stage==='won';}).length,'converted','#10B981')
+      +'</div>'
+      +'<div class="card"><div style="font-size:11px;font-weight:800;color:#F97316;margin-bottom:10px">QHSE & Operations</div>'
+      +mRow('Open NCRs',openNCR.length,'',openNCR.length>0?'#F97316':'#10B981')
+      +mRow('Critical NCRs',critNCR.length,'',critNCR.length>0?'#EF4444':'#10B981')
+      +mRow('Man-Hours This Month',monthHours.toFixed(0)+'h','','var(--blue)')
+      +mRow('Pending Timesheets',tsData.filter(function(t){return t.status==='submitted';}).length,'awaiting approval')
+      +'</div>'
+      +'</div>'
+      +(msList.length>0?'<div class="card" style="margin-top:14px"><div style="font-size:11px;font-weight:700;color:#EF4444;margin-bottom:8px">Upcoming & Overdue Milestones</div><table class="tbl"><thead><tr><th>Project</th><th>Milestone</th><th>Planned</th><th>Status</th></tr></thead><tbody>'+msRows+'</tbody></table></div>':'')
+      +'<div style="text-align:center;padding:14px;color:var(--faint);font-size:10px;margin-top:14px;border-top:1px solid var(--bdr)">Auto-generated by SP360 v4.0 - Smart Projects 360 - Kuwait - '+new Date().toLocaleString('en-GB')+'</div>'
+      +'</div>';
+  } catch(ex){ pageError('page-weekly',ex); }
+}
+
+function printWeeklyReport(){
+  var content = document.getElementById('weekly-report-content');
+  if(!content){ showToast('Report not loaded yet','warning'); return; }
+  var printWin = window.open('','_blank');
+  var now = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+  printWin.document.write('<html><head><title>SP360 Weekly Report</title>'
+    +'<style>body{font-family:Arial,sans-serif;font-size:11px;padding:20px;color:#1E293B;background:#fff}'
+    +'h1{color:#0F1E38;font-size:16px}.card{border:1px solid #E2E8F0;border-radius:8px;padding:14px;margin-bottom:12px;break-inside:avoid}'
+    +'table{width:100%;border-collapse:collapse}th{background:#0F1E38;color:#C9A84C;padding:5px 8px;font-size:10px}td{border:1px solid #E2E8F0;padding:4px 7px;font-size:10px}'
+    +'@media print{body{padding:10px}}</style></head><body>'
+    +'<h1>SP360 v4.0 - Executive Weekly Report</h1>'
+    +'<p style="color:#94A3B8;font-size:10px">Smart Projects 360 - Kuwait - '+now+'</p>'
+    +content.innerHTML
+    +'</body></html>');
+  printWin.document.close();
+  setTimeout(function(){ printWin.print(); }, 600);
+}
+
 </script>
 </body>
 </html>
