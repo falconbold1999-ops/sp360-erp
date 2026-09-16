@@ -1190,6 +1190,10 @@ async function loadProfile(){
   }
 }
 
+// ── SINGLE AUTH BOOTSTRAP GUARD (P0-FIX) ─────────────────────────────────
+// enterApp() is the sole entry point into the application.
+// _enterAppDone prevents concurrent or duplicate calls from bootstrapSession()
+// and the window.load handler. Do NOT call enterApp() from any other path.
 let _enterAppDone=false;
 function enterApp(){
   if(_enterAppDone)return;
@@ -1199,7 +1203,7 @@ function enterApp(){
   requestAnimationFrame(()=>{const n=document.querySelector('aside nav');if(n)n.scrollTop=0;});
 
   // ── Apply role-based nav visibility ──────────────────────
-  const allowed = ROLE_PAGES[currentProfile?.role] || Object.values(ROLE_PAGES).flat();
+  const allowed = ROLE_PAGES[currentProfile?.role] || ['dashboard']; // P0-FIX: unknown role gets dashboard only, not all pages
   document.querySelectorAll('.nav-btn[id^="nav-"]').forEach(btn=>{
     const pageId = btn.id.replace('nav-','');
     if(pageId==='dashboard') return;
@@ -7689,6 +7693,46 @@ async function runHealthCheck(){
     // Read-access check only; this does not verify an actual write
     const {error}=await sb.from('audit_log').select('id').limit(1);
     return error?false:'Read OK';
+  });
+  await check('CRM Customers', async()=>{
+    const {error}=await sb.from('crm_customers').select('id').limit(1);
+    return error?false:'Accessible';
+  });
+  await check('CRM Leads', async()=>{
+    const {error}=await sb.from('crm_leads').select('id').limit(1);
+    return error?false:'Accessible';
+  });
+  await check('CRM Opportunities', async()=>{
+    const {error}=await sb.from('crm_opportunities').select('id').limit(1);
+    return error?false:'Accessible';
+  });
+  await check('CRM Quotations', async()=>{
+    const {error}=await sb.from('crm_quotations').select('id').limit(1);
+    return error?false:'Accessible';
+  });
+  await check('CRM Activities', async()=>{
+    const {error}=await sb.from('crm_activities').select('id').limit(1);
+    return error?false:'Accessible';
+  });
+  await check('Contracts', async()=>{
+    const {error}=await sb.from('contracts').select('id').limit(1);
+    return error?false:'Accessible';
+  });
+  await check('Invoices', async()=>{
+    const {error}=await sb.from('invoices').select('id').limit(1);
+    return error?false:'Accessible';
+  });
+  await check('Purchase Orders', async()=>{
+    const {error}=await sb.from('purchase_orders').select('id').limit(1);
+    return error?false:'Accessible';
+  });
+  await check('Employees', async()=>{
+    const {error}=await sb.from('employees').select('id').limit(1);
+    return error?false:'Accessible';
+  });
+  await check('Inventory Items', async()=>{
+    const {error}=await sb.from('inventory_items').select('id').limit(1);
+    return error?false:'Accessible';
   });
   await check('PWA Service Worker', async()=>{
     if(!('serviceWorker' in navigator)) return 'Not supported';
@@ -17263,8 +17307,10 @@ async function updateOpportunity(id){
 
 async function createQuotationFromOpp(oppId){
   const {data:o} = await sb.from('crm_opportunities').select('*,customer:crm_customers(name)').eq('id',oppId).single();
-  const {count} = await sb.from('crm_quotations').select('*',{count:'exact',head:true});
-  const no = `QUOT-${String((count||0)+4001).padStart(4,'0')}`;
+  // P0-FIX: atomic sequence via next_ref_no() RPC — prevents duplicate QUOT numbers under concurrent usage
+  const {data:quotRef,error:quotRefErr} = await sb.rpc('next_ref_no',{p_prefix:'QUOT'});
+  if(quotRefErr||!quotRef){ showToast('Error generating quotation number','error'); return; }
+  const no = quotRef;
   openModal(`New Quotation — ${o.opp_no}`,`
     <div class="form-grid">
       <div class="form-field" style="grid-column:1/-1"><label>Quotation Title *</label><input id="nq-title" value="${o.title}"/></div>
