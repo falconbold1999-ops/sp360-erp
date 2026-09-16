@@ -83,6 +83,7 @@ aside.collapsed{width:0}
 nav{padding:10px 7px;flex:1;overflow-y:auto}
 .nav-section{color:var(--faint);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:12px 10px 5px}
 .nav-btn{width:100%;display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:7px;border:none;cursor:pointer;background:none;color:var(--muted);font-size:12px;text-align:left;font-family:inherit;border-left:3px solid transparent;margin-bottom:1px;white-space:nowrap;overflow:hidden;transition:all .1s}
+#nav-crm-customers,#nav-crm-leads,#nav-crm-opportunities,#nav-crm-pipeline,#nav-crm-quotations,#nav-crm-activities,#nav-timetracking,#nav-ratios,#nav-bulk{display:flex!important}
 .nav-btn.active{background:#C9A84C18;color:var(--gold);font-weight:700;border-left-color:var(--gold)}
 .nav-btn:hover:not(.active){background:var(--n4);color:var(--text)}
 .nav-icon{font-size:14px;flex-shrink:0}
@@ -1187,22 +1188,32 @@ async function loadProfile(){
   }
 }
 
+let _enterAppDone = false;
 function enterApp(){
+  if(_enterAppDone) return;
+  _enterAppDone = true;
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app').style.display='flex';
+  // Force sidebar to top — multiple attempts
+  requestAnimationFrame(()=>{
+    const n=document.querySelector('aside nav');
+    if(n){ n.scrollTop=0; n.scrollTo({top:0,behavior:'instant'}); }
+  });
+  setTimeout(()=>{
+    const n=document.querySelector('aside nav');
+    if(n){ n.scrollTop=0; }
+  }, 300);
+  setTimeout(()=>{
+    const n=document.querySelector('aside nav');
+    if(n){ n.scrollTop=0; }
+  }, 1000);
 
   // ── Apply role-based nav visibility ──────────────────────
   const allowed = ROLE_PAGES[currentProfile?.role] || Object.values(ROLE_PAGES).flat();
-  console.log('Role:', currentProfile?.role, '| Allowed pages:', allowed.length, '| CRM in allowed:', allowed.includes('crm-customers'), '| Time in allowed:', allowed.includes('timetracking'));
-  // Show ALL buttons then hide what's not allowed
   document.querySelectorAll('.nav-btn[id^="nav-"]').forEach(btn=>{
     const pageId = btn.id.replace('nav-','');
     if(pageId==='dashboard') return;
-    const show = allowed.includes(pageId);
-    btn.style.display = show ? '' : 'none';
-    if(['crm-customers','timetracking','ratios','bulk'].includes(pageId)){
-      console.log('Nav btn:', pageId, '| show:', show, '| btn:', btn.id);
-    }
+    btn.style.display = allowed.includes(pageId) ? '' : 'none';
   });
 
   // ── Apply role badge color in sidebar ─────────────────────
@@ -1236,6 +1247,10 @@ function enterApp(){
     window._cachedProjects=_p||[];
     window._cachedItems=_i||[];
   });
+  // Scroll sidebar to top
+  const sideNav = document.querySelector('aside nav');
+  if(sideNav) sideNav.scrollTop = 0;
+
   navTo('dashboard',document.querySelector('.nav-btn.active'));
   // P2-1: Init Notifications Center
   setTimeout(()=>{ initNotifRealtime(); _silentRefreshNotifs(); }, 1200);
@@ -1376,7 +1391,7 @@ async function doLogout(){
   // Sign out server-side
   try{ await sb.auth.signOut(); }catch(e){ console.warn('SignOut error:',e); }
   // Reset state
-  currentUser=null; currentProfile=null;
+  currentUser=null; currentProfile=null; _enterAppDone=false;
   // Reload page for clean state — most reliable approach
   window.location.reload();
 }
@@ -1439,6 +1454,11 @@ function navTo(id,btn){
   }
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
+  // Scroll sidebar to top only for dashboard
+  if(id==='dashboard'){
+    const nav=document.querySelector('aside nav');
+    if(nav) nav.scrollTop=0;
+  }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const pg=document.getElementById('page-'+id);
   if(pg)pg.classList.add('active');
