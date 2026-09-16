@@ -602,11 +602,12 @@ img,canvas,svg{max-width:100%;height:auto}
         <button class="nav-btn" id="nav-analytics" onclick="navTo('analytics',this)"><span class="nav-icon">🔬</span>Analytics</button>
         <button class="nav-btn" id="nav-tender" onclick="navTo('tender',this)"><span class="nav-icon">📋</span>Tender</button>
         <button class="nav-btn" id="nav-insurance" onclick="navTo('insurance',this)"><span class="nav-icon">🛡</span>Insurance</button>
-        <button class="nav-btn" id="nav-appraisal" onclick="navTo('appraisal',this)"><span class="nav-icon">⭐</span>Appraisal</button>
+        <button class="nav-btn" id="nav-appraisal" onclick="navTo('appraisal',this)"><span class="nav-icon">⭐</span>Performance B3</button>
         <button class="nav-btn" id="nav-budget" onclick="navTo('budget',this)"><span class="nav-icon">💵</span>Budget</button>
         <button class="nav-btn" id="nav-correspondence" onclick="navTo('correspondence',this)"><span class="nav-icon">✉️</span>Correspondence</button>
         <button class="nav-btn" id="nav-benchmark" onclick="navTo('benchmark',this)"><span class="nav-icon">📐</span>Benchmark</button>
         <button class="nav-btn" id="nav-import" onclick="navTo('import',this)"><span class="nav-icon">📥</span>Import/Export</button>
+        <button class="nav-btn" id="nav-bulk" onclick="navTo('bulk',this)"><span class="nav-icon">⚡</span>Bulk Operations</button>
         <button class="nav-btn" id="nav-sitediary" onclick="navTo('sitediary',this)"><span class="nav-icon">📔</span>Site Diary</button>
         <button class="nav-btn" id="nav-punchlist" onclick="navTo('punchlist',this)"><span class="nav-icon">📌</span>Punch List</button>
         <button class="nav-btn" id="nav-expenses" onclick="navTo('expenses',this)"><span class="nav-icon">🧾</span>Expenses</button>
@@ -1198,10 +1199,11 @@ function enterApp(){
   requestAnimationFrame(()=>{const n=document.querySelector('aside nav');if(n)n.scrollTop=0;});
 
   // ── Apply role-based nav visibility ──────────────────────
-  const allowed = ROLE_PAGES[currentProfile?.role] || ['dashboard'];
-  ['bizdev','projects','gantt','resources','scorecard','contracts','lessons','forecast','reports','training','assets','subcon','meetings','analytics','tender','insurance','appraisal','budget','correspondence','benchmark','import','sitediary','punchlist','expenses','ai','retention','sla','templates','procurement','finance','hr','qhse','inventory','documents','workflow','audit','users','ceo','system'].forEach(p=>{
-    const btn = document.getElementById('nav-'+p);
-    if(btn) btn.style.display = allowed.includes(p) ? '' : 'none';
+  const allowed = ROLE_PAGES[currentProfile?.role] || Object.values(ROLE_PAGES).flat();
+  document.querySelectorAll('.nav-btn[id^="nav-"]').forEach(btn=>{
+    const pageId = btn.id.replace('nav-','');
+    if(pageId==='dashboard') return;
+    btn.style.display = allowed.includes(pageId) ? '' : 'none';
   });
 
   // ── Apply role badge color in sidebar ─────────────────────
@@ -1451,7 +1453,7 @@ function navTo(id,btn){
     procurement:()=>loadProc(curProcTab),finance:loadFinance,
     hr:()=>loadHR(curHRTab),qhse:()=>loadQHSE(curQHSETab),
     inventory:loadInventory,documents:()=>loadDocs(curDocTab),workflow:loadWorkflow,audit:loadAudit,
-    users:loadUsers,ceo:loadCEO,system:loadSystem,resources:loadResources,scorecard:loadScorecard,contracts:loadContracts,lessons:loadLessons,forecast:loadForecast,reports:loadReports,training:loadTraining,assets:loadAssets,subcon:loadSubcon,meetings:loadMeetings,analytics:loadAnalytics,tender:loadTender,insurance:loadInsurance,appraisal:loadAppraisal,budget:loadBudget,correspondence:loadCorrespondence,benchmark:loadBenchmark,import:loadImportExport,sitediary:loadSiteDiary,punchlist:loadPunchList,expenses:loadExpenses,ai:loadAI,retention:loadRetention,sla:loadSLA,templates:loadTemplates,
+    users:loadUsers,ceo:loadCEO,system:loadSystem,resources:loadResources,scorecard:loadScorecard,contracts:loadContracts,lessons:loadLessons,forecast:loadForecast,reports:loadReports,training:loadTraining,assets:loadAssets,subcon:loadSubcon,meetings:loadMeetings,analytics:loadAnalytics,tender:loadTender,insurance:loadInsurance,appraisal:loadAppraisalB3,budget:loadBudget,correspondence:loadCorrespondence,benchmark:loadBenchmark,import:loadImportExport,sitediary:loadSiteDiary,punchlist:loadPunchList,expenses:loadExpenses,ai:loadAI,retention:loadRetention,sla:loadSLA,templates:loadTemplates,
     'crm-customers':loadCRMCustomers,'crm-leads':loadCRMLeads,'crm-opportunities':loadCRMOpportunities,
     'crm-pipeline':loadCRMPipeline,'crm-quotations':loadCRMQuotations,'crm-activities':loadCRMActivities,
     timetracking:loadTimeTracking, ratios:loadFinancialRatios, bulk:loadBulkOperations, weekly:loadWeeklyReport
@@ -3993,7 +3995,15 @@ async function loadInventory(tab='items'){
     const L=list||[];
     const reorder=L.filter(i=>i.current_stock<=i.reorder_level).length;
     kpis=kpi('Total Items',L.length,'#E2E8F0')+kpi('Active',L.filter(i=>i.is_active).length,'#10B981')+kpi('Below Reorder',reorder,reorder>0?'#EF4444':'#10B981')+kpi('Stock Value',fmtKWD(L.reduce((s,i)=>s+(i.current_stock*i.standard_cost),0)),'#3B82F6');
-    body=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px">${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewItemModal()">+ New Item</button>`:''}</div>
+    const reorderItems=L.filter(i=>i.current_stock<=i.reorder_level);
+    const reorderAlert=reorderItems.length>0?`
+    <div style="background:#EF444411;border:1px solid #EF444433;border-radius:9px;padding:12px 16px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:#EF4444;margin-bottom:8px">⚠️ ${reorderItems.length} Items Below Reorder Level</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${reorderItems.slice(0,8).map(i=>'<span style="background:var(--card);border:1px solid #EF444444;border-radius:6px;padding:4px 9px;font-size:10px"><span style="color:var(--gold);font-weight:700">'+esc(i.item_code)+'</span> — Stock: <span style="color:#EF4444;font-weight:700">'+Number(i.current_stock).toFixed(0)+'</span> / Reorder: '+Number(i.reorder_level).toFixed(0)+'</span>').join('')}
+      </div>
+    </div>`:'';
+    body=`${reorderAlert}<div style="display:flex;justify-content:flex-end;margin-bottom:10px">${isPMO?`<button class="btn btn-primary btn-sm" onclick="openNewItemModal()">+ New Item</button>`:''}</div>
     <table><thead><tr><th>Code</th><th>Item Name</th><th>Category</th><th>UOM</th><th style="text-align:right">Stock</th><th style="text-align:right">Reorder</th><th style="text-align:right">Std Cost</th><th style="text-align:center">Status</th></tr></thead><tbody>
     ${L.map(i=>{const low=i.current_stock<=i.reorder_level;return`<tr>
       <td style="color:var(--gold);font-weight:700;font-family:monospace;font-size:11px">${esc(i.item_code)}</td>
@@ -4053,7 +4063,11 @@ async function loadInventory(tab='items'){
     </tr>`).join('')}</tbody></table>`;
   }
   el.innerHTML=`
-  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">🏭</span><div><h1>Inventory</h1><div class="sub">Material Master · Stock · Ledger · 3-Way Match</div></div></div></div>
+  <div class="page-head"><div class="page-head-left"><span style="font-size:22px">🏭</span><div><h1>Inventory</h1><div class="sub">Material Master · Stock · Ledger · 3-Way Match</div></div></div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-ghost btn-sm" onclick="exportInventoryCSV()">📊 Export CSV</button>
+    <button class="btn btn-ghost btn-sm" onclick="loadInventory('${tab}')">↻ Refresh</button>
+  </div></div>
   <div class="grid4">${kpis}</div>
   <div class="card">${tabs}${body}</div>`;
 }
@@ -4404,6 +4418,27 @@ async function saveRevision(e){
     showToast('Revision '+revNo+' saved for '+docNo);closeModal();loadDocs('revisions');
   }catch(e2){showToast('Error: '+e2.message,'error');}
   finally{if(btn){btn.disabled=false;btn.textContent='Save';}}
+}
+
+function exportInventoryCSV(){
+  // Export from currently visible table
+  var rows=[['Code','Item Name','Category','UOM','Stock','Reorder Level','Std Cost','Status']];
+  document.querySelectorAll('.card table tbody tr').forEach(function(tr){
+    var cells=[...tr.querySelectorAll('td')].map(function(td){return td.textContent.trim().replace('⚠️','');});
+    if(cells.length>=4) rows.push(cells.slice(0,8));
+  });
+  var csv=rows.map(function(r){return r.map(function(v){return '"'+String(v||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='SP360_Inventory_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  showToast('CSV exported','success');
+}
+
+async function quickReorderRequest(itemCode, itemName){
+  if(!confirm('Create a Reorder PO Request for: '+itemName+'?')) return;
+  showToast('Opening procurement for '+itemCode+'...','info');
+  navTo('procurement', document.getElementById('nav-procurement'));
 }
 
 function openNewItemModal(){
@@ -13229,6 +13264,621 @@ async function openAppraisalDetail(id){
 }
 
 // ══════════════════════════════════════════════════════════════
+//  B3 · EMPLOYEE PERFORMANCE SCORECARD (v1.0)
+//  Department-specific KPI framework · Weighted scoring
+//  Self / Manager / 360° assessment · Calibration · Trends
+// ══════════════════════════════════════════════════════════════
+
+// ── B3: DEPT KPI FRAMEWORK ──────────────────────────────────
+const B3_DKPI={
+  'Security':[
+    {id:'patrol',name:'Site Coverage & Patrol',w:20},
+    {id:'incident',name:'Incident Response',w:20},
+    {id:'uptime',name:'System Uptime',w:15},
+    {id:'compliance',name:'Safety & Compliance',w:15},
+    {id:'docs',name:'Report Documentation',w:15},
+    {id:'team',name:'Team Coordination',w:15}],
+  'AV/Broadcast':[
+    {id:'install',name:'Installation Quality',w:25},
+    {id:'commission',name:'Commissioning & Testing',w:20},
+    {id:'delivery',name:'Delivery & Schedule',w:20},
+    {id:'technical',name:'Technical Proficiency',w:20},
+    {id:'docs',name:'As-Built Documentation',w:15}],
+  'Wireless':[
+    {id:'rf',name:'RF Design Accuracy',w:25},
+    {id:'install',name:'Installation Quality',w:20},
+    {id:'trouble',name:'Troubleshooting Speed',w:20},
+    {id:'delivery',name:'Project Delivery',w:20},
+    {id:'docs',name:'Network Documentation',w:15}],
+  'Power':[
+    {id:'safety',name:'Electrical Safety',w:25},
+    {id:'install',name:'Installation Standards',w:20},
+    {id:'technical',name:'Technical Knowledge',w:20},
+    {id:'delivery',name:'On-Time Delivery',w:20},
+    {id:'docs',name:'Test & Commission Docs',w:15}],
+  'IT':[
+    {id:'sla',name:'System Availability (SLA)',w:20},
+    {id:'tickets',name:'Ticket Resolution Time',w:20},
+    {id:'security',name:'Security Posture',w:20},
+    {id:'technical',name:'Technical Competency',w:20},
+    {id:'docs',name:'IT Documentation',w:20}],
+  'Civil':[
+    {id:'quality',name:'Workmanship Quality',w:25},
+    {id:'safety',name:'HSE Compliance',w:25},
+    {id:'delivery',name:'Schedule Adherence',w:20},
+    {id:'materials',name:'Material Management',w:15},
+    {id:'team',name:'Site Coordination',w:15}],
+  'Trading':[
+    {id:'revenue',name:'Revenue vs Target',w:30},
+    {id:'margin',name:'Gross Margin',w:25},
+    {id:'retention',name:'Client Retention',w:20},
+    {id:'pipeline',name:'Pipeline Management',w:15},
+    {id:'reporting',name:'Sales Reporting',w:10}],
+  'Finance':[
+    {id:'accuracy',name:'Financial Accuracy',w:30},
+    {id:'timeliness',name:'Reporting Timeliness',w:20},
+    {id:'compliance',name:'Regulatory Compliance',w:20},
+    {id:'analysis',name:'Financial Analysis',w:20},
+    {id:'audit',name:'Audit Readiness',w:10}],
+  'HR':[
+    {id:'recruitment',name:'Recruitment Efficiency',w:20},
+    {id:'esat',name:'Employee Satisfaction',w:20},
+    {id:'compliance',name:'Labour Law Compliance',w:20},
+    {id:'training',name:'Training Completion',w:20},
+    {id:'retention',name:'Staff Retention',w:20}],
+  'QHSE':[
+    {id:'incidents',name:'Incident Rate (LTI)',w:25},
+    {id:'audits',name:'Internal Audit Score',w:20},
+    {id:'ncr',name:'NCR Closure Rate',w:20},
+    {id:'training',name:'QHSE Training Delivery',w:20},
+    {id:'docs',name:'Procedure Compliance',w:15}],
+  'Procurement':[
+    {id:'savings',name:'Cost Savings Achieved',w:25},
+    {id:'lead',name:'Procurement Lead Time',w:20},
+    {id:'vendor',name:'Vendor Performance',w:20},
+    {id:'compliance',name:'Policy Compliance',w:20},
+    {id:'docs',name:'PO Documentation',w:15}],
+  'Default':[
+    {id:'quality',name:'Quality of Work',w:20},
+    {id:'delivery',name:'Delivery & Timeliness',w:20},
+    {id:'initiative',name:'Initiative & Innovation',w:20},
+    {id:'teamwork',name:'Teamwork & Communication',w:20},
+    {id:'compliance',name:'Safety & Compliance',w:20}]
+};
+const b3GetKPI=d=>B3_DKPI[d]||B3_DKPI['Default'];
+
+const B3_BANDS=[
+  {min:4.5,lbl:'Outstanding',clr:'#10B981'},
+  {min:3.5,lbl:'Exceeds Expectations',clr:'#3B82F6'},
+  {min:2.5,lbl:'Meets Expectations',clr:'#C9A84C'},
+  {min:1.5,lbl:'Needs Improvement',clr:'#F97316'},
+  {min:0,  lbl:'Unsatisfactory',clr:'#EF4444'}];
+const b3Band=s=>B3_BANDS.find(b=>s>=b.min)||B3_BANDS[4];
+const b3Clr=s=>b3Band(s).clr;
+const b3Lbl=s=>b3Band(s).lbl;
+const b3DeptBadge=d=>`<span style="display:inline-block;border-radius:5px;padding:2px 7px;font-size:9px;font-weight:700;background:#1A3660;color:var(--muted);border:1px solid var(--bdr)">${esc(d||'—')}</span>`;
+const b3Pill=(t,c)=>`<span style="display:inline-block;border-radius:10px;padding:2px 8px;font-size:9px;font-weight:700;background:${c}22;color:${c};border:1px solid ${c}44">${esc(t)}</span>`;
+const b3Bar=(pct,clr)=>`<div style="height:6px;border-radius:3px;background:#1A3660;overflow:hidden"><div style="height:100%;width:${pct}%;background:${clr};border-radius:3px"></div></div>`;
+const b3FmtD=d=>d?new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'—';
+
+// B3 tab state
+let b3Tab='dashboard';
+window._b3Kpis=[];
+window._b3Scores={};
+
+// ── MAIN ENTRY POINT ─────────────────────────────────────
+async function loadAppraisalB3(tab='dashboard'){
+  const el=document.getElementById('page-appraisal');
+  if(!el)return;
+  b3Tab=tab;
+  const tabs=[
+    {id:'dashboard',icon:'📊',lbl:'Dashboard'},
+    {id:'list',icon:'📋',lbl:'All Appraisals'},
+    {id:'new',icon:'➕',lbl:'New Appraisal'},
+    {id:'dept',icon:'🏢',lbl:'By Department'},
+    {id:'calib',icon:'⚖️',lbl:'Calibration'},
+    {id:'trends',icon:'📈',lbl:'Trends'},
+    {id:'kpicfg',icon:'⚙️',lbl:'KPI Framework'}];
+
+  el.innerHTML=`
+  <div style="margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <span style="font-size:22px">⭐</span>
+      <div><h1 style="font-size:17px;font-weight:800">Performance Scorecard · B3</h1><div style="color:var(--faint);font-size:10px">Department KPI Framework · Weighted Scoring · Calibration</div></div>
+    </div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--bdr);padding-bottom:10px;margin-bottom:16px">
+      ${tabs.map(t=>`<button onclick="loadAppraisalB3('${t.id}')" style="background:${tab===t.id?'#C9A84C18':'none'};border:1px solid ${tab===t.id?'var(--gold)':'var(--bdr)'};border-radius:6px;padding:5px 12px;font-size:11px;color:${tab===t.id?'var(--gold)':'var(--muted)'};cursor:pointer;font-weight:${tab===t.id?'700':'400'};font-family:inherit">${t.icon} ${t.lbl}</button>`).join('')}
+    </div>
+    <div id="b3-content"><div class="loading">Loading…</div></div>
+  </div>`;
+
+  const loaders={dashboard:b3Dashboard,list:b3List,new:b3NewPage,dept:b3DeptAnalysis,calib:b3Calibration,trends:b3Trends,kpicfg:b3KPIConfig};
+  if(loaders[tab])loaders[tab]();
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────
+async function b3Dashboard(){
+  const c=document.getElementById('b3-content');
+  c.innerHTML='<div class="loading">Loading dashboard…</div>';
+  try{
+    const[aR,eR]=await Promise.all([
+      sb.from('performance_appraisals').select('*,employee:employees(full_name,employee_no,department,position)').order('appraisal_date',{ascending:false}),
+      sb.from('employees').select('id,full_name,employee_no,department,status').eq('status','active')
+    ]);
+    const apps=aR.data||[],emps=eR.data||[];
+    const yr=new Date().getFullYear();
+    const yrApps=apps.filter(a=>a.appraisal_date?.startsWith(yr));
+    const avg=apps.length?apps.reduce((s,a)=>s+Number(a.overall_score||0),0)/apps.length:0;
+    const top=apps.filter(a=>Number(a.overall_score||0)>=4).length;
+    const pend=emps.filter(e=>!apps.find(a=>a.employee_id===e.id&&a.appraisal_date?.startsWith(yr))).length;
+    const depts=[...new Set(emps.map(e=>e.department).filter(Boolean))].sort();
+
+    const dRows=depts.map(d=>{
+      const da=yrApps.filter(a=>a.employee?.department===d);
+      const de=emps.filter(e=>e.department===d);
+      const av=da.length?da.reduce((s,a)=>s+Number(a.overall_score||0),0)/da.length:0;
+      const cov=de.length?Math.round(da.length/de.length*100):0;
+      const cc=cov>=80?'#10B981':cov>=50?'#C9A84C':'#EF4444';
+      return`<tr>
+        <td>${b3DeptBadge(d)}</td><td style="text-align:center">${de.length}</td><td style="text-align:center">${da.length}</td>
+        <td><div style="display:flex;align-items:center;gap:6px">${b3Bar(cov,cc)}<span style="font-size:10px;color:${cc};font-weight:700;min-width:28px">${cov}%</span></div></td>
+        <td style="text-align:center">${av>0?`<span style="font-weight:800;color:${b3Clr(av)}">${av.toFixed(2)}</span><div style="font-size:9px;color:${b3Clr(av)}">${b3Lbl(av)}</div>`:'<span style="color:var(--faint)">—</span>'}</td>
+      </tr>`;
+    }).join('');
+
+    const rRows=apps.slice(0,8).map(a=>{
+      const sc=Number(a.overall_score||0);
+      return`<tr>
+        <td style="font-weight:700">${esc(a.employee?.full_name||'—')}</td>
+        <td>${b3DeptBadge(a.employee?.department)}</td>
+        <td style="font-size:10px;color:var(--muted)">${esc(a.appraisal_period||'—')}</td>
+        <td style="text-align:center"><span style="font-size:15px;font-weight:900;color:${b3Clr(sc)}">${sc>0?sc.toFixed(1):'—'}</span></td>
+        <td>${b3Pill(b3Lbl(sc),b3Clr(sc))}</td>
+        <td><button onclick="b3ViewApp('${a.id}')" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:11px">👁</button></td>
+      </tr>`;
+    }).join('');
+
+    c.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+      ${kpi('Total',apps.length,'#C9A84C','All time')}
+      ${kpi('This Year ('+yr+')',yrApps.length,'#3B82F6',emps.length+' active employees')}
+      ${kpi('Avg Score',avg>0?avg.toFixed(2):'—',avg>=3.5?'#10B981':avg>=2.5?'#C9A84C':'#EF4444',avg>0?b3Lbl(avg):'No data')}
+      ${kpi('Pending '+yr,pend,pend>0?'#F97316':'#10B981',top+' top performers ≥4.0')}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="card"><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">Department Coverage · ${yr}</div>
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">
+          <thead><tr><th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--bdr)">Dept</th><th style="text-align:center;padding:6px 8px;color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--bdr)">Staff</th><th style="text-align:center;padding:6px 8px;color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--bdr)">Done</th><th style="padding:6px 8px;color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--bdr)">Coverage</th><th style="text-align:center;padding:6px 8px;color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--bdr)">Avg Score</th></tr></thead>
+          <tbody>${dRows||'<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--faint);font-size:11px">No data</td></tr>'}</tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Recent Appraisals</span>
+          <button onclick="loadAppraisalB3('list')" style="background:none;border:1px solid var(--bdr);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--muted);cursor:pointer;font-family:inherit">View All</button>
+        </div>
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">
+          <thead><tr><th style="text-align:left;padding:6px 8px;color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--bdr)">Employee</th><th style="padding:6px 8px;color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--bdr)">Dept</th><th style="padding:6px 8px;color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--bdr)">Period</th><th style="text-align:center;padding:6px 8px;color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--bdr)">Score</th><th style="padding:6px 8px;color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--bdr)">Rating</th><th style="padding:6px 8px;border-bottom:1px solid var(--bdr)"></th></tr></thead>
+          <tbody>${rRows||'<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--faint);font-size:11px">No appraisals yet</td></tr>'}</tbody>
+        </table></div>
+      </div>
+    </div>`;
+  }catch(err){c.innerHTML=`<div class="empty">Error: ${esc(err.message)}</div>`;}
+}
+
+// ── LIST ──────────────────────────────────────────────────
+async function b3List(filter='all'){
+  const c=document.getElementById('b3-content');
+  c.innerHTML='<div class="loading">Loading…</div>';
+  try{
+    const{data:apps}=await sb.from('performance_appraisals').select('*,employee:employees(full_name,employee_no,department,position)').order('appraisal_date',{ascending:false});
+    const all=apps||[];
+    const depts=[...new Set(all.map(a=>a.employee?.department).filter(Boolean))].sort();
+    const periods=[...new Set(all.map(a=>a.appraisal_period).filter(Boolean))].sort().reverse();
+    const filt=filter==='all'?all:all.filter(a=>a.employee?.department===filter||a.appraisal_period===filter);
+
+    const rows=filt.map(a=>{
+      const sc=Number(a.overall_score||0);
+      return`<tr style="border-bottom:1px solid #0F2444">
+        <td style="padding:8px 10px;font-weight:700">${esc(a.employee?.full_name||'—')}</td>
+        <td style="padding:8px 10px;font-size:10px;color:var(--faint)">${esc(a.employee?.employee_no||'—')}</td>
+        <td style="padding:8px 10px">${b3DeptBadge(a.employee?.department)}</td>
+        <td style="padding:8px 10px;font-size:10px;color:var(--muted)">${esc(a.appraisal_period||'—')}</td>
+        <td style="padding:8px 10px;font-size:10px;color:var(--faint)">${b3FmtD(a.appraisal_date)}</td>
+        <td style="padding:8px 10px;text-align:center"><span style="font-size:16px;font-weight:900;color:${b3Clr(sc)}">${sc>0?sc.toFixed(1):'—'}</span></td>
+        <td style="padding:8px 10px">${b3Pill(b3Lbl(sc),b3Clr(sc))}</td>
+        <td style="padding:8px 10px">${b3Pill(a.status||'draft',a.status==='completed'?'#10B981':'#94A3B8')}</td>
+        <td style="padding:8px 10px">
+          <button onclick="b3ViewApp('${a.id}')" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:11px">👁</button>
+          <button onclick="b3DelApp('${a.id}')" style="background:none;border:none;color:var(--faint);cursor:pointer;font-size:11px;margin-left:4px">🗑</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    const thStyle='text-align:left;padding:7px 10px;color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bdr);white-space:nowrap';
+
+    c.innerHTML=`
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">
+      <button onclick="b3List('all')" style="background:${filter==='all'?'#C9A84C18':'none'};border:1px solid ${filter==='all'?'var(--gold)':'var(--bdr)'};border-radius:6px;padding:5px 12px;font-size:11px;color:${filter==='all'?'var(--gold)':'var(--muted)'};cursor:pointer;font-family:inherit;font-weight:${filter==='all'?700:400}">All (${all.length})</button>
+      ${depts.map(d=>`<button onclick="b3List('${esc(d)}')" style="background:${filter===d?'#C9A84C18':'none'};border:1px solid ${filter===d?'var(--gold)':'var(--bdr)'};border-radius:6px;padding:5px 12px;font-size:11px;color:${filter===d?'var(--gold)':'var(--muted)'};cursor:pointer;font-family:inherit;font-weight:${filter===d?700:400}">${esc(d)}</button>`).join('')}
+    </div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px">
+      ${periods.slice(0,6).map(p=>`<button onclick="b3List('${esc(p)}')" style="background:${filter===p?'#C9A84C18':'none'};border:1px solid ${filter===p?'var(--gold)':'var(--bdr)'};border-radius:6px;padding:5px 12px;font-size:11px;color:${filter===p?'var(--gold)':'var(--muted)'};cursor:pointer;font-family:inherit;font-weight:${filter===p?700:400}">${esc(p)}</button>`).join('')}
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead><tr>
+          <th style="${thStyle}">Name</th><th style="${thStyle}">Emp No</th><th style="${thStyle}">Dept</th>
+          <th style="${thStyle}">Period</th><th style="${thStyle}">Date</th>
+          <th style="${thStyle};text-align:center">Score</th><th style="${thStyle}">Rating</th>
+          <th style="${thStyle}">Status</th><th style="${thStyle}"></th>
+        </tr></thead>
+        <tbody>${rows||'<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--faint);font-size:11px">No records found</td></tr>'}</tbody>
+      </table></div>
+    </div>`;
+  }catch(err){c.innerHTML=`<div class="empty">Error: ${esc(err.message)}</div>`;}
+}
+
+async function b3DelApp(id){
+  if(!confirm('Delete this appraisal?'))return;
+  const{error}=await sb.from('performance_appraisals').delete().eq('id',id);
+  if(error){showToast('Error: '+error.message,'error');return;}
+  showToast('Deleted ✓');b3List();
+}
+
+async function b3ViewApp(id){
+  const{data:a}=await sb.from('performance_appraisals').select('*,employee:employees(full_name,employee_no,department,position)').eq('id',id).single();
+  if(!a)return;
+  const sc=Number(a.overall_score||0);const band=b3Band(sc);
+  let kpiHtml='';
+  try{
+    const n=JSON.parse(a.notes||'{}');
+    if(n.kpiDef&&n.kpiScores){
+      kpiHtml=`<div style="font-size:9px;font-weight:700;color:var(--gold);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">KPI Breakdown</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        ${n.kpiDef.map(k=>{const s=n.kpiScores[k.id];if(!s)return'';const col=b3Clr(s);return`<div style="background:var(--card);border:1px solid var(--bdr);border-radius:6px;padding:8px"><div style="font-size:9px;color:var(--muted);margin-bottom:4px">${esc(k.name)}<span style="float:right">×${k.w}%</span></div><div style="font-size:20px;font-weight:900;color:${col}">${s}</div><div style="height:5px;border-radius:3px;background:#1A3660;overflow:hidden;margin-top:4px"><div style="height:100%;width:${s/5*100}%;background:${col}"></div></div></div>`;}).join('')}
+      </div>`;
+    }else{
+      const std=[['Quality',a.quality_score],['Delivery',a.delivery_score],['Initiative',a.initiative_score],['Teamwork',a.teamwork_score],['Safety',a.safety_score],['Leadership',a.leadership_score]].filter(([,v])=>v!=null);
+      if(std.length)kpiHtml=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px">${std.map(([l,v])=>`<div style="background:var(--n3);border-radius:6px;padding:8px;text-align:center"><div style="font-size:9px;color:var(--muted)">${l}</div><div style="font-size:18px;font-weight:800;color:${b3Clr(Number(v||0))}">${v}</div></div>`).join('')}</div>`;
+    }
+  }catch(e){}
+  openModal(`⭐ ${a.employee?.full_name||'—'} — Appraisal`,`
+    <div style="display:flex;gap:14px;align-items:center;padding:12px;background:var(--card);border-radius:8px;margin-bottom:14px;border:1px solid var(--bdr)">
+      <div style="text-align:center;flex-shrink:0">
+        <div style="font-size:40px;font-weight:900;color:${band.clr}">${sc>0?sc.toFixed(2):'—'}</div>
+        <div style="font-size:9px;font-weight:700;color:${band.clr}">${band.lbl}</div>
+        <div style="height:6px;border-radius:3px;background:#1A3660;overflow:hidden;width:80px;margin-top:6px"><div style="height:100%;width:${sc/5*100}%;background:${band.clr}"></div></div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:800">${esc(a.employee?.full_name||'—')}</div>
+        <div style="font-size:10px;color:var(--muted)">${esc(a.employee?.employee_no||'')} · ${esc(a.employee?.department||'')} · ${esc(a.employee?.position||'')}</div>
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${b3Pill(a.appraisal_period||'—','#94A3B8')} ${b3Pill(a.status||'draft',a.status==='completed'?'#10B981':'#94A3B8')}</div>
+        <div style="font-size:10px;color:var(--faint);margin-top:4px">${b3FmtD(a.appraisal_date)}</div>
+      </div>
+    </div>
+    ${kpiHtml}
+    ${a.strengths?`<div style="padding:10px;background:var(--card);border-radius:7px;margin-bottom:8px;border-left:3px solid #10B981"><div style="font-size:9px;font-weight:700;color:#10B981;margin-bottom:4px">KEY ACHIEVEMENTS</div><div style="font-size:11px">${esc(a.strengths)}</div></div>`:''}
+    ${a.improvements?`<div style="padding:10px;background:var(--card);border-radius:7px;margin-bottom:8px;border-left:3px solid #F97316"><div style="font-size:9px;font-weight:700;color:#F97316;margin-bottom:4px">AREAS FOR IMPROVEMENT</div><div style="font-size:11px">${esc(a.improvements)}</div></div>`:''}
+    ${a.development_plan?`<div style="padding:10px;background:var(--card);border-radius:7px;border-left:3px solid #3B82F6"><div style="font-size:9px;font-weight:700;color:#3B82F6;margin-bottom:4px">DEVELOPMENT PLAN</div><div style="font-size:11px">${esc(a.development_plan)}</div></div>`:''}
+  `);
+}
+
+// ── NEW APPRAISAL ────────────────────────────────────────
+async function b3NewPage(){
+  const c=document.getElementById('b3-content');
+  c.innerHTML='<div class="loading">Loading…</div>';
+  try{
+    const{data:emps}=await sb.from('employees').select('id,full_name,employee_no,department,position').eq('status','active').order('full_name');
+    window._b3Emps=emps||[];
+    const yr=new Date().getFullYear();
+    const periods=[`Annual ${yr}`,`H1 ${yr}`,`H2 ${yr}`,`Q1 ${yr}`,`Q2 ${yr}`,`Q3 ${yr}`,`Q4 ${yr}`];
+    c.innerHTML=`
+    <div class="card">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label style="display:block;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Employee *</label>
+          <select id="b3-emp" onchange="b3OnEmp()" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:9px 11px;color:var(--text);font-size:12px;font-family:inherit;outline:none">
+            <option value="">— Select Employee —</option>
+            ${(emps||[]).map(e=>`<option value="${e.id}" data-dept="${esc(e.department||'')}">${esc(e.full_name)} (${esc(e.employee_no||'')})</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label style="display:block;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Appraisal Period *</label>
+          <select id="b3-period" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:9px 11px;color:var(--text);font-size:12px;font-family:inherit;outline:none">
+            ${periods.map(p=>`<option>${p}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label style="display:block;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Assessment Type</label>
+          <select id="b3-type" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:9px 11px;color:var(--text);font-size:12px;font-family:inherit;outline:none">
+            <option value="manager">Manager Assessment</option>
+            <option value="self">Self Assessment</option>
+            <option value="360">360° Assessment</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Department Detected</label>
+          <div id="b3-dept-disp" style="background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:9px 11px;color:var(--faint);font-size:12px">Select employee above</div>
+        </div>
+      </div>
+      <div id="b3-kpi-section"><div style="text-align:center;padding:20px;color:var(--faint);font-size:12px">Select an employee to load department-specific KPIs</div></div>
+      <div id="b3-qual-section" style="display:none">
+        <div style="height:1px;background:var(--bdr);margin:14px 0"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div>
+            <label style="display:block;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Key Achievements</label>
+            <textarea id="b3-str" rows="3" placeholder="What did this employee achieve?" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:9px 11px;color:var(--text);font-size:12px;font-family:inherit;outline:none;resize:vertical"></textarea>
+          </div>
+          <div>
+            <label style="display:block;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Areas for Improvement</label>
+            <textarea id="b3-imp" rows="3" placeholder="Where can they improve?" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:9px 11px;color:var(--text);font-size:12px;font-family:inherit;outline:none;resize:vertical"></textarea>
+          </div>
+        </div>
+        <div style="margin-bottom:10px">
+          <label style="display:block;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Development Plan</label>
+          <textarea id="b3-plan" rows="2" placeholder="Training, mentoring, next steps…" style="width:100%;background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:9px 11px;color:var(--text);font-size:12px;font-family:inherit;outline:none;resize:vertical"></textarea>
+        </div>
+        <div id="b3-prev" style="background:var(--card);border:1px solid var(--bdr);border-radius:8px;padding:12px;margin-bottom:12px;display:none">
+          <div style="display:flex;align-items:center;gap:14px">
+            <div style="text-align:center">
+              <div id="b3-big" style="font-size:36px;font-weight:900"></div>
+              <div id="b3-lbl" style="font-size:9px;font-weight:700"></div>
+            </div>
+            <div style="flex:1">
+              <div id="b3-bar-wrap" style="height:10px;border-radius:5px;background:#1A3660;overflow:hidden;margin-bottom:6px"><div id="b3-bar" style="height:100%;border-radius:5px;transition:width .3s"></div></div>
+              <div id="b3-bkdn" style="font-size:10px;color:var(--muted)"></div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button class="btn btn-ghost" onclick="b3ResetNew()">Clear</button>
+          <button class="btn btn-primary" onclick="b3SaveNew()">Save Appraisal</button>
+        </div>
+      </div>
+    </div>`;
+  }catch(err){c.innerHTML=`<div class="empty">Error: ${esc(err.message)}</div>`;}
+}
+
+function b3OnEmp(){
+  const sel=document.getElementById('b3-emp');
+  const opt=sel.options[sel.selectedIndex];
+  const dept=opt?opt.dataset.dept:'';
+  const dd=document.getElementById('b3-dept-disp');
+  if(!sel.value){
+    dd.textContent='Select employee above';dd.style.color='var(--faint)';
+    document.getElementById('b3-kpi-section').innerHTML='<div style="text-align:center;padding:20px;color:var(--faint);font-size:12px">Select an employee to load department-specific KPIs</div>';
+    document.getElementById('b3-qual-section').style.display='none';return;
+  }
+  dd.textContent=dept||'Unknown';dd.style.color='var(--gold)';
+  window._b3Kpis=b3GetKPI(dept);window._b3Scores={};
+  b3RenderKPIs(window._b3Kpis);
+  document.getElementById('b3-qual-section').style.display='block';
+  b3UpdPrev();
+}
+
+function b3RenderKPIs(kpis){
+  const sec=document.getElementById('b3-kpi-section');
+  sec.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--gold);margin:4px 0 10px">Department KPIs — Star Rating 1 (Poor) → 5 (Outstanding)</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
+    ${kpis.map(k=>`<div style="background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:10px" id="b3kc-${k.id}">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">${esc(k.name)}<span style="float:right;font-size:9px;color:var(--faint)">×${k.w}%</span></div>
+      <div style="display:flex;align-items:center;gap:4px">
+        ${[1,2,3,4,5].map(n=>`<button onclick="b3SetStar('${k.id}',${n})" id="b3s-${k.id}-${n}" style="background:none;border:none;cursor:pointer;font-size:20px;line-height:1;padding:0;transition:transform .1s" title="${n}">☆</button>`).join('')}
+        <span id="b3sv-${k.id}" style="font-size:12px;font-weight:800;color:var(--gold);margin-left:4px;min-width:16px">—</span>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function b3SetStar(kid,val){
+  window._b3Scores[kid]=val;
+  for(let i=1;i<=5;i++){const b=document.getElementById(`b3s-${kid}-${i}`);if(b)b.textContent=i<=val?'★':'☆';}
+  const sv=document.getElementById(`b3sv-${kid}`);if(sv){sv.textContent=val;sv.style.color=b3Clr(val);}
+  b3UpdPrev();
+}
+
+function b3UpdPrev(){
+  const kpis=window._b3Kpis,sc=window._b3Scores;
+  const filled=kpis.filter(k=>sc[k.id]!==undefined);
+  if(!filled.length){document.getElementById('b3-prev').style.display='none';return;}
+  const tw=filled.reduce((s,k)=>s+k.w,0);
+  const avg=filled.reduce((s,k)=>s+sc[k.id]*k.w,0)/tw;
+  const band=b3Band(avg);
+  document.getElementById('b3-prev').style.display='block';
+  document.getElementById('b3-big').textContent=avg.toFixed(2);document.getElementById('b3-big').style.color=band.clr;
+  document.getElementById('b3-lbl').textContent=band.lbl;document.getElementById('b3-lbl').style.color=band.clr;
+  const bar=document.getElementById('b3-bar');bar.style.width=avg/5*100+'%';bar.style.background=band.clr;
+  document.getElementById('b3-bkdn').innerHTML=filled.map(k=>`${esc(k.name)}: <b style="color:${b3Clr(sc[k.id])}">${sc[k.id]}</b>`).join(' · ');
+}
+
+function b3ResetNew(){const sel=document.getElementById('b3-emp');if(sel){sel.value='';b3OnEmp();}}
+
+async function b3SaveNew(){
+  const empId=document.getElementById('b3-emp')?.value;
+  if(!empId){showToast('Select an employee first','error');return;}
+  const kpis=window._b3Kpis,sc=window._b3Scores;
+  const filled=kpis.filter(k=>sc[k.id]!==undefined);
+  if(filled.length<Math.ceil(kpis.length/2)){showToast('Score at least half the KPIs','error');return;}
+  const tw=filled.reduce((s,k)=>s+k.w,0);
+  const overall=filled.reduce((s,k)=>s+sc[k.id]*k.w,0)/tw;
+  const kpiScores={};kpis.forEach(k=>{if(sc[k.id])kpiScores[k.id]=sc[k.id];});
+  const row={
+    employee_id:empId,
+    appraisal_period:document.getElementById('b3-period')?.value,
+    appraisal_date:new Date().toISOString().split('T')[0],
+    overall_score:Math.round(overall*100)/100,
+    strengths:document.getElementById('b3-str')?.value.trim()||null,
+    improvements:document.getElementById('b3-imp')?.value.trim()||null,
+    development_plan:document.getElementById('b3-plan')?.value.trim()||null,
+    status:'completed',
+    appraiser_id:currentProfile?.id||null,
+    created_by:currentProfile?.id||null,
+    notes:JSON.stringify({type:document.getElementById('b3-type')?.value||'manager',kpiScores,kpiDef:kpis.map(k=>({id:k.id,name:k.name,w:k.w}))})
+  };
+  if(kpis[0])row.quality_score=sc[kpis[0].id]||null;
+  if(kpis[1])row.delivery_score=sc[kpis[1].id]||null;
+  if(kpis[2])row.initiative_score=sc[kpis[2].id]||null;
+  if(kpis[3])row.teamwork_score=sc[kpis[3].id]||null;
+  if(kpis[4])row.safety_score=sc[kpis[4].id]||null;
+  if(kpis[5])row.leadership_score=sc[kpis[5].id]||null;
+  const{error}=await sb.from('performance_appraisals').insert(row);
+  if(error){showToast('Error: '+error.message,'error');return;}
+  showToast('Appraisal saved ✓');b3ResetNew();loadAppraisalB3('list');
+}
+
+// ── DEPT ANALYSIS ─────────────────────────────────────────
+async function b3DeptAnalysis(){
+  const c=document.getElementById('b3-content');
+  c.innerHTML='<div class="loading">Loading…</div>';
+  try{
+    const[aR,eR]=await Promise.all([
+      sb.from('performance_appraisals').select('*,employee:employees(full_name,department)').order('appraisal_date',{ascending:false}),
+      sb.from('employees').select('id,department,status').eq('status','active')
+    ]);
+    const apps=aR.data||[],emps=eR.data||[];
+    const depts=[...new Set(emps.map(e=>e.department).filter(Boolean))].sort();
+    const cards=depts.map(d=>{
+      const da=apps.filter(a=>a.employee?.department===d);
+      const de=emps.filter(e=>e.department===d);
+      const av=da.length?da.reduce((s,a)=>s+Number(a.overall_score||0),0)/da.length:0;
+      const band=av>0?b3Band(av):null;
+      const kpis=b3GetKPI(d);
+      const dist=[5,4,3,2,1].map(n=>({n,cnt:da.filter(a=>Math.round(a.overall_score||0)===n).length,pct:da.length?Math.round(da.filter(a=>Math.round(a.overall_score||0)===n).length/da.length*100):0}));
+      const top3=[...da].sort((a,b)=>b.overall_score-a.overall_score).slice(0,3);
+      return`<div class="card">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
+          <div><div style="font-size:13px;font-weight:800">${esc(d)}</div><div style="font-size:9px;color:var(--muted);margin-top:1px">${de.length} employees · ${da.length} appraised</div></div>
+          ${av>0?`<div style="text-align:right"><div style="font-size:20px;font-weight:900;color:${band.clr}">${av.toFixed(2)}</div><div style="font-size:9px;color:${band.clr};font-weight:700">${band.lbl}</div></div>`:'<span style="font-size:10px;color:var(--faint)">No data</span>'}
+        </div>
+        <div style="font-size:9px;color:var(--faint);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;font-weight:700">KPI Criteria</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">${kpis.map(k=>`<span style="background:var(--n3);border:1px solid var(--bdr);border-radius:4px;padding:2px 6px;font-size:9px;color:var(--muted)">${esc(k.name)} <b style="color:var(--faint)">×${k.w}%</b></span>`).join('')}</div>
+        ${da.length?`
+        <div style="font-size:9px;color:var(--faint);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;font-weight:700">Score Distribution</div>
+        ${dist.map(d=>`<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><div style="font-size:9px;color:var(--muted);width:10px;text-align:right">${d.n}</div><div style="flex:1;height:14px;background:var(--n3);border-radius:3px;overflow:hidden"><div style="height:100%;width:${d.pct}%;background:${b3Clr(d.n)};border-radius:3px"></div></div><div style="font-size:9px;color:var(--faint);min-width:32px">${d.cnt} (${d.pct}%)</div></div>`).join('')}
+        ${top3.length?`<div style="font-size:9px;color:var(--faint);margin-top:8px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;font-weight:700">Top Performers</div>
+        ${top3.map((a,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 7px;background:var(--card);border-radius:5px;margin-bottom:3px"><span style="font-size:11px">${['🥇','🥈','🥉'][i]}</span><div style="flex:1;font-size:10px;font-weight:700">${esc(a.employee?.full_name||'—')}</div><div style="font-size:12px;font-weight:900;color:${b3Clr(Number(a.overall_score||0))}">${Number(a.overall_score||0).toFixed(1)}</div></div>`).join('')}`:''}
+        `:`<div style="text-align:center;padding:12px;color:var(--faint);font-size:11px">No appraisals yet</div>`}
+      </div>`;
+    }).join('');
+    c.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">${cards||'<div class="empty">No department data</div>'}</div>`;
+  }catch(err){c.innerHTML=`<div class="empty">Error: ${esc(err.message)}</div>`;}
+}
+
+// ── CALIBRATION ────────────────────────────────────────────
+async function b3Calibration(){
+  const c=document.getElementById('b3-content');
+  c.innerHTML='<div class="loading">Loading…</div>';
+  try{
+    const{data:apps}=await sb.from('performance_appraisals').select('*,employee:employees(full_name,department)').order('overall_score',{ascending:false});
+    const all=apps||[];
+    const calBands=[
+      {lbl:'Outstanding',min:4.5,clr:'#10B981',tgt:'5–10%'},
+      {lbl:'Exceeds',min:3.5,clr:'#3B82F6',tgt:'20–25%'},
+      {lbl:'Meets',min:2.5,clr:'#C9A84C',tgt:'55–65%'},
+      {lbl:'Needs Impr.',min:1.5,clr:'#F97316',tgt:'10–15%'},
+      {lbl:'Unsatisfactory',min:0,clr:'#EF4444',tgt:'<5%'}];
+    const total=all.length||1;
+    const calRows=calBands.map((b,i)=>{
+      const next=calBands[i-1];
+      const grp=all.filter(a=>{const sc=Number(a.overall_score||0);return sc>=b.min&&(!next||sc<next.min);});
+      return{b,grp,pct:Math.round(grp.length/total*100)};
+    });
+    const segs=calRows.map(r=>`<div style="flex:1;border-radius:5px;padding:8px 6px;text-align:center;background:${r.b.clr}15;border:1px solid ${r.b.clr}33"><div style="font-size:16px;font-weight:900;color:${r.b.clr}">${r.grp.length}</div><div style="font-size:8px;font-weight:700;color:${r.b.clr};text-transform:uppercase;letter-spacing:.3px;margin-top:2px">${r.b.lbl}</div><div style="font-size:9px;color:var(--muted);margin-top:2px">${r.pct}%</div><div style="font-size:8px;color:var(--faint);margin-top:2px">Target: ${r.b.tgt}</div></div>`).join('');
+    const thS='text-align:left;padding:7px 10px;color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bdr);white-space:nowrap';
+    const rows=all.map((a,i)=>{const sc=Number(a.overall_score||0);const band=b3Band(sc);return`<tr style="border-bottom:1px solid #0F2444"><td style="padding:7px 10px;color:var(--faint);font-size:10px">${i+1}</td><td style="padding:7px 10px;font-weight:700">${esc(a.employee?.full_name||'—')}</td><td style="padding:7px 10px">${b3DeptBadge(a.employee?.department)}</td><td style="padding:7px 10px;font-size:10px;color:var(--muted)">${esc(a.appraisal_period||'—')}</td><td style="padding:7px 10px;text-align:center;font-size:18px;font-weight:900;color:${band.clr}">${sc>0?sc.toFixed(2):'—'}</td><td style="padding:7px 10px">${b3Pill(band.lbl,band.clr)}</td></tr>`;}).join('');
+    c.innerHTML=`
+    <div class="card" style="margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Rating Band Distribution · ${all.length} total appraisals</div>
+      <div style="display:flex;gap:4px;margin-bottom:10px">${segs}</div>
+      <div style="font-size:10px;color:var(--faint)">💡 Target distribution follows a bell curve. Majority should fall in Meets Expectations.</div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--bdr)"><span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Full Ranking — Highest to Lowest</span></div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead><tr><th style="${thS}">#</th><th style="${thS}">Employee</th><th style="${thS}">Dept</th><th style="${thS}">Period</th><th style="${thS};text-align:center">Score</th><th style="${thS}">Rating</th></tr></thead>
+        <tbody>${rows||'<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--faint)">No data</td></tr>'}</tbody>
+      </table></div>
+    </div>`;
+  }catch(err){c.innerHTML=`<div class="empty">Error: ${esc(err.message)}</div>`;}
+}
+
+// ── TRENDS ─────────────────────────────────────────────────
+async function b3Trends(){
+  const c=document.getElementById('b3-content');
+  c.innerHTML='<div class="loading">Loading…</div>';
+  try{
+    const{data:apps}=await sb.from('performance_appraisals').select('*,employee:employees(full_name,department)').order('appraisal_date',{ascending:true});
+    const all=apps||[];
+    const byP={};
+    all.forEach(a=>{const p=a.appraisal_period||'Unknown';if(!byP[p])byP[p]=[];byP[p].push(Number(a.overall_score||0));});
+    const pLbls=Object.keys(byP).reverse();
+    const thS='text-align:left;padding:7px 10px;color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bdr);white-space:nowrap';
+    const pRows=pLbls.map(p=>{
+      const sc=byP[p];const av=sc.reduce((s,v)=>s+v,0)/sc.length;const band=b3Band(av);
+      return`<tr style="border-bottom:1px solid #0F2444">
+        <td style="padding:7px 10px;font-weight:700">${esc(p)}</td>
+        <td style="padding:7px 10px;text-align:center">${sc.length}</td>
+        <td style="padding:7px 10px;text-align:center"><span style="font-size:16px;font-weight:900;color:${band.clr}">${av.toFixed(2)}</span></td>
+        <td style="padding:7px 10px"><div style="display:flex;align-items:center;gap:6px">${b3Bar(av/5*100,band.clr)} ${b3Pill(band.lbl,band.clr)}</div></td>
+        <td style="padding:7px 10px;text-align:center">${Math.max(...sc).toFixed(1)}</td>
+        <td style="padding:7px 10px;text-align:center">${Math.min(...sc).toFixed(1)}</td>
+      </tr>`;
+    }).join('');
+    const empMap={};
+    all.forEach(a=>{const k=a.employee_id;if(!empMap[k])empMap[k]={name:a.employee?.full_name,dept:a.employee?.department,records:[]};empMap[k].records.push({period:a.appraisal_period,score:Number(a.overall_score||0),date:a.appraisal_date});});
+    const multi=Object.values(empMap).filter(e=>e.records.length>1).sort((a,b)=>b.records.length-a.records.length).slice(0,15);
+    const tRows=multi.map(e=>{
+      const sorted=[...e.records].sort((a,b)=>new Date(a.date)-new Date(b.date));
+      const first=sorted[0].score,last=sorted[sorted.length-1].score,delta=last-first;
+      const tr=delta>0.2?'▲':delta<-0.2?'▼':'▶';
+      const tc=delta>0.2?'#10B981':delta<-0.2?'#EF4444':'var(--muted)';
+      const band=b3Band(last);
+      return`<tr style="border-bottom:1px solid #0F2444">
+        <td style="padding:7px 10px;font-weight:700">${esc(e.name||'—')}</td>
+        <td style="padding:7px 10px">${b3DeptBadge(e.dept)}</td>
+        <td style="padding:7px 10px;text-align:center">${e.records.length}</td>
+        <td style="padding:7px 10px">${sorted.map(r=>`<span style="font-size:9px;color:var(--faint);margin-right:4px">${esc(r.period?.slice(0,7)||'')} <b style="color:${b3Clr(r.score)}">${r.score.toFixed(1)}</b></span>`).join('')}</td>
+        <td style="padding:7px 10px;text-align:center;font-weight:800;color:${band.clr}">${last.toFixed(2)}</td>
+        <td style="padding:7px 10px;text-align:center;color:${tc};font-size:14px">${tr} <span style="font-size:10px">${delta>=0?'+':''}${delta.toFixed(2)}</span></td>
+      </tr>`;
+    }).join('');
+    c.innerHTML=`
+    <div class="card" style="margin-bottom:14px;padding:0;overflow:hidden">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--bdr)"><span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Score by Appraisal Period</span></div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead><tr><th style="${thS}">Period</th><th style="${thS};text-align:center">Count</th><th style="${thS};text-align:center">Avg Score</th><th style="${thS}">Distribution</th><th style="${thS};text-align:center">High</th><th style="${thS};text-align:center">Low</th></tr></thead>
+        <tbody>${pRows||'<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--faint)">No data</td></tr>'}</tbody>
+      </table></div>
+    </div>
+    ${multi.length?`<div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between"><span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Individual Trajectory (Multi-Period)</span><span style="font-size:10px;color:var(--faint)">${multi.length} employees</span></div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead><tr><th style="${thS}">Employee</th><th style="${thS}">Dept</th><th style="${thS};text-align:center">Periods</th><th style="${thS}">History</th><th style="${thS};text-align:center">Latest</th><th style="${thS};text-align:center">Trend</th></tr></thead>
+        <tbody>${tRows}</tbody>
+      </table></div>
+    </div>`:''}`;
+  }catch(err){c.innerHTML=`<div class="empty">Error: ${esc(err.message)}</div>`;}
+}
+
+// ── KPI FRAMEWORK CONFIG ───────────────────────────────────
+function b3KPIConfig(){
+  const c=document.getElementById('b3-content');
+  const cards=Object.keys(B3_DKPI).map(d=>{
+    const kpis=B3_DKPI[d];const tw=kpis.reduce((s,k)=>s+k.w,0);
+    return`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span style="font-size:12px;font-weight:800">${esc(d)}</span><span style="font-size:10px;color:${tw===100?'#10B981':'#F97316'};font-weight:700">Σ ${tw}% ${tw===100?'✓':'⚠️'}</span></div>
+    ${kpis.map(k=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="flex:1"><div style="font-size:11px;font-weight:600">${esc(k.name)}</div><div style="font-size:9px;color:var(--faint)">${k.id}</div></div><div style="background:#C9A84C22;border:1px solid #C9A84C33;border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;color:var(--gold)">${k.w}%</div></div>`).join('')}</div>`;
+  }).join('');
+  c.innerHTML=`
+  <div style="background:var(--card2);border:1px solid var(--bdr);border-radius:8px;padding:12px;margin-bottom:14px;font-size:11px;color:var(--muted)">
+    💡 Each department has tailored KPIs weighted to sum to 100%. KPIs load automatically when selecting an employee. To modify, update the <code style="background:var(--n3);padding:1px 4px;border-radius:3px;font-size:10px">B3_DKPI</code> object in the source.
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">${cards}</div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
 //  P9-5 · BUDGET PLANNING
 // ══════════════════════════════════════════════════════════════
 async function loadBudget(tab='overview'){
@@ -13697,69 +14347,126 @@ async function assignEquipment(e){
 // ══════════════════════════════════════════════════════════════
 //  P10-3 · CORRESPONDENCE LOG
 // ══════════════════════════════════════════════════════════════
-async function loadCorrespondence(tab='all'){
-  const el=document.getElementById('page-correspondence');
+async function loadCorrespondence(tab){
+  tab=tab||'all';
+  var el=document.getElementById('page-correspondence');
   if(!el) return;
-  el.innerHTML='<div class="loading">Loading Correspondence…</div>';
+  el.innerHTML='<div class="loading">Loading Correspondence...</div>';
   try{
-    const today=new Date();
-    const [corrR,projR]=await Promise.all([
-      sb.from('correspondence').select('*,project:projects(project_no,name)').order('correspondence_date',{ascending:false}),
-      sb.from('projects').select('id,project_no,name').in('status',ACTIVE_STATUSES).order('project_no')
-    ]);
-    const corrs=corrR.data||[], projs=projR.data||[];
-    const incoming=corrs.filter(c=>c.direction==='incoming');
-    const outgoing=corrs.filter(c=>c.direction==='outgoing');
-    const pending  =corrs.filter(c=>c.status==='pending_reply');
+    var today=new Date();
+    var r1=await sb.from('correspondence').select('*,project:projects(project_no,name)').order('correspondence_date',{ascending:false});
+    var corrs=r1.data||[];
+    var incoming=corrs.filter(function(c){return c.direction==='incoming';});
+    var outgoing=corrs.filter(function(c){return c.direction==='outgoing';});
+    var pending=corrs.filter(function(c){return c.status==='pending_reply';});
+    var overdue=corrs.filter(function(c){return c.status==='pending_reply'&&c.reply_due_date&&new Date(c.reply_due_date)<today;});
+    var list=tab==='incoming'?incoming:tab==='outgoing'?outgoing:tab==='pending'?pending:tab==='overdue'?overdue:corrs;
+    var tc={letter:'#3B82F6',email:'#10B981',fax:'#8B5CF6',notice:'#EF4444',memo:'#C9A84C',report:'#F97316'};
 
-    const tabBtns=`<div class="tabs">
-      <button class="tab${tab==='all'?' act':''}" onclick="loadCorrespondence('all')">📨 All (${corrs.length})</button>
-      <button class="tab${tab==='incoming'?' act':''}" onclick="loadCorrespondence('incoming')">📥 Incoming (${incoming.length})</button>
-      <button class="tab${tab==='outgoing'?' act':''}" onclick="loadCorrespondence('outgoing')">📤 Outgoing (${outgoing.length})</button>
-      <button class="tab${tab==='pending'?' act':''}" onclick="loadCorrespondence('pending')" style="color:${pending.length>0?'#F97316':'inherit'}">⏳ Pending Reply (${pending.length})</button>
-    </div>`;
+    // Build page
+    var html='<div class="page-head"><div class="page-head-left"><span style="font-size:22px">\u2709\uFE0F</span>'
+      +'<div><h1>Correspondence Log</h1><div class="sub">Letters \xb7 Emails \xb7 Notices \xb7 Memos</div></div></div>'
+      +'<div style="display:flex;gap:8px">'
+      +(can('create')?'<button class="btn btn-primary btn-sm" onclick="openNewCorrModal()">+ Log Correspondence</button>':'')
+      +'<button class="btn btn-ghost btn-sm" onclick="exportCorrespondenceCSV()">Export CSV</button>'
+      +'</div></div>';
 
-    const list=tab==='incoming'?incoming:tab==='outgoing'?outgoing:tab==='pending'?pending:corrs;
+    html+='<div class="grid4" style="margin-bottom:14px">'
+      +kpi('Total',corrs.length,'#C9A84C','All')
+      +kpi('Incoming',incoming.length,'#3B82F6','Received')
+      +kpi('Outgoing',outgoing.length,'#10B981','Sent')
+      +kpi('Overdue Reply',overdue.length,overdue.length>0?'#EF4444':'#10B981','Past due')
+      +'</div>';
 
-    const typeColors={'letter':'#3B82F6','email':'#10B981','fax':'#8B5CF6','notice':'#EF4444','memo':'#C9A84C','report':'#F97316'};
+    if(overdue.length>0){
+      html+='<div style="background:#EF444411;border:1px solid #EF444433;border-radius:9px;padding:12px 16px;margin-bottom:14px">'
+        +'<div style="font-size:11px;font-weight:700;color:#EF4444;margin-bottom:8px">'+overdue.length+' Overdue Reply Items</div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:6px">';
+      for(var oi=0;oi<Math.min(overdue.length,5);oi++){
+        var oc=overdue[oi];
+        var odays=Math.ceil((today-new Date(oc.reply_due_date))/86400000);
+        html+='<span style="background:var(--card);border:1px solid #EF444444;border-radius:6px;padding:5px 10px;font-size:10px;cursor:pointer" data-id="'+oc.id+'" onclick="openCorrDetail(this.dataset.id)">'
+          +esc(oc.ref_no||'--')+' - '+esc((oc.subject||'').slice(0,30))
+          +' <span style="color:#EF4444">'+odays+'d overdue</span></span>';
+      }
+      html+='</div></div>';
+    }
 
-    el.innerHTML=`
-    <div class="page-head">
-      <div class="page-head-left"><span style="font-size:22px">✉️</span>
-        <div><h1>Correspondence Log</h1><div class="sub">Letters · Emails · Notices · Memos · Formal Communications</div></div>
-      </div>
-      ${can('create')?`<button class="btn btn-primary btn-sm" onclick="openNewCorrModal()">+ Log Correspondence</button>`:''}
-    </div>
-    <div class="grid4" style="margin-bottom:14px">
-      ${kpi('Total',        corrs.length,    '#C9A84C', 'All correspondence')}
-      ${kpi('Incoming',     incoming.length, '#3B82F6', 'Received')}
-      ${kpi('Outgoing',     outgoing.length, '#10B981', 'Sent')}
-      ${kpi('Pending Reply',pending.length,   pending.length>0?'#F97316':'#10B981', 'Awaiting response')}
-    </div>
-    <div class="card">
-      ${tabBtns}
-      ${list.length===0?'<div class="empty">No correspondence found</div>':`
-      <table><thead><tr>
-        <th>Ref No</th><th>Subject</th><th>Type</th><th>Direction</th><th>Party</th>
-        <th>Project</th><th>Date</th><th style="text-align:center">Status</th><th></th>
-      </tr></thead><tbody>
-      ${list.map(c=>`<tr>
-        <td style="color:var(--gold);font-weight:700;font-size:10px">${esc(c.ref_no||'—')}</td>
-        <td style="font-weight:600;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.subject||'—')}</td>
-        <td><span style="font-size:9px;background:${(typeColors[c.corr_type]||'#94A3B8')}22;color:${typeColors[c.corr_type]||'#94A3B8'};border-radius:4px;padding:2px 6px;text-transform:capitalize">${esc(c.corr_type||'—')}</span></td>
-        <td><span style="font-size:9px;background:${c.direction==='incoming'?'#3B82F622':'#10B98122'};color:${c.direction==='incoming'?'#3B82F6':'#10B981'};border-radius:4px;padding:2px 6px">${c.direction==='incoming'?'📥 In':'📤 Out'}</span></td>
-        <td style="font-size:10px;color:var(--muted)">${esc(c.party_name||'—')}</td>
-        <td style="font-size:10px;color:var(--gold)">${esc(c.project?.project_no||'General')}</td>
-        <td style="font-size:10px;color:var(--faint)">${c.correspondence_date||'—'}</td>
-        <td style="text-align:center">${pill(c.status||'filed',c.status==='pending_reply'?'#F97316':c.status==='replied'?'#10B981':'#94A3B8')}</td>
-        <td><button onclick="openCorrDetail('${c.id}')" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:11px">👁</button></td>
-      </tr>`).join('')}
-      </tbody></table>`}
-    </div>`;
-  }catch(err){ el.innerHTML=`<div class="empty">Error: ${err.message}</div>`; }
+    html+='<div class="card">'
+      +'<div class="tabs">'
+      +'<button class="tab'+(tab==='all'?' act':'')+'" data-t="all" onclick="loadCorrespondence(this.dataset.t)">All ('+corrs.length+')</button>'
+      +'<button class="tab'+(tab==='incoming'?' act':'')+'" data-t="incoming" onclick="loadCorrespondence(this.dataset.t)">Incoming ('+incoming.length+')</button>'
+      +'<button class="tab'+(tab==='outgoing'?' act':'')+'" data-t="outgoing" onclick="loadCorrespondence(this.dataset.t)">Outgoing ('+outgoing.length+')</button>'
+      +'<button class="tab'+(tab==='pending'?' act':'')+'" data-t="pending" onclick="loadCorrespondence(this.dataset.t)">Pending ('+pending.length+')</button>'
+      +'<button class="tab'+(tab==='overdue'?' act':'')+'" data-t="overdue" onclick="loadCorrespondence(this.dataset.t)" style="color:'+(overdue.length>0?'#EF4444':'inherit')+'">Overdue ('+overdue.length+')</button>'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;margin-bottom:10px">'
+      +'<input id="corr-search" placeholder="Search ref, subject, party..." oninput="filterCorrTable(this.value)" style="background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:6px 10px;color:var(--text);font-size:11px;width:240px;font-family:inherit"/>'
+      +'<select id="corr-type-filter" onchange="filterCorrTable(document.getElementById(\'corr-search\').value||\'\')" style="background:var(--card);border:1px solid var(--bdr);border-radius:7px;padding:6px 10px;color:var(--text);font-size:11px;font-family:inherit">'
+      +'<option value="">All Types</option><option value="letter">Letter</option><option value="email">Email</option>'
+      +'<option value="fax">Fax</option><option value="notice">Notice</option><option value="memo">Memo</option><option value="report">Report</option>'
+      +'</select></div>';
+
+    if(list.length===0){
+      html+='<div class="empty">No correspondence found</div>';
+    } else {
+      html+='<div style="overflow-x:auto"><table class="tbl"><thead><tr>'
+        +'<th>Ref No</th><th>Subject</th><th>Type</th><th>Dir</th>'
+        +'<th>Party</th><th>Project</th><th>Date</th><th>Reply Due</th><th>Status</th><th></th>'
+        +'</tr></thead><tbody id="corr-tbody">';
+      for(var ri=0;ri<list.length;ri++){
+        var cc=list[ri];
+        var isOv=cc.status==='pending_reply'&&cc.reply_due_date&&new Date(cc.reply_due_date)<today;
+        var dLeft=cc.reply_due_date?Math.ceil((new Date(cc.reply_due_date)-today)/86400000):null;
+        var dText=cc.reply_due_date?(isOv?Math.abs(dLeft)+'d late':(dLeft===0?'Today':dLeft+'d left')):'--';
+        html+='<tr data-ref="'+(cc.ref_no||'').toLowerCase()+'" data-subj="'+(cc.subject||'').toLowerCase()+'" data-party="'+(cc.party_name||'').toLowerCase()+'" data-type="'+(cc.corr_type||'')+'" style="background:'+(isOv?'#EF444408':'')+'">'
+          +'<td style="color:var(--gold);font-weight:700;font-size:10px">'+esc(cc.ref_no||'--')+'</td>'
+          +'<td style="font-weight:600;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(cc.subject||'--')+'</td>'
+          +'<td><span style="font-size:9px;background:'+(tc[cc.corr_type]||'#94A3B8')+'22;color:'+(tc[cc.corr_type]||'#94A3B8')+';border-radius:4px;padding:2px 6px">'+esc(cc.corr_type||'--')+'</span></td>'
+          +'<td><span style="font-size:9px;background:'+(cc.direction==='incoming'?'#3B82F622':'#10B98122')+';color:'+(cc.direction==='incoming'?'#3B82F6':'#10B981')+';border-radius:4px;padding:2px 6px">'+(cc.direction==='incoming'?'In':'Out')+'</span></td>'
+          +'<td style="font-size:10px;color:var(--muted)">'+esc(cc.party_name||'--')+'</td>'
+          +'<td style="font-size:10px;color:var(--gold)">'+esc(cc.project?cc.project.project_no:'General')+'</td>'
+          +'<td style="font-size:10px;color:var(--faint)">'+esc(cc.correspondence_date||'--')+'</td>'
+          +'<td style="font-size:10px;color:'+(isOv?'#EF4444':(dLeft!==null&&dLeft<=3?'#F97316':'var(--muted)'))+'">'+(cc.reply_due_date?dText:'--')+'</td>'
+          +'<td>'+pill(cc.status||'filed',cc.status==='pending_reply'?'#F97316':cc.status==='replied'?'#10B981':'#94A3B8')+'</td>'
+          +'<td style="display:flex;gap:3px">'
+          +'<button data-id="'+cc.id+'" onclick="openCorrDetail(this.dataset.id)" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:10px">View</button>'
+          +(can('edit')&&cc.status==='pending_reply'?'<button data-id="'+cc.id+'" onclick="markCorrReplied(this.dataset.id)" style="background:none;border:none;color:#10B981;cursor:pointer;font-size:10px">Done</button>':'')
+          +'</td></tr>';
+      }
+      html+='</tbody></table></div>';
+    }
+    html+='</div>';
+    el.innerHTML=html;
+  }catch(err){ el.innerHTML='<div class="empty">Error: '+err.message+'</div>'; }
 }
 
+function filterCorrTable(q){
+  var type=(document.getElementById('corr-type-filter')||{}).value||'';
+  document.querySelectorAll('#corr-tbody tr').forEach(function(tr){
+    var mq=!q||tr.dataset.ref.includes(q.toLowerCase())||tr.dataset.subj.includes(q.toLowerCase())||tr.dataset.party.includes(q.toLowerCase());
+    var mt=!type||tr.dataset.type===type;
+    tr.style.display=(mq&&mt)?'':'none';
+  });
+}
+
+function exportCorrespondenceCSV(){
+  var rows=[['Ref No','Subject','Type','Dir','Party','Project','Date','Reply Due','Status']];
+  document.querySelectorAll('#corr-tbody tr').forEach(function(tr){
+    var cells=[...tr.querySelectorAll('td')].map(function(td){return td.textContent.trim();});
+    if(cells.length>=9) rows.push(cells.slice(0,9));
+  });
+  var csv=rows.map(function(r){return r.map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='Correspondence_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  showToast('CSV exported','success');
+}
+
+
 function openNewCorrModal(){
+
   const projs=window._cachedProjects||[];
   const today=new Date().toISOString().split('T')[0];
   openModal('+ Log Correspondence',`
